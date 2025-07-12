@@ -6,210 +6,99 @@
     <title>FedEx Shipping, Manage, Track, Deliver</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
     <style>
-       body {
-    font-family: Arial, sans-serif; /* Fallback font */
-}
-.fedex-purple-bg {
-    background-color: #4D148C; /* Approximate FedEx purple */
-}
-/* Added class for the purple navbar */
-.navbar-fedex-purple {
-    background-color: #4D148C !important; /* Force purple background */
-}
-.navbar-fedex-purple .navbar-brand img {
-    height: 3.5rem; /* Increased logo size */
-}
-.navbar-fedex-purple .nav-link,
-.navbar-fedex-purple .btn-link {
-    color: white !important; /* White text for navigation links */
-}
-.navbar-fedex-purple .nav-link:hover,
-.navbar-fedex-purple .btn-link:hover {
-    color: #FF6200 !important; /* FedEx orange on hover */
-}
-.navbar-fedex-purple .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e"); /* White toggler icon */
-}
-.fedex-orange-btn {
-    background-color: #FF6200; /* Approximate FedEx orange */
-    border-color: #FF6200;
-}
-.fedex-orange-btn:hover {
-    background-color: #E65A00; /* Darker orange on hover */
-    border-color: #E65A00;
-}
-.hero-section {
-    background-image: url('https://fedex-dims.brightspotgocdn.com/dims4/default/7a4a573/2147483647/strip/true/crop/2880x700+0+0/resize/1440x350!/format/webp/quality/90/?url=https%3A%2F%2Ffedex-static.brightspotgocdn.com%2F91%2Fd3%2F8702fff14a2a9a82e845b687ecdb%2Fmediadownloads-banner.png');
-    background-size: cover;
-    background-position: center;
-    height: 500px;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-}
-.hero-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.3);
-}
-.tracking-card {
-    background-color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(5px);
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    /* Add max-width for better control on larger screens */
-    max-width: 700px;
-    width: 90%; /* Adjust width on all screen sizes */
-}
-.nav-tabs .nav-link {
-    color: #6c757d; /* Bootstrap default gray */
-    font-weight: 600;
-    padding-bottom: 1rem; /* Adjust padding for visual alignment */
-    border-bottom: 2px solid transparent;
-}
-.nav-tabs .nav-link.active {
-    color: #4D148C; /* FedEx purple for active tab */
-    border-color: #4D148C;
-    background-color: transparent;
-}
-.nav-tabs .nav-link:hover {
-    border-color: #adb5bd; /* Lighter border on hover for inactive */
-}
-.form-control:focus {
-    border-color: #4D148C; /* FedEx Purple border on focus */
-    box-shadow: 0 0 0 0.25rem rgba(77, 20, 140, 0.25); /* Purple glow on focus */
-}
-.feature-icon {
-    height: 4rem; /* Adjust icon size */
-    width: 4rem;
-    margin-bottom: 0.5rem;
-}
-.chat-btn {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    background-color: #4D148C;
-    color: white;
-    padding: 0.75rem;
-    border-radius: 50%;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    display: flex; /* Use flex to center icon */
-    align-items: center;
-    justify-content: center;
-    width: 50px; /* Default size for larger screens */
-    height: 50px;
-}
-.chat-btn:hover {
-    background-color: #3b106e;
-}
-
-/* --- Mobile View Adjustments --- */
-
-/* Media query for screens up to 768px (typical tablets and phones) */
-@media (max-width: 768px) {
-    .navbar-fedex-purple .navbar-brand img {
-        height: 2.5rem; /* Smaller logo for mobile navbar */
-    }
-
-    .hero-section {
-        height: 300px; /* Reduce hero section height */
-        padding: 0.5rem; /* Reduce padding */
-    }
-
-    .tracking-card {
-        width: 95%; /* Make tracking card wider on smaller screens */
-        padding: 1rem; /* Reduce card padding */
-    }
-
-    .nav-tabs .nav-link {
-        padding: 0.75rem 0.5rem; /* Reduce tab padding */
-        font-size: 0.9rem; /* Smaller tab font size */
-    }
-
-    /* Adjusting the input and button for tracking */
-    .form-control {
-        font-size: 0.9rem; /* Smaller font in input field */
-        padding: 0.5rem 0.75rem; /* Smaller padding in input field */
-    }
-
-    /* Assuming the track button is an actual button with .btn class */
-    .fedex-orange-btn {
-        padding: 0.6rem 1rem; /* Smaller padding for the button */
-        font-size: 0.9rem; /* Smaller font for the button */
-        /* If button is next to input and you want them to stack or be fluid */
-        width: 100%; /* Make button full width if needed for stacking */
-        margin-top: 10px; /* Add space above the button if it stacks */
-    }
-
-    /* If the track input and button are in a flex container (e.g., Bootstrap form-row or input-group) */
-    .input-group > .form-control,
-    .input-group > .btn {
-        flex: 1 1 auto; /* Allows them to shrink and grow */
-    }
-    .input-group {
-        flex-direction: column; /* Stack input and button vertically */
-    }
-
-    /* Adjust feature icons */
-    .feature-icon {
-        height: 3rem;
-        width: 3rem;
-    }
-
-    /* Chat button adjustments */
-    .chat-btn {
-        bottom: 1rem; /* Move chat button slightly up */
-        right: 1rem; /* Move chat button slightly left */
-        width: 45px; /* Smaller chat button */
-        height: 45px;
-        font-size: 1.2rem; /* Adjust icon size if it's an icon font */
-    }
-}
-
-/* Media query for very small screens (e.g., phones in portrait) */
-@media (max-width: 480px) {
-    .hero-section {
-        height: 250px; /* Even smaller hero section */
-    }
-
-    .tracking-card {
-        padding: 0.75rem; /* Even less padding */
-    }
-
-    .nav-tabs .nav-link {
-        font-size: 0.8rem; /* Even smaller tab font */
-        padding: 0.6rem 0.3rem;
-    }
-
-    .form-control {
-        font-size: 0.85rem;
-        padding: 0.4rem 0.6rem;
-    }
-
-    .fedex-orange-btn {
-        padding: 0.5rem 0.8rem;
-        font-size: 0.85rem;
-        margin-top: 8px; /* Slightly less margin */
-    }
-
-    .feature-icon {
-        height: 2.5rem;
-        width: 2.5rem;
-    }
-
-    .chat-btn {
-        bottom: 0.8rem;
-        right: 0.8rem;
-        width: 40px; /* Smallest chat button */
-        height: 40px;
-        font-size: 1rem;
-    }
-}
+        body {
+            font-family: Arial, sans-serif; /* Fallback font */
+        }
+        .fedex-purple-bg {
+            background-color: #4D148C; /* Approximate FedEx purple */
+        }
+        /* Added class for the purple navbar */
+        .navbar-fedex-purple {
+            background-color: #4D148C !important; /* Force purple background */
+        }
+        .navbar-fedex-purple .navbar-brand img {
+            height: 3.5rem; /* Increased logo size */
+        }
+        .navbar-fedex-purple .nav-link,
+        .navbar-fedex-purple .btn-link {
+            color: white !important; /* White text for navigation links */
+        }
+        .navbar-fedex-purple .nav-link:hover,
+        .navbar-fedex-purple .btn-link:hover {
+            color: #FF6200 !important; /* FedEx orange on hover */
+        }
+        .navbar-fedex-purple .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e"); /* White toggler icon */
+        }
+        .fedex-orange-btn {
+            background-color: #FF6200; /* Approximate FedEx orange */
+            border-color: #FF6200;
+        }
+        .fedex-orange-btn:hover {
+            background-color: #E65A00; /* Darker orange on hover */
+            border-color: #E65A00;
+        }
+        .hero-section {
+            background-image: url('https://fedex-dims.brightspotgocdn.com/dims4/default/7a4a573/2147483647/strip/true/crop/2880x700+0+0/resize/1440x350!/format/webp/quality/90/?url=https%3A%2F%2Ffedex-static.brightspotgocdn.com%2F91%2Fd3%2F8702fff14a2a9a82e845b687ecdb%2Fmediadownloads-banner.png');
+            background-size: cover;
+            background-position: center;
+            height: 500px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        .tracking-card {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .nav-tabs .nav-link {
+            color: #6c757d; /* Bootstrap default gray */
+            font-weight: 600;
+            padding-bottom: 1rem; /* Adjust padding for visual alignment */
+            border-bottom: 2px solid transparent;
+        }
+        .nav-tabs .nav-link.active {
+            color: #4D148C; /* FedEx purple for active tab */
+            border-color: #4D148C;
+            background-color: transparent;
+        }
+        .nav-tabs .nav-link:hover {
+            border-color: #adb5bd; /* Lighter border on hover for inactive */
+        }
+        .form-control:focus {
+            border-color: #4D148C; /* FedEx Purple border on focus */
+            box-shadow: 0 0 0 0.25rem rgba(77, 20, 140, 0.25); /* Purple glow on focus */
+        }
+        .feature-icon {
+            height: 4rem; /* Adjust icon size */
+            width: 4rem;
+            margin-bottom: 0.5rem;
+        }
+        .chat-btn {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background-color: #4D148C;
+            color: white;
+            padding: 0.75rem;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .chat-btn:hover {
+            background-color: #3b106e;
+        }
     </style>
 </head>
 <body>

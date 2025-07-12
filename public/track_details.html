@@ -8,460 +8,280 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles/tracking_details.css">
     <style>
-       /* Base Styles */
-body {
-    font-family: 'Poppins', sans-serif;
-    margin: 0;
-    padding: 20px;
-    background-color: #f0f2f5; /* Lighter background to match screenshot */
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    color: #333;
-    /* REMOVED: FedEx Logo Watermark */
-    /*
-    background-image: url('https://i.imgur.com/i342sW8.png');
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: 800px;
-    background-attachment: fixed;
-    opacity: 0.1;
-    */
-}
-
-/* Overlay to make content readable over the watermark */
-.main-container {
-    position: relative; /* Needed for z-index to work */
-    z-index: 1; /* Ensures content appears above the watermark */
-    width: 100%;
-    max-width: 800px; /* Wider to accommodate new layout */
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Space between cards */
-    background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background for readability */
-    border-radius: 8px;
-    padding: 20px; /* Added padding to the container itself for overall aesthetics */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Slightly more prominent shadow */
-}
-
-/* Card Styling */
-.card {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-    padding: 25px; /* Consistent padding */
-    box-sizing: border-box; /* Include padding in width */
-}
-
-/* Header Section */
-.tracking-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0; /* Adjust padding for top */
-    border-bottom: 1px solid #eee; /* Separator line */
-    margin-bottom: 20px;
-}
-
-.tracking-header h1 {
-    margin: 0;
-    font-size: 1.8em;
-    font-weight: 700;
-    color: #333;
-}
-
-.tracking-header .right-section {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.track-again-btn {
-    background-color:rgb(159, 21, 201); /* Green button */
-    color: #fff;
-    padding: 8px 15px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-size: 0.9em;
-    font-weight: 600;
-    transition: background-color 0.3s ease;
-}
-
-.track-again-btn:hover {
-    background-color: #45a049;
-}
-
-.fedex-logo {
-    height: 35px; /* Increased size for the logo in the header */
-    margin-left: 10px; /* Space from button */
-}
-
-/* Status & Expected Delivery Card */
-.status-card {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.status-line {
-    display: flex;
-    align-items: center;
-    padding: 10px 15px;
-    border-radius: 5px;
-    font-weight: 600;
-    color: #fff; /* Default text color for status line */
-    /* Default background will be set by JS via data.statusColor */
-}
-
-/* Blinking Animation */
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.2; }
-}
-
-.status-indicator-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    /* Background color of dot will match the statusLine's background, then adjust for visibility */
-    margin-right: 10px;
-    border: 1px solid rgba(0, 0, 0, 0.2); /* Slight border for definition */
-}
-/* Only apply blinking if the 'blinking' class is present */
-.status-indicator-dot.blinking {
-    animation: blink 1s linear infinite alternate;
-}
-
-.status-card .section-header {
-    padding: 0; /* Remove header padding as it's part of the card */
-    background-color: transparent;
-    border-bottom: none;
-    margin-bottom: 10px;
-}
-
-.expected-delivery-info {
-    background-color: #f8f9fa; /* Lighter background for delivery box */
-    border: 1px solid #e9ecef;
-    border-radius: 5px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.expected-delivery-info p {
-    margin: 0;
-    font-size: 0.95em;
-    color: #555;
-}
-
-.expected-delivery-info .label {
-    font-weight: 600;
-    color: #333;
-}
-
-/* Information Grid (Package, Delivery To, Special Handling) */
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns */
-    gap: 20px; /* Space between grid items */
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.info-label-small {
-    font-size: 0.8em;
-    color: #777;
-    text-transform: uppercase;
-    font-weight: 500;
-}
-
-.display-field {
-    background-color: #f8f9fa;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    padding: 10px 12px;
-    font-size: 0.95em;
-    color: #333;
-    min-height: 20px; /* Ensure consistent height */
-    display: flex;
-    align-items: center;
-    white-space: pre-wrap; /* Allows text to wrap and respects newline characters */
-}
-.display-field.bold-text {
-    font-weight: 600;
-}
-
-/* Delivery History */
-.delivery-history-card .section-header {
-    padding: 0;
-    background-color: transparent;
-    border-bottom: none;
-    margin-bottom: 15px;
-}
-
-.history-item {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 20px; /* More space between history items */
-    position: relative;
-}
-
-.history-item:last-child {
-    margin-bottom: 0;
-}
-
-/* Vertical timeline line */
-.history-item:not(:last-child)::before {
-    content: '';
-    position: absolute;
-    left: 11px; /* Adjust to align with icon center */
-    top: 30px; /* Start below the icon */
-    bottom: -20px; /* Extend below this item to next */
-    width: 2px;
-    background-color: #ccc;
-    z-index: 0;
-}
-
-.history-icon-circle {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background-color: #bbb; /* Default grey for past inactive points */
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.9em;
-    flex-shrink: 0;
-    z-index: 1; /* Above the line */
-}
-.history-icon-circle.green {
-    background-color: #4CAF50; /* Green for main active point / Delivered */
-}
-.history-icon-circle.blue {
-    background-color: #007bff; /* Blue for 'Departed' or important recent events */
-}
-.history-icon-circle.red {
-    background-color: #DC3545; /* Red for 'Held' or exception events */
-}
-
-
-.history-content {
-    margin-left: 15px;
-    flex-grow: 1;
-}
-
-.history-time {
-    font-size: 0.85em;
-    color: #888;
-    margin-bottom: 3px;
-}
-
-.history-location {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-.history-description-detailed {
-    font-size: 0.9em;
-    color: #555;
-}
-
-/* FedEx Footer Logo */
-.fedex-footer-logo {
-    display: block;
-    margin-top: 30px;
-    margin-left: auto;
-    margin-right: auto;
-    height: 35px; /* Adjust size as needed */
-}
-
-/* --- */
-
-/* Mobile-Specific Adjustments */
-@media (max-width: 768px) {
-    body {
-        padding: 10px; /* Reduce overall padding on smaller screens */
-        align-items: stretch; /* Allow content to stretch to full width */
-    }
-
-    .main-container {
-        padding: 15px; /* Reduce padding inside the main container */
-        gap: 15px; /* Reduce space between cards */
-    }
-
-    .card {
-        padding: 15px; /* Reduce card padding */
-    }
-
-    .tracking-header {
-        flex-direction: column; /* Stack header items vertically */
-        align-items: flex-start;
-        padding: 10px 0;
-        margin-bottom: 15px;
-    }
-
-    .tracking-header h1 {
-        font-size: 1.5em; /* Smaller heading for mobile */
-        margin-bottom: 10px; /* Add space below heading */
-    }
-
-    .tracking-header .right-section {
-        flex-direction: column; /* Stack button and logo */
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .track-again-btn {
-        width: 100%; /* Make button full width */
-        text-align: center;
-        padding: 10px;
-        font-size: 0.85em; /* Slightly smaller button text */
-    }
-
-    .fedex-logo {
-        height: 30px; /* Smaller logo in header */
-        margin-left: 0; /* Remove left margin when stacked */
-    }
-
-    .status-line {
-        padding: 8px 12px; /* Smaller padding for status line */
-        font-size: 0.9em; /* Smaller status text */
-    }
-
-    .expected-delivery-info {
-        padding: 12px; /* Smaller padding for delivery info */
-    }
-
-    .expected-delivery-info p {
-        font-size: 0.9em; /* Smaller delivery info text */
-    }
-
-    .info-grid {
-        grid-template-columns: 1fr; /* Stack grid items vertically on small screens */
-        gap: 15px; /* Adjust gap for stacked items */
-    }
-
-    .display-field {
-        padding: 8px 10px; /* Smaller padding for display fields */
-        font-size: 0.9em; /* Smaller text in display fields */
-    }
-
-    .history-item {
-        margin-bottom: 15px; /* Reduce space between history items */
-    }
-
-    .history-item:not(:last-child)::before {
-        left: 9px; /* Adjust timeline line position */
-        top: 25px;
-        bottom: -15px;
-    }
-
-    .history-icon-circle {
-        width: 20px; /* Smaller history circles */
-        height: 20px;
-        font-size: 0.8em;
-    }
-
-    .history-content {
-        margin-left: 12px; /* Adjust margin for history content */
-    }
-
-    .history-time,
-    .history-description-detailed {
-        font-size: 0.8em; /* Smaller text for history details */
-    }
-
-    .history-location {
-        font-size: 0.9em; /* Slightly smaller history location */
-    }
-
-    .fedex-footer-logo {
-        height: 30px; /* Smaller footer logo */
-        margin-top: 20px;
-    }
-}
-
-@media (max-width: 480px) {
-    /* Further adjustments for very small screens */
-    .body {
-        padding: 5px;
-    }
-
-    .main-container {
-        padding: 10px;
-        gap: 10px;
-    }
-
-    .card {
-        padding: 10px;
-    }
-
-    .tracking-header h1 {
-        font-size: 1.3em;
-    }
-
-    .track-again-btn {
-        padding: 8px;
-        font-size: 0.8em;
-    }
-
-    .fedex-logo {
-        height: 25px;
-    }
-
-    .status-line {
-        padding: 6px 10px;
-        font-size: 0.85em;
-    }
-
-    .expected-delivery-info {
-        padding: 10px;
-    }
-
-    .expected-delivery-info p {
-        font-size: 0.85em;
-    }
-
-    .info-label-small {
-        font-size: 0.75em;
-    }
-
-    .display-field {
-        padding: 6px 8px;
-        font-size: 0.85em;
-    }
-
-    .history-time,
-    .history-location,
-    .history-description-detailed {
-        font-size: 0.75em;
-    }
-
-    .history-icon-circle {
-        width: 18px;
-        height: 18px;
-        font-size: 0.7em;
-    }
-
-    .history-item:not(:last-child)::before {
-        left: 8px;
-        top: 22px;
-        bottom: -12px;
-    }
-
-    .fedex-footer-logo {
-        height: 25px;
-        margin-top: 15px;
-    }
-}
+        /* Base Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5; /* Lighter background to match screenshot */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            color: #333;
+            /* REMOVED: FedEx Logo Watermark */
+            /*
+            background-image: url('https://i.imgur.com/i342sW8.png');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: 800px;
+            background-attachment: fixed;
+            opacity: 0.1;
+            */
+        }
+
+        /* Overlay to make content readable over the watermark */
+        .main-container {
+            position: relative; /* Needed for z-index to work */
+            z-index: 1; /* Ensures content appears above the watermark */
+            width: 100%;
+            max-width: 800px; /* Wider to accommodate new layout */
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* Space between cards */
+            background-color: rgba(255, 255, 255, 0.9); /* Semi-transparent white background for readability */
+            border-radius: 8px;
+            padding: 20px; /* Added padding to the container itself for overall aesthetics */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Slightly more prominent shadow */
+        }
+
+        /* Card Styling */
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            padding: 25px; /* Consistent padding */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        /* Header Section */
+        .tracking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0; /* Adjust padding for top */
+            border-bottom: 1px solid #eee; /* Separator line */
+            margin-bottom: 20px;
+        }
+
+        .tracking-header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .tracking-header .right-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .track-again-btn {
+            background-color:rgb(159, 21, 201); /* Green button */
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: background-color 0.3s ease;
+        }
+
+        .track-again-btn:hover {
+            background-color: #45a049;
+        }
+
+        .fedex-logo {
+            height: 35px; /* Increased size for the logo in the header */
+            margin-left: 10px; /* Space from button */
+        }
+
+        /* Status & Expected Delivery Card */
+        .status-card {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .status-line {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: 600;
+            color: #fff; /* Default text color for status line */
+            /* Default background will be set by JS via data.statusColor */
+        }
+
+        /* Blinking Animation */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        .status-indicator-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            /* Background color of dot will match the statusLine's background, then adjust for visibility */
+            margin-right: 10px;
+            border: 1px solid rgba(0, 0, 0, 0.2); /* Slight border for definition */
+        }
+        /* Only apply blinking if the 'blinking' class is present */
+        .status-indicator-dot.blinking {
+            animation: blink 1s linear infinite alternate;
+        }
+
+        .status-card .section-header {
+            padding: 0; /* Remove header padding as it's part of the card */
+            background-color: transparent;
+            border-bottom: none;
+            margin-bottom: 10px;
+        }
+
+        .expected-delivery-info {
+            background-color: #f8f9fa; /* Lighter background for delivery box */
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .expected-delivery-info p {
+            margin: 0;
+            font-size: 0.95em;
+            color: #555;
+        }
+
+        .expected-delivery-info .label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Information Grid (Package, Delivery To, Special Handling) */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns */
+            gap: 20px; /* Space between grid items */
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .info-label-small {
+            font-size: 0.8em;
+            color: #777;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .display-field {
+            background-color: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 10px 12px;
+            font-size: 0.95em;
+            color: #333;
+            min-height: 20px; /* Ensure consistent height */
+            display: flex;
+            align-items: center;
+            white-space: pre-wrap; /* Allows text to wrap and respects newline characters */
+        }
+        .display-field.bold-text {
+            font-weight: 600;
+        }
+
+        /* Delivery History */
+        .delivery-history-card .section-header {
+            padding: 0;
+            background-color: transparent;
+            border-bottom: none;
+            margin-bottom: 15px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px; /* More space between history items */
+            position: relative;
+        }
+
+        .history-item:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Vertical timeline line */
+        .history-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: 11px; /* Adjust to align with icon center */
+            top: 30px; /* Start below the icon */
+            bottom: -20px; /* Extend below this item to next */
+            width: 2px;
+            background-color: #ccc;
+            z-index: 0;
+        }
+
+        .history-icon-circle {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #bbb; /* Default grey for past inactive points */
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.9em;
+            flex-shrink: 0;
+            z-index: 1; /* Above the line */
+        }
+        .history-icon-circle.green {
+            background-color: #4CAF50; /* Green for main active point / Delivered */
+        }
+        .history-icon-circle.blue {
+            background-color: #007bff; /* Blue for 'Departed' or important recent events */
+        }
+        .history-icon-circle.red {
+            background-color: #DC3545; /* Red for 'Held' or exception events */
+        }
+
+
+        .history-content {
+            margin-left: 15px;
+            flex-grow: 1;
+        }
+
+        .history-time {
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 3px;
+        }
+
+        .history-location {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .history-description-detailed {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        /* FedEx Footer Logo */
+        .fedex-footer-logo {
+            display: block;
+            margin-top: 30px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 35px; /* Adjust size as needed */
+        }
     </style>
 </head>
 <body>
