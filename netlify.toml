@@ -1,0 +1,10 @@
+# netlify.toml
+[build]
+    publish = "public"      # Netlify will deploy the contents of your 'public' folder
+    functions = "netlify/functions" # This is where your serverless functions are located
+
+[[redirects]]
+    from = "/api/*"
+    to = "/.netlify/functions/api/:splat" # Routes all /api requests to your Express API function
+    status = 200
+    force = true
