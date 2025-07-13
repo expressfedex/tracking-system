@@ -146,16 +146,32 @@ const authenticateAdmin = (req, res, next) => {
 // --- User Authentication Routes ---
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
+
+    // --- ADD THESE CONSOLE.LOGS ---
+    console.log('Login attempt for username:', username);
+    // console.log('Password received (DO NOT LOG IN PRODUCTION):', password); // ONLY FOR DEBUGGING, REMOVE LATER!
+    // --- END ADDED LOGS ---
+
     try {
         const user = await User.findOne({ username });
+
+        // --- ADD THIS CONSOLE.LOG ---
         if (!user) {
+            console.log('User not found for username:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
         }
+        console.log('User found:', user.username); // User was found
+        // --- END ADDED LOGS ---
 
         const isMatch = await bcrypt.compare(password, user.password);
+
+        // --- ADD THESE CONSOLE.LOGS ---
+        console.log('Password comparison result (isMatch):', isMatch);
         if (!isMatch) {
+            console.log('Password mismatch for user:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
         }
+        // --- END ADDED LOGS ---
 
         const token = jwt.sign(
             { id: user._id, username: user.username, role: user.role },
