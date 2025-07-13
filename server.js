@@ -182,7 +182,7 @@ app.get('/api/track/:trackingId', async (req, res) => { // CHANGED: Added /api
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            ])),
+        })),
             attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
             lastUpdated: trackingDetails.lastUpdated
         };
