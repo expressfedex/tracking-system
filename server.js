@@ -49,7 +49,7 @@ const TrackingSchema = new mongoose.Schema({
     expectedDelivery: { type: Date },
     senderName: { type: String, default: '' },
     recipientName: { type: String, default: '' },
-    recipientEmail: { type: String, default: '' }, // Added recipientEmail field
+    // recipientEmail: { type: String, default: '' }, // REMOVED: Recipient Email field
     packageContents: { type: String, default: '' },
     serviceType: { type: String, default: '' },
     recipientAddress: { type: String, default: '' },
@@ -99,7 +99,7 @@ async function populateInitialData() {
             expectedDelivery: new Date('2025-07-13T00:00:00Z'),
             senderName: 'UNDEF Program',
             recipientName: 'David R Fox',
-            recipientEmail: 'mistycpayne@gmail.com', // Added recipient email for initial data
+            // recipientEmail: 'mistycpayne@gmail.com', // REMOVED: Recipient email from initial data
             packageContents: '$250,000 USD',
             serviceType: 'Express',
             recipientAddress: 'Hollywood, Barangay Narvarte, Nibaliw west. San Fabian, Pangasinan, Philippines ,2433.',
@@ -161,7 +161,7 @@ app.get('/api/track/:trackingId', async (req, res) => {
             return res.status(404).json({ message: 'Tracking ID not found.' });
         }
 
-        // Return only necessary public details, don't expose sensitive info like recipientEmail to public
+        // Return only necessary public details, NO sensitive info like recipientEmail
         const publicDetails = {
             trackingId: trackingDetails.trackingId,
             status: trackingDetails.status,
@@ -200,7 +200,8 @@ app.get('/api/track/:trackingId', async (req, res) => {
 app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
         console.log('Received GET /api/admin/trackings request.'); // For debugging
-        const trackings = await Tracking.find({}); // Fetch all tracking documents
+        // Use .select('-recipientEmail') to explicitly exclude the field from the results
+        const trackings = await Tracking.find({}).select('-recipientEmail');
         res.json(trackings);
     } catch (error) {
         console.error('Error fetching all trackings for admin:', error);
@@ -214,7 +215,8 @@ app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         const { id } = req.params;
         console.log(`Received GET /api/admin/trackings/${id} request.`); // For debugging
 
-        const tracking = await Tracking.findById(id);
+        // Use .select('-recipientEmail') to explicitly exclude the field from the result
+        const tracking = await Tracking.findById(id).select('-recipientEmail');
 
         if (!tracking) {
             return res.status(404).json({ message: 'Tracking record not found.' });
@@ -269,7 +271,7 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             expectedDelivery,
             senderName,
             recipientName,
-            recipientEmail,
+            // recipientEmail, // REMOVED from payload destructuring to prevent even accidental capture
             packageContents,
             serviceType,
             recipientAddress,
@@ -300,7 +302,7 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             expectedDelivery: expectedDelivery ? new Date(expectedDelivery) : undefined, // Convert to Date object
             senderName,
             recipientName,
-            recipientEmail,
+            // recipientEmail: recipientEmail, // REMOVED from new Tracking object creation
             packageContents,
             serviceType,
             recipientAddress,
@@ -415,6 +417,11 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 
         Object.keys(updateData).forEach(key => {
             if (key === 'trackingId' || key === 'history' || key === '_id' || key === '__v' || updateData[key] === undefined) {
+                return;
+            }
+            // Block updating recipientEmail if it's sent in the payload for this PUT route
+            if (key === 'recipientEmail') { // REMOVED: Block recipientEmail update
+                console.warn('Attempt to update recipientEmail via PUT /api/admin/trackings/:id ignored.');
                 return;
             }
 
