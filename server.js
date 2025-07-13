@@ -152,7 +152,8 @@ const authenticateAdmin = (req, res, next) => {
 // --- API Routes ---
 
 // Public endpoint to get tracking details
-app.get('/api/track/:trackingId', async (req, res) => {
+// Changed from '/api/track/:trackingId' to '/track/:trackingId'
+app.get('/track/:trackingId', async (req, res) => {
     try {
         const trackingId = req.params.trackingId;
         const trackingDetails = await Tracking.findOne({ trackingId: trackingId });
@@ -182,7 +183,7 @@ app.get('/api/track/:trackingId', async (req, res) => {
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            })),
+            ])),
             attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
             lastUpdated: trackingDetails.lastUpdated
         };
@@ -197,9 +198,10 @@ app.get('/api/track/:trackingId', async (req, res) => {
 
 
 // Admin Route: Get all tracking records
-app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/trackings' to '/admin/trackings'
+app.get('/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
-        console.log('Received GET /api/admin/trackings request.'); // For debugging
+        console.log('Received GET /admin/trackings request.'); // For debugging
         // Use .select('-recipientEmail') to explicitly exclude the field from the results
         const trackings = await Tracking.find({}).select('-recipientEmail');
         res.json(trackings);
@@ -210,10 +212,11 @@ app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
 });
 
 // Admin Route: Get a single tracking record by ID
-app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/trackings/:id' to '/admin/trackings/:id'
+app.get('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`Received GET /api/admin/trackings/${id} request.`); // For debugging
+        console.log(`Received GET /admin/trackings/${id} request.`); // For debugging
 
         // Use .select('-recipientEmail') to explicitly exclude the field from the result
         const tracking = await Tracking.findById(id).select('-recipientEmail');
@@ -233,9 +236,10 @@ app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 });
 
 // Admin Route: Get dashboard statistics
-app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/dashboard-stats' to '/admin/dashboard-stats'
+app.get('/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
     try {
-        console.log('Received GET /api/admin/dashboard-stats request.');
+        console.log('Received GET /admin/dashboard-stats request.');
         const totalTrackings = await Tracking.countDocuments({});
         const deliveredTrackings = await Tracking.countDocuments({ status: 'Delivered' });
         const inTransitTrackings = await Tracking.countDocuments({
@@ -257,9 +261,10 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
 });
 
 // POST /api/admin/trackings - Create a new tracking record (Admin only)
-app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/trackings' to '/admin/trackings'
+app.post('/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
-        console.log('Received POST /api/admin/trackings request.');
+        console.log('Received POST /admin/trackings request.');
         const {
             trackingId,
             status,
@@ -327,7 +332,8 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
 
 
 // Edit a specific history event
-app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/trackings/:id/history/:historyId' to '/admin/trackings/:id/history/:historyId'
+app.put('/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
     const { date, time, location, description } = req.body;
 
@@ -393,7 +399,8 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
-app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/trackings/:id' to '/admin/trackings/:id'
+app.put('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
@@ -484,7 +491,8 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 
 
 // Delete a specific history event by _id
-app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/trackings/:id/history/:historyId' to '/admin/trackings/:id/history/:historyId'
+app.delete('/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
 
     try {
@@ -514,7 +522,8 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
 
 
 // Delete an entire tracking record
-app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
+// Changed from '/api/admin/trackings/:id' to '/admin/trackings/:id'
+app.delete('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         const trackingToDelete = await Tracking.findById(id);
@@ -551,7 +560,8 @@ app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 // --- Initial User Creation ---
 // IMPORTANT: This route should be protected or removed after initial admin user creation in a production environment.
 // For initial setup, you might run it once and then remove/protect it.
-app.post('/api/admin/create-user', async (req, res) => {
+// Changed from '/api/admin/create-user' to '/admin/create-user'
+app.post('/admin/create-user', async (req, res) => {
     const { username, password, role } = req.body;
     try {
         const existingUser = await User.findOne({ username });
@@ -569,6 +579,35 @@ app.post('/api/admin/create-user', async (req, res) => {
     } catch (error) {
         console.error('Error creating user:', error);
         res.status(500).json({ message: 'Error creating user.' });
+    }
+});
+
+// User Login (Public Endpoint)
+// Changed from '/api/login' to '/login'
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials.' });
+        }
+
+        // Generate JWT
+        const token = jwt.sign(
+            { id: user._id, username: user.username, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' } // Token expires in 1 hour
+        );
+
+        res.json({ message: 'Login successful!', token, role: user.role });
+    } catch (error) {
+        console.error('Error during login:', error);
+        res.status(500).json({ message: 'Server error during login.' });
     }
 });
 
