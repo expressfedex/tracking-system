@@ -196,7 +196,7 @@ app.get('/api/track/:trackingId', async (req, res) => {
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            ])),
+        })),
             attachedFileName: trackingDetails.attachedFileName,
             lastUpdated: trackingDetails.lastUpdated
         };
