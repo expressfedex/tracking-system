@@ -182,7 +182,7 @@ app.get('/api/track/:trackingId', async (req, res) => { // CHANGED: Added /api
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            })),
+            ])),
             attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
             lastUpdated: trackingDetails.lastUpdated
         };
@@ -639,20 +639,27 @@ app.post('/api/admin/create-user', async (req, res) => { // CHANGED: Added /api
 });
 
 // User Login (Public Endpoint)
-app.post('/api/login', async (req, res) => { // CHANGED: Added /api
-    console.log('--- RECEIVED LOGIN REQUEST ---'); // ADDED LOG
-    console.log('Request body:', req.body); // ADDED LOG
+app.post('/api/login', async (req, res) => {
+    console.log('--- RECEIVED LOGIN REQUEST ---');
+    console.log('Request body (raw):', req.body); // Keep this to see the buffer
+    console.log('Type of req.body:', typeof req.body);
+    console.log('Is req.body an object and not null?', typeof req.body === 'object' && req.body !== null);
+    
     const { username, password } = req.body;
+
+    console.log('Extracted username:', username);
+    console.log('Extracted password (first few chars):', password ? password.substring(0, 5) + '...' : 'null/undefined');
+
     try {
         const user = await User.findOne({ username });
         if (!user) {
-            console.log('Login failed: User not found for username:', username); // ADDED LOG
+            console.log('Login failed: User not found for username:', username);
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            console.log('Login failed: Password mismatch for user:', username); // ADDED LOG
+            console.log('Login failed: Password mismatch for user:', username);
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
@@ -663,10 +670,10 @@ app.post('/api/login', async (req, res) => { // CHANGED: Added /api
             { expiresIn: '1h' }
         );
 
-        console.log('Login successful for user:', username, 'Role:', user.role); // ADDED LOG
+        console.log('Login successful for user:', username, 'Role:', user.role);
         res.json({ message: 'Login successful!', token, role: user.role });
     } catch (error) {
-        console.error('Error during login route execution:', error); // MODIFIED LOG MESSAGE
+        console.error('Error during login route execution:', error);
         res.status(500).json({ message: 'Server error during login.' });
     }
 });
