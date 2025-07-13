@@ -6,7 +6,7 @@ require('dotenv').config(); // Good for local development/testing
 
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser'); // Keep this require if you use bodyParser for other things, like urlencoded
+// const bodyParser = require('body-parser'); // REMOVED: express.json() and express.urlencoded() are sufficient
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
@@ -150,14 +150,73 @@ const authenticateAdmin = (req, res, next) => {
 };
 
 
-// --- User Authentication Routes ---
+// --- API Routes ---
+
+// Public endpoint to get tracking details
+app.get('/api/track/:trackingId', async (req, res) => {
+    try {
+        const trackingId = req.params.trackingId;
+        const trackingDetails = await Tracking.findOne({ trackingId: trackingId });
+
+        if (!trackingDetails) {
+            return res.status(404).json({ message: 'Tracking ID not found.' });
+        }
+
+        // Return only necessary public details, don't expose sensitive info like recipientEmail to public
+        const publicDetails = {
+            trackingId: trackingDetails.trackingId,
+            status: trackingDetails.status,
+            statusLineColor: trackingDetails.statusLineColor,
+            blinkingDotColor: trackingDetails.blinkingDotColor,
+            isBlinking: trackingDetails.isBlinking,
+            origin: trackingDetails.origin,
+            destination: trackingDetails.destination,
+            expectedDelivery: trackingDetails.expectedDelivery,
+            senderName: trackingDetails.senderName,
+            recipientName: trackingDetails.recipientName,
+            packageContents: trackingDetails.packageContents,
+            serviceType: trackingDetails.serviceType,
+            recipientAddress: trackingDetails.recipientAddress,
+            specialHandling: trackingDetails.specialHandling,
+            weight: trackingDetails.weight,
+            history: trackingDetails.history.map(item => ({
+                timestamp: item.timestamp,
+                location: item.location,
+                description: item.description,
+            })),
+            attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
+            lastUpdated: trackingDetails.lastUpdated
+        };
+
+        res.json(publicDetails);
+
+    } catch (error) {
+        console.error('Error fetching public tracking details:', error);
+        res.status(500).json({ message: 'Server error while fetching tracking details.' });
+    }
+});
+
+
+// Admin Route: Get all tracking records
+app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
+    try {
+        console.log('Received GET /api/admin/trackings request.'); // For debugging
+        const trackings = await Tracking.find({}); // Fetch all tracking documents
+        res.json(trackings);
+    } catch (error) {
+        console.error('Error fetching all trackings for admin:', error);
+        res.status(500).json({ message: 'Server error while fetching all trackings.', error: error.message });
+    }
+});
+
+// User Authentication Route
 app.post('/api/login', async (req, res) => {
-    // --- START LOGIN REQUEST DEBUGGING ---
-    console.log('Received login request. Full request object (DEBUG):', req);
-    console.log('Received login request. Headers:', req.headers);
-    console.log('Received login request. Raw Body from Netlify (if available):', req.rawBody);
-    console.log('Received login request. Parsed Body (as Buffer/string from Netlify):', req.body);
-    console.log('--- END LOGIN REQUEST DEBUGGING ---');
+    // --- REMOVED: Extensive LOGIN REQUEST DEBUGGING for production readiness ---
+    // console.log('Received login request. Full request object (DEBUG):', req);
+    // console.log('Received login request. Headers:', req.headers);
+    // console.log('Received login request. Raw Body from Netlify (if available):', req.rawBody);
+    // console.log('Received login request. Parsed Body (as Buffer/string from Netlify):', req.body);
+    // --- END LOGIN REQUEST DEBUGGING ---
 
     let parsedBody;
     try {
@@ -189,7 +248,7 @@ app.post('/api/login', async (req, res) => {
     // Now, destructure username and password from the correctly parsed object
     const { username, password } = parsedBody;
 
-    console.log('Login attempt for username (after custom parsing):', username);
+    // console.log('Login attempt for username (after custom parsing):', username); // Keep only essential logs
     // console.log('Password received (DO NOT LOG IN PRODUCTION):', password); // Remove this line in production!
 
     try {
@@ -199,11 +258,11 @@ app.post('/api/login', async (req, res) => {
             console.log('User not found for username:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
         }
-        console.log('User found:', user.username);
+        // console.log('User found:', user.username); // Keep only essential logs
 
         const isMatch = await bcrypt.compare(password, user.password);
 
-        console.log('Password comparison result (isMatch):', isMatch);
+        // console.log('Password comparison result (isMatch):', isMatch); // Keep only essential logs
         if (!isMatch) {
             console.log('Password mismatch for user:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
