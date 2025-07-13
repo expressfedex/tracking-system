@@ -25,6 +25,13 @@ app.use(cors());
 // Keep this if you need to parse URL-encoded bodies (e.g., from HTML forms that aren't JSON)
 app.use(express.urlencoded({ extended: true }));
 
+// --- Add this generic logging middleware ---
+app.use((req, res, next) => {
+    console.log(`[Express Debug] ${req.method} ${req.url}`);
+    next();
+});
+// --- End of generic logging middleware ---
+
 // --- Mongoose Schemas and Models ---
 
 const trackingHistorySchema = new mongoose.Schema({
@@ -145,8 +152,7 @@ const authenticateAdmin = (req, res, next) => {
 // --- API Routes ---
 
 // Public endpoint to get tracking details
-// Changed from '/api/track/:trackingId' to '/track/:trackingId'
-app.get('/track/:trackingId', async (req, res) => {
+app.get('/api/track/:trackingId', async (req, res) => { // CHANGED: Added /api
     try {
         const trackingId = req.params.trackingId;
         const trackingDetails = await Tracking.findOne({ trackingId: trackingId });
@@ -191,10 +197,9 @@ app.get('/track/:trackingId', async (req, res) => {
 
 
 // Admin Route: Get all tracking records
-// Changed from '/api/admin/trackings' to '/admin/trackings'
-app.get('/admin/trackings', authenticateAdmin, async (req, res) => {
+app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     try {
-        console.log('Received GET /admin/trackings request.'); // For debugging
+        console.log('Received GET /api/admin/trackings request.'); // For debugging
         // Use .select('-recipientEmail') to explicitly exclude the field from the results
         const trackings = await Tracking.find({}).select('-recipientEmail');
         res.json(trackings);
@@ -205,11 +210,10 @@ app.get('/admin/trackings', authenticateAdmin, async (req, res) => {
 });
 
 // Admin Route: Get a single tracking record by ID
-// Changed from '/api/admin/trackings/:id' to '/admin/trackings/:id'
-app.get('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
+app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     try {
         const { id } = req.params;
-        console.log(`Received GET /admin/trackings/${id} request.`); // For debugging
+        console.log(`Received GET /api/admin/trackings/${id} request.`); // For debugging
 
         // Use .select('-recipientEmail') to explicitly exclude the field from the result
         const tracking = await Tracking.findById(id).select('-recipientEmail');
@@ -229,10 +233,9 @@ app.get('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 });
 
 // Admin Route: Get dashboard statistics
-// Changed from '/api/admin/dashboard-stats' to '/admin/dashboard-stats'
-app.get('/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
+app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     try {
-        console.log('Received GET /admin/dashboard-stats request.');
+        console.log('Received GET /api/admin/dashboard-stats request.');
         const totalTrackings = await Tracking.countDocuments({});
         const deliveredTrackings = await Tracking.countDocuments({ status: 'Delivered' });
         const inTransitTrackings = await Tracking.countDocuments({
@@ -254,10 +257,9 @@ app.get('/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
 });
 
 // POST /admin/trackings - Create a new tracking record (Admin only)
-// Changed from '/api/admin/trackings' to '/admin/trackings'
-app.post('/admin/trackings', authenticateAdmin, async (req, res) => {
+app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     try {
-        console.log('Received POST /admin/trackings request.');
+        console.log('Received POST /api/admin/trackings request.');
         const {
             trackingId,
             status,
@@ -360,8 +362,7 @@ function parseTimeWithAmPm(timeStr) {
 
 
 // Edit a specific history event
-// Changed from '/api/admin/trackings/:id/history/:historyId' to '/admin/trackings/:id/history/:historyId'
-app.put('/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
+app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     const { id, historyId } = req.params;
     const { date, time, location, description } = req.body;
 
@@ -439,8 +440,7 @@ app.put('/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req
 
 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
-// Changed from '/api/admin/trackings/:id' to '/admin/trackings/:id'
-app.put('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
+app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     const { id } = req.params;
     const updateData = req.body;
 
@@ -550,8 +550,7 @@ app.put('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 
 
 // Delete a specific history event by _id
-// Changed from '/api/admin/trackings/:id/history/:historyId' to '/admin/trackings/:id/history/:historyId'
-app.delete('/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
+app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     const { id, historyId } = req.params;
 
     try {
@@ -581,8 +580,7 @@ app.delete('/admin/trackings/:id/history/:historyId', authenticateAdmin, async (
 
 
 // Delete an entire tracking record
-// Changed from '/api/admin/trackings/:id' to '/admin/trackings/:id'
-app.delete('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
+app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
     const { id } = req.params;
     try {
         const trackingToDelete = await Tracking.findById(id);
@@ -619,8 +617,7 @@ app.delete('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 // --- Initial User Creation ---
 // IMPORTANT: This route should be protected or removed after initial admin user creation in a production environment.
 // For initial setup, you might run it once and then remove/protect it.
-// Changed from '/api/admin/create-user' to '/admin/create-user'
-app.post('/admin/create-user', async (req, res) => {
+app.post('/api/admin/create-user', async (req, res) => { // CHANGED: Added /api
     const { username, password, role } = req.body;
     try {
         const existingUser = await User.findOne({ username });
@@ -642,7 +639,7 @@ app.post('/admin/create-user', async (req, res) => {
 });
 
 // User Login (Public Endpoint)
-app.post('/login', async (req, res) => {
+app.post('/api/login', async (req, res) => { // CHANGED: Added /api
     console.log('--- RECEIVED LOGIN REQUEST ---'); // ADDED LOG
     console.log('Request body:', req.body); // ADDED LOG
     const { username, password } = req.body;
