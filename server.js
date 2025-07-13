@@ -157,29 +157,29 @@ app.get('/track/:trackingId', async (req, res) => {
 
         // Return only necessary public details, NO sensitive info like recipientEmail
         const publicDetails = {
-            trackingId: trackingDetails.trackingId,
-            status: trackingDetails.status,
-            statusLineColor: trackingDetails.statusLineColor,
-            blinkingDotColor: trackingDetails.blinkingDotColor,
-            isBlinking: trackingDetails.isBlinking,
-            origin: trackingDetails.origin,
-            destination: trackingDetails.destination,
-            expectedDelivery: trackingDetails.expectedDelivery,
-            senderName: trackingDetails.senderName,
-            recipientName: trackingDetails.recipientName,
-            packageContents: trackingDetails.packageContents,
-            serviceType: trackingDetails.serviceType,
-            recipientAddress: trackingDetails.recipientAddress,
-            specialHandling: trackingDetails.specialHandling,
-            weight: trackingDetails.weight,
-            history: trackingDetails.history.map(item => ({
-                timestamp: item.timestamp,
-                location: item.location,
-                description: item.description,
-            })), // FIXED: Removed the extra '])' here <-- This comment indicates a fix was applied
-            attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
-            lastUpdated: trackingDetails.lastUpdated
-        };
+            trackingId: trackingDetails.trackingId,
+            status: trackingDetails.status,
+            statusLineColor: trackingDetails.statusLineColor,
+            blinkingDotColor: trackingDetails.blinkingDotColor,
+            isBlinking: trackingDetails.isBlinking,
+            origin: trackingDetails.origin,
+            destination: trackingDetails.destination,
+            expectedDelivery: trackingDetails.expectedDelivery,
+            senderName: trackingDetails.senderName,
+            recipientName: trackingDetails.recipientName,
+            packageContents: trackingDetails.packageContents,
+            serviceType: trackingDetails.serviceType,
+            recipientAddress: trackingDetails.recipientAddress,
+            specialHandling: trackingDetails.specialHandling,
+            weight: trackingDetails.weight,
+            history: trackingDetails.history.map(item => ({
+                timestamp: item.timestamp,
+                location: item.location,
+                description: item.description,
+            })),
+            attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
+            lastUpdated: trackingDetails.lastUpdated
+        };
 
         res.json(publicDetails);
 
@@ -467,7 +467,7 @@ app.put('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                 return;
             }
             // Block updating recipientEmail if it's sent in the payload for this PUT route
-            if (key === 'recipientEmail') { // REMOVED: Block recipientEmail update
+            if (key === 'recipientEmail') {
                 console.warn('Attempt to update recipientEmail via PUT /api/admin/trackings/:id ignored.');
                 return;
             }
@@ -642,17 +642,20 @@ app.post('/admin/create-user', async (req, res) => {
 });
 
 // User Login (Public Endpoint)
-// Changed from '/api/login' to '/login'
 app.post('/login', async (req, res) => {
+    console.log('--- RECEIVED LOGIN REQUEST ---'); // ADDED LOG
+    console.log('Request body:', req.body); // ADDED LOG
     const { username, password } = req.body;
     try {
         const user = await User.findOne({ username });
         if (!user) {
+            console.log('Login failed: User not found for username:', username); // ADDED LOG
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log('Login failed: Password mismatch for user:', username); // ADDED LOG
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
@@ -660,12 +663,13 @@ app.post('/login', async (req, res) => {
         const token = jwt.sign(
             { id: user._id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' } // Token expires in 1 hour
+            { expiresIn: '1h' }
         );
 
+        console.log('Login successful for user:', username, 'Role:', user.role); // ADDED LOG
         res.json({ message: 'Login successful!', token, role: user.role });
     } catch (error) {
-        console.error('Error during login:', error);
+        console.error('Error during login route execution:', error); // MODIFIED LOG MESSAGE
         res.status(500).json({ message: 'Server error during login.' });
     }
 });
