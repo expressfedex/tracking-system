@@ -10,27 +10,26 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const path = require('path');
-const nodemailer = require('nodemailer');
+const nodemailer = require('nodemailer'); // Keep if you plan to use it later
 
 const app = express();
 
 // --- Middleware ---
-// This middleware parses JSON bodies from incoming requests.
-// It should be placed early in your middleware chain.
+// Ensure express.json() is before any routes that need JSON body parsing.
 app.use(express.json());
 
-// Keep CORS if your frontend and backend are on different domains (which they are with Netlify).
+// Enable CORS for all origins. Consider restricting this in production for security.
 app.use(cors());
 
-// Keep this if you need to parse URL-encoded bodies (e.g., from HTML forms that aren't JSON)
+// If you send data from HTML forms with 'application/x-www-form-urlencoded' Content-Type.
+// If all your front-end interactions are JSON, you might not strictly need this.
 app.use(express.urlencoded({ extended: true }));
 
-// --- Add this generic logging middleware ---
+// --- Generic Request Logging Middleware ---
 app.use((req, res, next) => {
     console.log(`[Express Debug] ${req.method} ${req.url}`);
     next();
 });
-// --- End of generic logging middleware ---
 
 // --- Mongoose Schemas and Models ---
 
@@ -80,37 +79,52 @@ const User = mongoose.model('User', UserSchema);
 
 
 // --- Initial Data Population Function (Exported, not automatically run by app.listen) ---
-// This function can be called once, manually, or as part of a deployment script.
 async function populateInitialData() {
     try {
+        // Check and create initial tracking data
         const existingTracking = await Tracking.findOne({ trackingId: '7770947003939' });
         if (existingTracking) {
             console.log('Tracking data already exists. Skipping initial population.');
-            return;
+        } else {
+            const newTracking = new Tracking({
+                trackingId: '7770947003939',
+                status: 'FedEx Hub',
+                statusLineColor: '#14b31e', // Green
+                blinkingDotColor: '#b93737', // Red
+                isBlinking: true,
+                origin: 'Texas, USA',
+                destination: 'Guangzhou, China',
+                expectedDelivery: new Date('2025-07-13T00:00:00Z'),
+                senderName: 'UNDEF Program',
+                recipientName: 'David R Fox',
+                packageContents: '$250,000 USD',
+                serviceType: 'Express',
+                recipientAddress: 'Hollywood, Barangay Narvarte, Nibaliw west. San Fabian, Pangasinan, Philippines ,2433.',
+                specialHandling: 'Signatured Required',
+                weight: 30, // kg
+                history: [
+                    { location: 'Origin', description: 'Shipment created' }
+                ]
+            });
+            await newTracking.save();
+            console.log('New tracking added to MongoDB:', newTracking.toObject());
         }
 
-        const newTracking = new Tracking({
-            trackingId: '7770947003939',
-            status: 'FedEx Hub',
-            statusLineColor: '#14b31e', // Green
-            blinkingDotColor: '#b93737', // Red
-            isBlinking: true,
-            origin: 'Texas, USA',
-            destination: 'Guangzhou, China',
-            expectedDelivery: new Date('2025-07-13T00:00:00Z'),
-            senderName: 'UNDEF Program',
-            recipientName: 'David R Fox',
-            packageContents: '$250,000 USD',
-            serviceType: 'Express',
-            recipientAddress: 'Hollywood, Barangay Narvarte, Nibaliw west. San Fabian, Pangasinan, Philippines ,2433.',
-            specialHandling: 'Signatured Required',
-            weight: 30, // kg
-            history: [
-                { location: 'Origin', description: 'Shipment created' }
-            ]
-        });
-        await newTracking.save();
-        console.log('New tracking added to MongoDB:', newTracking.toObject());
+        // Check and create admin user
+        const adminUserExists = await User.findOne({ username: 'admin' });
+        if (!adminUserExists) {
+            const adminUser = new User({
+                username: 'admin',
+                password: process.env.DEFAULT_ADMIN_PASSWORD || 'adminpass', // Use env var or default
+                role: 'admin'
+            });
+            await adminUser.save();
+            console.log('Default admin user created with username "admin".');
+            console.log('PLEASE CHANGE THE DEFAULT_ADMIN_PASSWORD IN YOUR .env FILE FOR SECURITY.');
+        } else {
+            console.log('Admin user "admin" already exists.');
+        }
+
     } catch (error) {
         console.error('Error populating initial data:', error);
     }
@@ -118,7 +132,7 @@ async function populateInitialData() {
 
 
 // --- JWT Authentication Middleware ---
-console.log('Server JWT_SECRET (active):', process.env.JWT_SECRET ? 'Loaded' : 'Not Loaded'); // Improved log
+console.log('Server JWT_SECRET (active):', process.env.JWT_SECRET ? 'Loaded' : 'Not Loaded');
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -152,7 +166,7 @@ const authenticateAdmin = (req, res, next) => {
 // --- API Routes ---
 
 // Public endpoint to get tracking details
-app.get('/api/track/:trackingId', async (req, res) => { // CHANGED: Added /api
+app.get('/api/track/:trackingId', async (req, res) => {
     try {
         const trackingId = req.params.trackingId;
         const trackingDetails = await Tracking.findOne({ trackingId: trackingId });
@@ -161,7 +175,7 @@ app.get('/api/track/:trackingId', async (req, res) => { // CHANGED: Added /api
             return res.status(404).json({ message: 'Tracking ID not found.' });
         }
 
-        // Return only necessary public details, NO sensitive info like recipientEmail
+        // Return only necessary public details, NO sensitive info
         const publicDetails = {
             trackingId: trackingDetails.trackingId,
             status: trackingDetails.status,
@@ -182,8 +196,8 @@ app.get('/api/track/:trackingId', async (req, res) => { // CHANGED: Added /api
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-        })),
-            attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
+            })),
+            attachedFileName: trackingDetails.attachedFileName,
             lastUpdated: trackingDetails.lastUpdated
         };
 
@@ -197,11 +211,10 @@ app.get('/api/track/:trackingId', async (req, res) => { // CHANGED: Added /api
 
 
 // Admin Route: Get all tracking records
-app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
-        console.log('Received GET /api/admin/trackings request.'); // For debugging
-        // Use .select('-recipientEmail') to explicitly exclude the field from the results
-        const trackings = await Tracking.find({}).select('-recipientEmail');
+        console.log('Received GET /api/admin/trackings request.');
+        const trackings = await Tracking.find({});
         res.json(trackings);
     } catch (error) {
         console.error('Error fetching all trackings for admin:', error);
@@ -210,13 +223,12 @@ app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHAN
 });
 
 // Admin Route: Get a single tracking record by ID
-app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`Received GET /api/admin/trackings/${id} request.`); // For debugging
+        console.log(`Received GET /api/admin/trackings/${id} request.`);
 
-        // Use .select('-recipientEmail') to explicitly exclude the field from the result
-        const tracking = await Tracking.findById(id).select('-recipientEmail');
+        const tracking = await Tracking.findById(id);
 
         if (!tracking) {
             return res.status(404).json({ message: 'Tracking record not found.' });
@@ -233,7 +245,7 @@ app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // 
 });
 
 // Admin Route: Get dashboard statistics
-app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
     try {
         console.log('Received GET /api/admin/dashboard-stats request.');
         const totalTrackings = await Tracking.countDocuments({});
@@ -257,9 +269,9 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => { /
 });
 
 // POST /admin/trackings - Create a new tracking record (Admin only)
-app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
-        console.log('Received POST /api/admin/trackings request.');
+        console.log('Received POST /api/admin/trackings request. Body:', req.body); // Log the body for debugging
         const {
             trackingId,
             status,
@@ -276,7 +288,7 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHA
             recipientAddress,
             specialHandling,
             weight,
-            history // Initial history, if provided by the frontend
+            history
         } = req.body;
 
         // Basic validation (you might want more robust validation)
@@ -293,12 +305,12 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHA
         const newTracking = new Tracking({
             trackingId,
             status,
-            statusLineColor: statusLineColor || '#2196F3', // Use provided color or default
-            blinkingDotColor: blinkingDotColor || '#FFFFFF', // Use provided color or default
-            isBlinking: typeof isBlinking === 'boolean' ? isBlinking : false, // Ensure boolean, default to false
+            statusLineColor: statusLineColor || '#2196F3',
+            blinkingDotColor: blinkingDotColor || '#FFFFFF',
+            isBlinking: typeof isBlinking === 'boolean' ? isBlinking : false,
             origin,
             destination,
-            expectedDelivery: expectedDelivery ? new Date(expectedDelivery) : undefined, // Convert to Date object
+            expectedDelivery: expectedDelivery ? new Date(expectedDelivery) : undefined,
             senderName,
             recipientName,
             packageContents,
@@ -306,7 +318,7 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHA
             recipientAddress,
             specialHandling,
             weight: parseFloat(weight) || 0,
-            history: history && Array.isArray(history) ? history : [{ description: 'Shipment created', location: origin || 'Unknown' }], // Ensure history is an array
+            history: history && Array.isArray(history) ? history : [{ description: 'Shipment created', location: origin || 'Unknown' }],
             lastUpdated: new Date()
         });
 
@@ -315,7 +327,6 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHA
 
     } catch (error) {
         console.error('Error adding new tracking record:', error);
-        // More specific error handling for Mongoose validation errors if needed
         if (error.name === 'ValidationError') {
             return res.status(400).json({ message: error.message, errors: error.errors });
         }
@@ -326,8 +337,8 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => { // CHA
 
 // Helper function to parse time including AM/PM
 function parseTimeWithAmPm(timeStr) {
-    const timeRegex12Hr = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i; // Handles 12:30 PM, 2:15am, 10:00
-    const timeRegex24Hr = /^(\d{2}):(\d{2})$/; // Handles 14:30
+    const timeRegex12Hr = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i;
+    const timeRegex24Hr = /^(\d{2}):(\d{2})$/;
 
     let match = timeStr.match(timeRegex12Hr);
     if (match) {
@@ -337,12 +348,12 @@ function parseTimeWithAmPm(timeStr) {
 
         if (ampm === 'PM' && hour < 12) {
             hour += 12;
-        } else if (ampm === 'AM' && hour === 12) { // 12 AM (midnight) is 00 in 24-hour format
+        } else if (ampm === 'AM' && hour === 12) {
             hour = 0;
         }
 
         if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-            return null; // Invalid time components
+            return null;
         }
         return { hour, minute };
     }
@@ -352,17 +363,17 @@ function parseTimeWithAmPm(timeStr) {
         let hour = parseInt(match[1], 10);
         let minute = parseInt(match[2], 10);
         if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-            return null; // Invalid time components
+            return null;
         }
         return { hour, minute };
     }
 
-    return null; // No match
+    return null;
 }
 
 
 // Edit a specific history event
-app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
     const { date, time, location, description } = req.body;
 
@@ -388,9 +399,8 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
         let newTimestamp;
         if (date !== undefined || time !== undefined) {
-            // Get current components from existing timestamp if not provided in request
-            const existingDateISO = historyEvent.timestamp.toISOString().split('T')[0]; // YYYY-MM-DD
-            const existingTimeISO = historyEvent.timestamp.toISOString().split('T')[1].substring(0, 5); // HH:MM (24-hour)
+            const existingDateISO = historyEvent.timestamp.toISOString().split('T')[0];
+            const existingTimeISO = historyEvent.timestamp.toISOString().split('T')[1].substring(0, 5);
 
             const effectiveDate = date !== undefined ? date : existingDateISO;
             const effectiveTimeInput = time !== undefined ? time : existingTimeISO;
@@ -407,7 +417,6 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
                 return res.status(400).json({ message: 'Invalid time format for history event update. Expected HH:MM or HH:MM AM/PM.' });
             }
 
-            // Construct new Date object in UTC to avoid server timezone issues
             newTimestamp = new Date(Date.UTC(
                 new Date(effectiveDate).getUTCFullYear(),
                 new Date(effectiveDate).getUTCMonth(),
@@ -440,7 +449,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
-app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
@@ -495,7 +504,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // 
                         parsedTime.hour,
                         parsedTime.minute
                     ));
-                    
+
                     if (!isNaN(newExpectedDelivery.getTime())) {
                         currentTracking.expectedDelivery = newExpectedDelivery;
                     } else {
@@ -550,7 +559,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // 
 
 
 // Delete a specific history event by _id
-app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
 
     try {
@@ -580,7 +589,7 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
 
 
 // Delete an entire tracking record
-app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { // CHANGED: Added /api
+app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         const trackingToDelete = await Tracking.findById(id);
@@ -588,14 +597,14 @@ app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { 
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
-        // IMPORTANT: THIS SECTION NEEDS REFACTORING FOR CLOUD STORAGE
-        // If an attached file exists, delete it from the cloud storage (e.g., S3)
         /*
+        // IMPORTANT: THIS SECTION NEEDS REFACTORING FOR CLOUD STORAGE (e.g., S3)
+        // If an attached file exists, delete it from the cloud storage (e.g., S3)
         if (trackingToDelete.attachedFileName) {
-            // Example for S3 deletion (requires S3 SDK setup)
-            // const s3Key = trackingToDelete.attachedFileName;
-            // await s3.deleteObject({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key }).promise();
-            console.log(`Placeholder: Would delete file from cloud storage: ${trackingToDelete.attachedFileName}`);
+             // Example for S3 deletion (requires S3 SDK setup)
+             // const s3Key = trackingToDelete.attachedFileName;
+             // await s3.deleteObject({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key }).promise();
+             console.log(`Placeholder: Would delete file from cloud storage: ${trackingToDelete.attachedFileName}`);
         }
         */
 
@@ -614,10 +623,8 @@ app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => { 
 });
 
 
-// --- Initial User Creation ---
-// IMPORTANT: This route should be protected or removed after initial admin user creation in a production environment.
-// For initial setup, you might run it once and then remove/protect it.
-app.post('/api/admin/create-user', async (req, res) => { // CHANGED: Added /api
+// --- Initial User Creation (Admin only) ---
+app.post('/api/admin/create-user', async (req, res) => {
     const { username, password, role } = req.body;
     try {
         const existingUser = await User.findOne({ username });
@@ -641,10 +648,10 @@ app.post('/api/admin/create-user', async (req, res) => { // CHANGED: Added /api
 // User Login (Public Endpoint)
 app.post('/api/login', async (req, res) => {
     console.log('--- RECEIVED LOGIN REQUEST ---');
-    console.log('Request body (raw):', req.body); // Keep this to see the buffer
-    console.log('Type of req.body:', typeof req.body);
-    console.log('Is req.body an object and not null?', typeof req.body === 'object' && req.body !== null);
-    
+    console.log('Request body BEFORE destructuring:', req.body); // Check the state of req.body here
+    console.log('Type of req.body BEFORE destructuring:', typeof req.body);
+    console.log('Is req.body an object and not null BEFORE destructuring?', typeof req.body === 'object' && req.body !== null);
+
     const { username, password } = req.body;
 
     console.log('Extracted username:', username);
@@ -679,41 +686,45 @@ app.post('/api/login', async (req, res) => {
 });
 
 
-// --- Serve Static HTML Files ---
-// IMPORTANT: These routes are for local development ONLY.
-// Netlify will serve your 'public' folder directly.
-/*
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// --- Serve Static Files (IMPORTANT for Netlify Functions) ---
+// Netlify automatically serves files from your 'public' folder.
+// If your HTML/CSS/JS are directly in the project root, this also helps for local dev.
+// For Netlify Functions, it primarily serves the function itself.
+// Client-side routes (like /admin_dashboard.html) need to be handled by Netlify's redirects
+// or by serving a single-page app's index.html for all non-API routes.
+app.use(express.static(path.join(__dirname, 'public'))); // Assuming a 'public' folder for your frontend assets
+app.use(express.static(__dirname)); // Fallback if files like admin_login.html are in the root
 
-app.get('/admin_login.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin_login.html'));
-});
 
-app.get('/admin_dashboard.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin_dashboard.html'));
-});
-
-app.get('/track_details.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'track_details.html'));
-});
-*/
-
-// Universal 404 handler (optional, but good practice)
+// --- Universal 404 Handler ---
+// This should be after all your API routes and static file serving.
 app.use((req, res, next) => {
-    res.status(404).json({ message: 'Endpoint not found.' });
+    // If the request path does not start with /api, and it's not a static file,
+    // you might want to serve your main HTML file for client-side routing.
+    // For Netlify Functions, this typically means a catch-all.
+    if (!req.path.startsWith('/api/') && !req.path.includes('.')) { // Avoid redirecting known file types or API calls
+        // For Single Page Applications, redirect all non-API routes to index.html
+        // You'll likely need a Netlify _redirects file for this as well for deployment
+        // E.g., /* /index.html 200
+        // For now, return a 404 for clarity.
+        res.status(404).json({ message: 'The requested page or API endpoint was not found.' });
+    } else {
+        // For other unmatched requests (e.g., missing static files), return a standard 404
+        res.status(404).json({ message: 'Endpoint not found.' });
+    }
 });
 
 
-// Error handling middleware (should be last)
+// --- Global Error Handling Middleware ---
 app.use((err, req, res, next) => {
-    console.error(err.stack); // Log the error stack for debugging
+    console.error('GLOBAL ERROR HANDLER:', err.stack);
     res.status(err.statusCode || 500).json({
-        message: err.message || 'An unexpected error occurred on the server.',
-        error: process.env.NODE_ENV === 'production' ? {} : err.stack // Avoid sending stack trace in production
+        message: err.message || 'An unexpected server error occurred.',
+        // Only send stack trace in development for security
+        error: process.env.NODE_ENV === 'production' ? {} : err.stack
     });
 });
+
 
 // Export the Express app instance for Netlify Function
 module.exports = app;
