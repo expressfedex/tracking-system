@@ -196,7 +196,7 @@ app.get('/api/track/:trackingId', async (req, res) => {
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            })),
+            ])),
             attachedFileName: trackingDetails.attachedFileName,
             lastUpdated: trackingDetails.lastUpdated
         };
@@ -601,10 +601,10 @@ app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         // IMPORTANT: THIS SECTION NEEDS REFACTORING FOR CLOUD STORAGE (e.g., S3)
         // If an attached file exists, delete it from the cloud storage (e.g., S3)
         if (trackingToDelete.attachedFileName) {
-             // Example for S3 deletion (requires S3 SDK setup)
-             // const s3Key = trackingToDelete.attachedFileName;
-             // await s3.deleteObject({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key }).promise();
-             console.log(`Placeholder: Would delete file from cloud storage: ${trackingToDelete.attachedFileName}`);
+            // Example for S3 deletion (requires S3 SDK setup)
+            // const s3Key = trackingToDelete.attachedFileName;
+            // await s3.deleteObject({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key }).promise();
+            console.log(`Placeholder: Would delete file from cloud storage: ${trackingToDelete.attachedFileName}`);
         }
         */
 
@@ -648,14 +648,37 @@ app.post('/api/admin/create-user', async (req, res) => {
 // User Login (Public Endpoint)
 app.post('/api/login', async (req, res) => {
     console.log('--- RECEIVED LOGIN REQUEST ---');
-    console.log('Request body BEFORE destructuring:', req.body); // Check the state of req.body here
-    console.log('Type of req.body BEFORE destructuring:', typeof req.body);
-    console.log('Is req.body an object and not null BEFORE destructuring?', typeof req.body === 'object' && req.body !== null);
+    console.log('Request body BEFORE any custom parsing (from Express):', req.body);
+    console.log('Type of req.body BEFORE any custom parsing (from Express):', typeof req.body);
+    console.log('Is req.body an object and not null BEFORE any custom parsing (from Express)?', typeof req.body === 'object' && req.body !== null);
 
-    const { username, password } = req.body;
+    let requestBody;
+
+    // Check if req.body is already a plain object with 'username' or if it's a Buffer that needs parsing
+    if (typeof req.body === 'object' && req.body !== null && !req.body.username && req.body instanceof Buffer) {
+        try {
+            // Attempt to convert buffer to string and then parse JSON
+            requestBody = JSON.parse(req.body.toString('utf8'));
+            console.log('Request body AFTER manual .toString() and JSON.parse:', requestBody);
+        } catch (parseError) {
+            console.error('Error manually parsing request body:', parseError);
+            return res.status(400).json({ message: 'Invalid request body format.' });
+        }
+    } else {
+        // If express.json() already parsed it, or it's not a buffer, use it directly
+        requestBody = req.body;
+        console.log('Request body used directly (assumed parsed by express.json() or non-Buffer):', requestBody);
+    }
+
+    const { username, password } = requestBody; // Destructure from requestBody, not req.body
 
     console.log('Extracted username:', username);
     console.log('Extracted password (first few chars):', password ? password.substring(0, 5) + '...' : 'null/undefined');
+
+    if (!username || !password) {
+        console.log('Login failed: Username or password missing');
+        return res.status(400).json({ message: 'Please enter all fields' });
+    }
 
     try {
         const user = await User.findOne({ username });
