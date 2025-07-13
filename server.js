@@ -6,7 +6,7 @@ require('dotenv').config(); // Good for local development/testing
 
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
+const bodyParser = require('body-parser'); // Keep this require if you use bodyParser for other things, like urlencoded
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
@@ -17,9 +17,16 @@ const nodemailer = require('nodemailer');
 const app = express();
 
 // --- Middleware ---
+// This middleware parses JSON bodies from incoming requests.
+// It should be placed early in your middleware chain.
+app.use(express.json());
+
+// Keep CORS if your frontend and backend are on different domains (which they are with Netlify).
 app.use(cors());
-app.use(bodyParser.json());
+
+// Keep this if you need to parse URL-encoded bodies (e.g., from HTML forms that aren't JSON)
 app.use(express.urlencoded({ extended: true }));
+
 // app.use(express.static(path.join(__dirname, 'public'))); // <--- COMMENTED OUT: Frontend served directly by Netlify
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // <--- COMMENTED OUT: Local file serving won't work on Netlify
 
@@ -147,7 +154,7 @@ const authenticateAdmin = (req, res, next) => {
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
-    // --- ADD THESE CONSOLE.LOGS ---
+    // --- ADDED CONSOLE.LOGS FOR DEBUGGING ---
     console.log('Login attempt for username:', username);
     // console.log('Password received (DO NOT LOG IN PRODUCTION):', password); // ONLY FOR DEBUGGING, REMOVE LATER!
     // --- END ADDED LOGS ---
@@ -155,7 +162,7 @@ app.post('/api/login', async (req, res) => {
     try {
         const user = await User.findOne({ username });
 
-        // --- ADD THIS CONSOLE.LOG ---
+        // --- ADDED CONSOLE.LOG FOR DEBUGGING ---
         if (!user) {
             console.log('User not found for username:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
@@ -165,7 +172,7 @@ app.post('/api/login', async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
 
-        // --- ADD THESE CONSOLE.LOGS ---
+        // --- ADDED CONSOLE.LOGS FOR DEBUGGING ---
         console.log('Password comparison result (isMatch):', isMatch);
         if (!isMatch) {
             console.log('Password mismatch for user:', username);
@@ -421,14 +428,17 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
             const timeRegex = /^(?:2[0-3]|[01]?[0-9]):[0-5][0-9]$/;
 
             if (date !== undefined && !dateRegex.test(effectiveDate)) {
+                console.warn(`Invalid date format for history event update: ${effectiveDate}`); // Log the invalid format
                 return res.status(400).json({ message: 'Invalid date format for history event update. Expected YYYY-MM-DD.' });
             }
             if (time !== undefined && !timeRegex.test(effectiveTime)) {
+                console.warn(`Invalid time format for history event update: ${effectiveTime}`); // Log the invalid format
                 return res.status(400).json({ message: 'Invalid time format for history event update. Expected HH:MM.' });
             }
 
             newTimestamp = new Date(`${effectiveDate}T${effectiveTime}:00`);
             if (isNaN(newTimestamp.getTime())) {
+                console.warn(`Could not parse combined timestamp: ${effectiveDate}T${effectiveTime}:00`);
                 return res.status(400).json({ message: 'Invalid date or time provided for history event update.' });
             }
             historyEvent.timestamp = newTimestamp;
@@ -486,7 +496,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
                     if (!dateRegex.test(effectiveDate)) {
                         console.warn(`Invalid date format for expectedDeliveryDate: ${effectiveDate}`);
-                        return;
+                        return; // Or handle more gracefully
                     }
                     const newExpectedDelivery = new Date(`${effectiveDate}T${effectiveTime}:00`);
                     if (!isNaN(newExpectedDelivery.getTime())) {
@@ -496,7 +506,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                     }
                 }
             } else if (key === 'expectedDeliveryTime') {
-                if (updateData.expectedDeliveryDate === undefined) {
+                if (updateData.expectedDeliveryDate === undefined) { // Only update time if date wasn't also provided
                     const effectiveDate = currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]);
                     const effectiveTime = updateData.expectedDeliveryTime;
 
@@ -504,7 +514,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                         const timeRegex = /^(?:2[0-3]|[01]?[0-9]):[0-5][0-9]$/;
                         if (!timeRegex.test(effectiveTime)) {
                             console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTime}`);
-                            return;
+                            return; // Or handle more gracefully
                         }
                         const newExpectedDelivery = new Date(`${effectiveDate}T${effectiveTime}:00`);
                         if (!isNaN(newExpectedDelivery.getTime())) {
