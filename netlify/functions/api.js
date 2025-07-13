@@ -1,45 +1,39 @@
-// netlify/functions/api.js - Wrapper for your Express app for Netlify Functions
+// netlify/functions/api.js
+// This file acts as the entry point for your Netlify Function.
+// It wraps your Express app.
 
-const serverless = require('serverless-http');
-const mongoose = require('mongoose');
-const app = require('../../server.js'); // Path to your modified server.js
+const serverless = require('serverless-http'); // Using serverless-http to wrap Express
+const app = require('../../server'); // Adjust the path to your main Express app file (server.js)
 
-// IMPORTANT: Ensure MONGODB_URI is set in Netlify Environment Variables
-const MONGODB_URI = process.env.MONGODB_URI;
+// Create a custom handler function for the Netlify Function
+const customHandler = async (event, context) => {
+    // Log the raw event body received by the Netlify Function before any parsing
+    console.log('[Netlify Function] Raw event.body received:', event.body);
+    console.log('[Netlify Function] event.headers[Content-Type]:', event.headers['content-type']);
 
-let cachedDb = null; // Cache the database connection
-
-exports.handler = async (event, context) => {
-    // Allows Netlify to cache the DB connection across invocations (cold starts)
-    context.callbackWaitsForEmptyEventLoop = false;
-
-    // Connect to MongoDB if not already connected
-    if (cachedDb && mongoose.connections[0].readyState) {
-        console.log('MongoDB already connected. Reusing connection.');
-    } else {
-        console.log('Connecting to MongoDB...');
+    // Check if event.body exists and if Content-Type indicates JSON
+    if (event.body && event.headers['content-type'] && event.headers['content-type'].includes('application/json')) {
         try {
-            cachedDb = await mongoose.connect(MONGODB_URI, {
-                // useNewUrlParser: true,   // Deprecated in Mongoose 6+
-                // useUnifiedTopology: true, // Deprecated in Mongoose 6+
-                bufferCommands: false, // Disable Mongoose's internal buffering
-                serverSelectionTimeoutMS: 5000, // Give up after 5 seconds if connection fails
-                dbName: 'fedex_db' // Specify your database name
-            });
-            console.log('MongoDB connected successfully!');
-            // The populateInitialData() function should be called as a one-time script,
-            // not on every function invocation (even cold starts). Keep it commented out here.
-        } catch (err) {
-            console.error('MongoDB connection error in Netlify function:', err);
-            // Return an error response if DB connection fails
+            // IMPORTANT: Only parse if it's still a string. Netlify sometimes pre-parses,
+            // but your logs show it's arriving as a string buffer in req.body for Express.
+            if (typeof event.body === 'string') {
+                event.body = JSON.parse(event.body);
+                console.log('[Netlify Function] Manually parsed JSON body:', event.body);
+            }
+        } catch (e) {
+            console.error('[Netlify Function] Error manually parsing JSON body:', e);
+            // If JSON parsing fails, return a 400 Bad Request error immediately
             return {
-                statusCode: 500,
-                body: JSON.stringify({ message: 'Failed to connect to database.', error: err.message }),
+                statusCode: 400,
+                body: JSON.stringify({ message: 'Invalid JSON format in request body.' }),
             };
         }
     }
 
-    // Pass the event to the serverless-wrapped Express app
-    const handler = serverless(app);
-    return await handler(event, context);
+    // Now, pass the modified event (with potentially parsed body) to the serverless-http handler,
+    // which will then feed it into your Express app (server.js).
+    return serverless(app)(event, context);
 };
+
+// Export the custom handler function for Netlify
+exports.handler = customHandler;
