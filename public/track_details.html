@@ -366,196 +366,194 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const trackingId = urlParams.get('trackingId');
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const trackingId = urlParams.get('trackingId');
 
-            if (trackingId) {
-                document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${trackingId}`;
-                fetchTrackingDetails(trackingId);
-            } else {
-                console.warn('No tracking ID provided in URL. Displaying placeholder data from Screenshot (28).png.');
-                // Default to a specific tracking ID from your initial data for testing if none provided
-                document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : 77200452739`; // Use the ID from the screenshot data
-                fetchTrackingDetails('77200452739'); // Use the ID from the new screenshot for default
-            }
-            // Add event listener for "Track Parcel Again" button
-            document.querySelector('.track-again-btn').addEventListener('click', (e) => {
-                e.preventDefault();
-                // Redirect to your main tracking page (e.g., index.html)
-                window.location.href = '/';
-            });
+        if (trackingId) {
+            document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${trackingId}`;
+            fetchTrackingDetails(trackingId);
+        } else {
+            console.warn('No tracking ID provided in URL. Displaying placeholder data.');
+            // Default to a specific tracking ID from your initial data for testing if none provided
+            document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : 77200452739`;
+            fetchTrackingDetails('77200452739');
+        }
+        // Add event listener for "Track Parcel Again" button
+        document.querySelector('.track-again-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            // Redirect to your main tracking page (e.g., index.html)
+            window.location.href = '/';
         });
+    });
 
-        async function fetchTrackingDetails(trackingId) {
-            try {
-                const response = await fetch(`/api/track/${trackingId}`);
-                const data = await response.json();
+    async function fetchTrackingDetails(trackingId) {
+        try {
+            const response = await fetch(`/api/track/${trackingId}`);
+            const data = await response.json();
 
-                if (response.ok) {
-                    populateTrackingData(data);
-                } else {
-                    alert('Tracking ID not found: ' + (data.message || 'Please try again.'));
-                    // Optionally, redirect back to the main tracking page or show error on this page
-                    window.location.href = '/'; // Go back to index page if not found
+            if (response.ok) {
+                populateTrackingData(data);
+            } else {
+                alert('Tracking ID not found: ' + (data.message || 'Please try again.'));
+                // Optionally, redirect back to the main tracking page or show error on this page
+                window.location.href = '/'; // Go back to index page if not found
+            }
+        } catch (error) {
+            console.error('Error fetching tracking data:', error);
+            alert('Network error or server unreachable. Could not fetch tracking details.');
+        }
+    }
+
+    function populateTrackingData(data) {
+        // --- ADDED ROBUSTNESS CHECK ---
+        if (!data || typeof data !== 'object') {
+            console.error('populateTrackingData received invalid or empty data:', data);
+            alert('Could not display tracking details due to invalid data received.');
+            return; // Stop execution if data is invalid
+        }
+        // --- END ADDED ROBUSTNESS CHECK ---
+
+        // Update Header
+        document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${data.trackingId || 'N/A'}`;
+
+        // Update Status & Delivery Info
+        const statusLine = document.getElementById('statusLine');
+        const statusDot = document.getElementById('statusIndicatorDot');
+        const currentStatusElem = document.getElementById('currentStatus'); // Get reference to element
+
+        // Clear existing classes
+        statusLine.className = 'status-line'; // Reset all classes
+        statusDot.className = 'status-indicator-dot'; // Reset all classes for the dot
+
+        // --- START MODIFICATION FOR COLORS ---
+        // Set the background color of the status line directly from the API response
+        statusLine.style.backgroundColor = data.statusLineColor || '#2196F3'; // Use new color field
+        statusDot.style.backgroundColor = data.blinkingDotColor || '#FFFFFF'; // Use new color field
+
+        // Determine text color for statusLine based on its background brightness
+        const statusLineHex = (data.statusLineColor || '2196F3').replace('#', '');
+        const rLine = parseInt(statusLineHex.substring(0, 2), 16);
+        const gLine = parseInt(statusLineHex.substring(2, 4), 16);
+        const bLine = parseInt(statusLineHex.substring(4, 6), 16);
+        const brightnessLine = ((rLine * 299) + (gLine * 587) + (bLine * 114)) / 1000;
+        statusLine.style.color = (brightnessLine > 180) ? '#333' : '#fff'; // Dark text for light background, white for dark
+
+        // Determine border color for the dot based on its background brightness
+        const dotHex = (data.blinkingDotColor || 'FFFFFF').replace('#', '');
+        const rDot = parseInt(dotHex.substring(0, 2), 16);
+        const gDot = parseInt(dotHex.substring(2, 4), 16);
+        const bDot = parseInt(dotHex.substring(4, 6), 16);
+        const brightnessDot = ((rDot * 299) + (gDot * 587) + (bDot * 114)) / 1000;
+        statusDot.style.border = (brightnessDot > 180) ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.2)'; // Adjust border for visibility
+
+        // --- END MODIFICATION FOR COLORS ---
+
+        currentStatusElem.textContent = data.status || 'Unknown Status'; // Use the element reference
+
+        // Apply blinking if isBlinking is true
+        if (data.isBlinking) {
+            statusDot.classList.add('blinking');
+        } else {
+            statusDot.classList.remove('blinking'); // Ensure it's removed if false
+        }
+
+        const expectedDeliveryDateElem = document.getElementById('expectedDeliveryDate');
+        const expectedDeliveryTimeElem = document.getElementById('expectedDeliveryTime');
+
+        if (data.expectedDelivery) {
+            const deliveryDate = new Date(data.expectedDelivery);
+            expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            expectedDeliveryTimeElem.textContent = deliveryDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        } else {
+            expectedDeliveryDateElem.textContent = 'N/A';
+            expectedDeliveryTimeElem.textContent = 'N/A';
+        }
+
+        // Update Package Information
+        document.getElementById('senderName').textContent = data.senderName || 'N/A';
+        document.getElementById('originLocation').textContent = data.origin || 'N/A';
+        document.getElementById('currentLocation').textContent = data.status || 'Unknown'; // Using data.status for current location
+        document.getElementById('packageContents').textContent = data.packageContents || 'N/A';
+        document.getElementById('packageWeight').textContent = data.weight ? `${data.weight} KG` : 'N/A';
+        document.getElementById('serviceType').textContent = data.serviceType || 'N/A';
+        document.getElementById('specialHandling').textContent = data.specialHandling || 'None';
+
+        // Update Delivery To
+        document.getElementById('recipientName').textContent = data.recipientName || 'N/A';
+        document.getElementById('recipientAddress').textContent = data.recipientAddress || 'N/A';
+
+        // Update Delivery History
+        const historyContainer = document.getElementById('deliveryHistoryContainer');
+        historyContainer.innerHTML = ''; // Clear existing placeholder history
+
+        if (data.history && Array.isArray(data.history) && data.history.length > 0) { // Added Array.isArray check
+            data.history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            data.history.forEach((item, index) => {
+                const historyItemDiv = document.createElement('div');
+                historyItemDiv.classList.add('history-item');
+
+                const iconSpan = document.createElement('span');
+                iconSpan.classList.add('history-icon-circle');
+
+                let iconClass = 'grey'; // Default for past inactive points
+                let iconHTML = '<i class="fas fa-circle"></i>'; // Default circle icon
+
+                const lowerDescription = (item.description || '').toLowerCase(); // Ensure description is a string
+                if (lowerDescription.includes('departed') || lowerDescription.includes('transit')) {
+                    iconClass = 'blue';
+                    iconHTML = '<i class="fas fa-truck"></i>';
+                } else if (lowerDescription.includes('delivered')) {
+                    iconClass = 'green';
+                    iconHTML = '<i class="fas fa-check"></i>';
+                } else if (lowerDescription.includes('held') || lowerDescription.includes('officer') || lowerDescription.includes('exception')) {
+                    iconClass = 'red';
+                    iconHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                } else if (index === 0) { // If it's the most recent entry and not an exception
+                    iconClass = 'green';
+                    iconHTML = '<i class="fas fa-map-marker-alt"></i>';
                 }
-            } catch (error) {
-                console.error('Error fetching tracking data:', error);
-                alert('Network error or server unreachable. Could not fetch tracking details.');
-            }
+
+                iconSpan.classList.add(iconClass);
+                iconSpan.innerHTML = iconHTML;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.classList.add('history-content');
+
+                const timeP = document.createElement('p');
+                timeP.classList.add('history-time');
+                timeP.textContent = formatHistoryDateTimeScreenshot(item.timestamp || new Date().toISOString()); // Fallback timestamp
+
+                const locationP = document.createElement('p');
+                locationP.classList.add('history-location');
+                locationP.textContent = item.description || 'N/A'; // Use description as main event
+
+                const descriptionP = document.createElement('p');
+                descriptionP.classList.add('history-description-detailed');
+                descriptionP.textContent = item.location || 'N/A'; // Use location as detailed info
+
+                contentDiv.appendChild(timeP);
+                contentDiv.appendChild(locationP);
+                contentDiv.appendChild(descriptionP);
+
+                historyItemDiv.appendChild(iconSpan);
+                historyItemDiv.appendChild(contentDiv);
+
+                historyContainer.appendChild(historyItemDiv);
+            });
+        } else {
+            historyContainer.innerHTML = '<p style="text-align: center; color: #777;">No history events available yet.</p>';
         }
+    }
 
-        function populateTrackingData(data) {
-            // Update Header
-            document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${data.trackingId}`;
-
-            // Update Status & Delivery Info
-            const statusLine = document.getElementById('statusLine');
-            const statusDot = document.getElementById('statusIndicatorDot');
-
-            // Clear existing classes
-            statusLine.className = 'status-line'; // Reset all classes
-            statusDot.className = 'status-indicator-dot'; // Reset all classes for the dot
-
-            // --- START MODIFICATION FOR COLORS ---
-            // Set the background color of the status line directly from the API response
-            statusLine.style.backgroundColor = data.statusLineColor || '#2196F3'; // Use new color field
-            statusDot.style.backgroundColor = data.blinkingDotColor || '#FFFFFF'; // Use new color field
-
-            // Determine text color for statusLine based on its background brightness
-            // This is for the *text* inside the statusLine div, not the dot.
-            const statusLineHex = (data.statusLineColor || '2196F3').replace('#', '');
-            const rLine = parseInt(statusLineHex.substring(0, 2), 16);
-            const gLine = parseInt(statusLineHex.substring(2, 4), 16);
-            const bLine = parseInt(statusLineHex.substring(4, 6), 16);
-            const brightnessLine = ((rLine * 299) + (gLine * 587) + (bLine * 114)) / 1000;
-            statusLine.style.color = (brightnessLine > 180) ? '#333' : '#fff'; // Dark text for light background, white for dark
-
-            // Determine border color for the dot based on its background brightness
-            const dotHex = (data.blinkingDotColor || 'FFFFFF').replace('#', '');
-            const rDot = parseInt(dotHex.substring(0, 2), 16);
-            const gDot = parseInt(dotHex.substring(2, 4), 16);
-            const bDot = parseInt(dotHex.substring(4, 6), 16);
-            const brightnessDot = ((rDot * 299) + (gDot * 587) + (bDot * 114)) / 1000;
-            statusDot.style.border = (brightnessDot > 180) ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.2)'; // Adjust border for visibility
-
-            // --- END MODIFICATION FOR COLORS ---
-
-            document.getElementById('currentStatus').textContent = data.status || 'Unknown Status';
-
-            // Apply blinking if isBlinking is true
-            if (data.isBlinking) {
-                statusDot.classList.add('blinking');
-            } else {
-                statusDot.classList.remove('blinking'); // Ensure it's removed if false
-            }
-
-            const expectedDeliveryDateElem = document.getElementById('expectedDeliveryDate');
-            const expectedDeliveryTimeElem = document.getElementById('expectedDeliveryTime');
-
-            if (data.expectedDelivery) {
-                const deliveryDate = new Date(data.expectedDelivery);
-                expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); // e.g., July 12, 2025
-                expectedDeliveryTimeElem.textContent = deliveryDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); // e.g., 05:00 AM
-            } else {
-                expectedDeliveryDateElem.textContent = 'N/A';
-                expectedDeliveryTimeElem.textContent = 'N/A';
-            }
-
-            // Update Package Information
-            document.getElementById('senderName').textContent = data.senderName || 'N/A';
-
-            // Display Origin Location
-            document.getElementById('originLocation').textContent = data.origin || 'N/A'; // Corrected ID usage
-
-            // Use data.status for 'CURRENT LOCATION' as per typical tracking displays
-            document.getElementById('currentLocation').textContent = data.status || 'Unknown';
-
-
-            document.getElementById('packageContents').textContent = data.packageContents || 'N/A';
-            document.getElementById('packageWeight').textContent = data.weight ? `${data.weight} KG` : 'N/A'; // Assumes 'weight' field exists
-            document.getElementById('serviceType').textContent = data.serviceType || 'N/A';
-            document.getElementById('specialHandling').textContent = data.specialHandling || 'None';
-
-            // --- START MODIFICATION ---
-            // Update Delivery To
-            document.getElementById('recipientName').textContent = data.recipientName || 'N/A';
-            document.getElementById('recipientAddress').textContent = data.recipientAddress || 'N/A';
-            // --- END MODIFICATION ---
-
-
-            // Update Delivery History
-            const historyContainer = document.getElementById('deliveryHistoryContainer');
-            historyContainer.innerHTML = ''; // Clear existing placeholder history
-
-            if (data.history && data.history.length > 0) {
-                // Sort history by timestamp in descending order (most recent first) to match screenshot
-                data.history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-                data.history.forEach((item, index) => {
-                    const historyItemDiv = document.createElement('div');
-                    historyItemDiv.classList.add('history-item');
-
-                    const iconSpan = document.createElement('span');
-                    iconSpan.classList.add('history-icon-circle');
-
-                    let iconClass = 'grey'; // Default for past inactive points
-                    let iconHTML = '<i class="fas fa-circle"></i>'; // Default circle icon
-
-                    // Logic to determine icon and color based on description and if it's the most recent
-                    const lowerDescription = item.description.toLowerCase();
-                    if (lowerDescription.includes('departed') || lowerDescription.includes('transit')) {
-                        iconClass = 'blue';
-                        iconHTML = '<i class="fas fa-truck"></i>';
-                    } else if (lowerDescription.includes('delivered')) {
-                        iconClass = 'green';
-                        iconHTML = '<i class="fas fa-check"></i>';
-                    } else if (lowerDescription.includes('held') || lowerDescription.includes('officer') || lowerDescription.includes('exception')) {
-                        iconClass = 'red';
-                        iconHTML = '<i class="fas fa-exclamation-triangle"></i>'; // Warning icon for held packages
-                    } else if (index === 0) { // If it's the most recent entry and not an exception
-                        iconClass = 'green';
-                        iconHTML = '<i class="fas fa-map-marker-alt"></i>'; // Current location icon
-                    }
-
-
-                    iconSpan.classList.add(iconClass);
-                    iconSpan.innerHTML = iconHTML;
-
-                    const contentDiv = document.createElement('div');
-                    contentDiv.classList.add('history-content');
-
-                    const timeP = document.createElement('p');
-                    timeP.classList.add('history-time');
-                    timeP.textContent = formatHistoryDateTimeScreenshot(item.timestamp);
-
-                    const locationP = document.createElement('p');
-                    locationP.classList.add('history-location');
-                    locationP.textContent = item.description; // Description first as main event
-
-                    const descriptionP = document.createElement('p');
-                    descriptionP.classList.add('history-description-detailed');
-                    descriptionP.textContent = item.location; // Location as detailed info
-
-
-                    contentDiv.appendChild(timeP);
-                    contentDiv.appendChild(locationP);
-                    contentDiv.appendChild(descriptionP);
-
-
-                    historyItemDiv.appendChild(iconSpan);
-                    historyItemDiv.appendChild(contentDiv);
-
-                    historyContainer.appendChild(historyItemDiv);
-                });
-            } else {
-                historyContainer.innerHTML = '<p style="text-align: center; color: #777;">No history events available yet.</p>';
-            }
-        }
-
-        // Helper function for formatting history date/time to match screenshot (YYYY-MM-DD • HH:MM PM)
-        function formatHistoryDateTimeScreenshot(isoString) {
+    // Helper function for formatting history date/time to match screenshot (YYYY-MM-DD • HH:MM PM)
+    function formatHistoryDateTimeScreenshot(isoString) {
+        try {
             const dateObj = new Date(isoString);
+            if (isNaN(dateObj.getTime())) { // Check for invalid date
+                return 'Invalid Date';
+            }
             const year = dateObj.getFullYear();
             const month = String(dateObj.getMonth() + 1).padStart(2, '0');
             const day = String(dateObj.getDate()).padStart(2, '0');
@@ -568,7 +566,11 @@
             const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
             return `${year}-${month}-${day} • ${formattedTime}`;
+        } catch (e) {
+            console.error('Error formatting date:', isoString, e);
+            return 'Date N/A';
         }
-    </script>
+    }
+</script>
 </body>
 </html>

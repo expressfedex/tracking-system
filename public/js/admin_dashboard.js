@@ -337,9 +337,6 @@ async function uploadFile(formData) {
     }
 }
 
-// --- DOM Element Declarations (inside DOMContentLoaded for safety, or globally if needed across modules) ---
-// For this single file structure, declaring them once inside DOMContentLoaded is fine.
-
 // --- Dashboard Rendering Functions ---
 
 async function updateDashboardStats() {
@@ -407,7 +404,7 @@ function renderAllTrackingsTable() {
         deleteButton.dataset.mongoId = tracking._id; // Store Mongo ID for easy access
         actionsCell.appendChild(deleteButton);
     });
-    attachTableButtonListeners(); // Attach listeners after rendering
+    // attachTableButtonListeners() will be called from DOMContentLoaded
 }
 
 function renderTrackingHistory(trackingHistory, trackingMongoId) {
@@ -443,7 +440,7 @@ function renderTrackingHistory(trackingHistory, trackingMongoId) {
     }
 }
 
-// --- Event Listener Attachment Functions ---
+// --- Event Listener Attachment Functions (for dynamically created elements) ---
 
 function attachTableButtonListeners() {
     const allTrackingsTableBody = document.getElementById('all-trackings-table-body');
@@ -458,11 +455,8 @@ function attachTableButtonListeners() {
         if (target.classList.contains('btn-info')) { // View/Edit button
             loadTrackingForEdit(mongoId);
             // Switch to "Manage Single Tracking" section
-            document.querySelectorAll('.sidebar ul li a').forEach(link => link.classList.remove('active'));
-            const manageLink = document.querySelector('[data-section="manage-tracking-section"]');
-            if (manageLink) manageLink.classList.add('active');
-            document.querySelectorAll('.dashboard-section').forEach(section => section.classList.remove('active-section'));
-            document.getElementById('manage-tracking-section').classList.add('active-section');
+            // The showSection function will also handle 'active' class for sidebar links
+            // We'll call showSection('manage-tracking-section') after loading in the form
         } else if (target.classList.contains('btn-danger')) { // Delete button
             if (confirm(`Are you sure you want to delete this tracking entry?`)) {
                 try {
@@ -529,7 +523,6 @@ function attachHistoryButtonListeners() {
     });
 }
 
-
 // --- Form Submission Handlers ---
 
 async function handleAddTrackingForm(event) {
@@ -580,12 +573,12 @@ async function handleUpdateTrackingForm(event) {
         trackingId: document.getElementById('updateTrackingId').value,
         status: document.getElementById('updateStatus').value,
         description: document.getElementById('updateDescription').value,
-        isBlinking: document.getElementById('updateIsBlinkingOriginal').checked,        
+        isBlinking: document.getElementById('updateIsBlinkingOriginal').checked,
         statusLineColor: document.getElementById('updateStatusLineColor').value,
         blinkingDotColor: document.getElementById('updateBlinkingDotColor').value,
         senderName: document.getElementById('updateSenderName').value,
         recipientName: document.getElementById('updateRecipientName').value,
-       // recipientEmail: document.getElementById('updateRecipientEmail').value,
+        recipientEmail: document.getElementById('updateRecipientEmail').value, // Corrected: Uncommented this line
         packageContents: document.getElementById('updatePackageContents').value,
         serviceType: document.getElementById('updateServiceType').value,
         recipientAddress: document.getElementById('updateRecipientAddress').value,
@@ -671,7 +664,7 @@ async function handleSendEmailForm(event) {
     const subject = document.getElementById('emailSubject').value;
     const message = document.getElementById('notificationMessage').value;
     const emailAttachmentFile = document.getElementById('emailAttachmentFileUpload').files[0];
-    const trackingIdForEmail = document.getElementById('emailTrackingIdSelect').value; // Ensure this is the correct ID for the select
+    const trackingIdForEmail = document.getElementById('emailTrackingIdSelect').value;
 
     if (!recipientEmail || !subject || !message) {
         alert('Please fill in all email fields: Recipient, Subject, and Message.');
@@ -744,11 +737,12 @@ async function loadTrackingForEdit(mongoId) {
         document.getElementById('updateTrackingId').value = tracking.trackingId || '';
         document.getElementById('updateStatus').value = tracking.status || '';
         document.getElementById('updateDescription').value = tracking.description || '';
-    document.getElementById('updateIsBlinkingOriginal').checked = tracking.isBlinking || false;        document.getElementById('updateStatusLineColor').value = tracking.statusLineColor || '#2196F3';
+        document.getElementById('updateIsBlinkingOriginal').checked = tracking.isBlinking || false;
+        document.getElementById('updateStatusLineColor').value = tracking.statusLineColor || '#2196F3';
         document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
         document.getElementById('updateSenderName').value = tracking.senderName || '';
         document.getElementById('updateRecipientName').value = tracking.recipientName || '';
-       // document.getElementById('updateRecipientEmail').value = tracking.recipientEmail || '';
+        document.getElementById('updateRecipientEmail').value = tracking.recipientEmail || ''; // Corrected: Uncommented this line
         document.getElementById('updatePackageContents').value = tracking.packageContents || '';
         document.getElementById('updateServiceType').value = tracking.serviceType || '';
         document.getElementById('updateRecipientAddress').value = tracking.recipientAddress || '';
@@ -760,11 +754,20 @@ async function loadTrackingForEdit(mongoId) {
         document.getElementById('updateWeight').value = tracking.weight || '';
 
         // Update status indicator for the edit form
-// In loadTrackingForEdit function:
-document.getElementById('updateIsBlinkingOriginal').checked = tracking.isBlinking || false;
+        updateStatusIndicator('updateStatus', 'updateStatusCircle', 'updateIsBlinkingOriginal'); // Ensure this is linked
         // Render history for the selected tracking
         renderTrackingHistory(tracking.history, tracking._id);
         M.updateTextFields(); // Important for Materialize to correctly show populated fields
+
+        // Automatically switch to "Manage Single Tracking" section if loaded via table button
+        const manageLink = document.querySelector('[data-section="manage-tracking-section"]');
+        if (manageLink) {
+            const sidebarLinks = document.querySelectorAll('.sidebar ul li a');
+            sidebarLinks.forEach(link => link.classList.remove('active'));
+            manageLink.classList.add('active');
+            showSection('manage-tracking-section'); // Use the centralized showSection
+        }
+
     } else {
         updateTrackingForm.style.display = 'none';
         document.getElementById('trackingHistoryList').querySelector('ul').innerHTML = '<li>No tracking selected or data found.</li>';
@@ -830,25 +833,30 @@ function attachEmailTrackingSelectListener() {
 
 // --- Main Dashboard Initialization ---
 
+// Declared globally for access in DOMContentLoaded
+let sidebar, menuToggle, sidebarLinks, dashboardSections;
+
+// Function to show a specific dashboard section (from the second snippet, adapted)
+function showSection(sectionId) {
+    if (!dashboardSections) { // Ensure elements are defined before attempting to use
+        dashboardSections = document.querySelectorAll('.dashboard-section');
+    }
+    dashboardSections.forEach(section => {
+        section.classList.remove('active-section');
+    });
+    const activeSection = document.getElementById(sectionId);
+    if (activeSection) {
+        activeSection.classList.add('active-section');
+    }
+    localStorage.setItem('activeDashboardSection', sectionId); // Store active section
+}
+
+// Main initialization function
 async function initializeDashboard() {
     if (!isAuthenticated() || !hasAdminPrivileges()) {
         logout(); // Redirect to login if not authenticated or not an admin
         return;
     }
-
-    // Set active section on load (default to dashboard)
-    const activeSection = localStorage.getItem('activeDashboardSection') || 'dashboard-section';
-    document.querySelectorAll('.dashboard-section').forEach(section => {
-        section.classList.remove('active-section');
-    });
-    document.getElementById(activeSection).classList.add('active-section');
-
-    document.querySelectorAll('.sidebar ul li a').forEach(link => {
-        link.classList.remove('active');
-        if (link.dataset.section === activeSection) {
-            link.classList.add('active');
-        }
-    });
 
     // Fetch and update all dashboard data
     await fetchAllTrackings(); // Populates the global `trackings` array
@@ -858,7 +866,7 @@ async function initializeDashboard() {
 
     // Apply status indicator for Add New Tracking (initial render)
     updateStatusIndicator('addStatus', 'addStatusCircle', 'addIsBlinking');
-    // For update form, the indicator is applied when a tracking is loaded
+    // For update form, the indicator is applied when a tracking is loaded via loadTrackingForEdit
 }
 
 
@@ -874,37 +882,24 @@ document.addEventListener('DOMContentLoaded', function() {
         twelveHour: false // Use 24-hour format for easier backend handling
     });
 
-    // --- DOM Element References (after Materialize init) ---
+    // --- DOM Element References ---
     const addTrackingForm = document.getElementById('addTrackingForm');
     const updateTrackingForm = document.getElementById('updateTrackingForm');
     const addHistoryForm = document.getElementById('addHistoryForm');
     const saveHistoryEditBtn = document.getElementById('saveHistoryEditBtn');
-    const closeEditHistoryModalBtn = document.getElementById('closeEditHistoryModalBtn');
+    // Get the close button from the modal itself, more robust
+    const closeEditHistoryModalBtn = document.getElementById('editHistoryModal')?.querySelector('.modal-close');
     const sendEmailForm = document.getElementById('sendEmailForm');
     const uploadPackageFileForm = document.getElementById('uploadPackageFileForm');
 
+    // References for sidebar navigation
+    sidebar = document.querySelector('.sidebar'); // Assign to global
+    menuToggle = document.querySelector('.menu-toggle'); // Assign to global
+    sidebarLinks = document.querySelectorAll('.sidebar ul li a'); // Assign to global
+    dashboardSections = document.querySelectorAll('.dashboard-section'); // Assign to global
+
 
     // --- Attach Event Listeners ---
-
-    // Sidebar navigation
-    document.querySelectorAll('.sidebar ul li a').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetSectionId = this.dataset.section;
-
-            document.querySelectorAll('.dashboard-section').forEach(section => {
-                section.classList.remove('active-section');
-            });
-            document.getElementById(targetSectionId).classList.add('active-section');
-
-            document.querySelectorAll('.sidebar ul li a').forEach(navLink => {
-                navLink.classList.remove('active');
-            });
-            this.classList.add('active');
-
-            localStorage.setItem('activeDashboardSection', targetSectionId); // Remember active section
-        });
-    });
 
     // Logout Button
     const logoutBtn = document.getElementById('logoutBtn');
@@ -936,6 +931,54 @@ document.addEventListener('DOMContentLoaded', function() {
     attachSingleTrackingSelectListener();
     attachEmailTrackingSelectListener();
 
-    // Initial Dashboard Load
-    initializeDashboard();
+    // --- Sidebar Navigation Logic (consolidated and adapted) ---
+    if (menuToggle) {
+        menuToggle.addEventListener('click', function() {
+            if (sidebar) {
+                sidebar.classList.toggle('active');
+            }
+        });
+    }
+
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Remove 'active' class from all links
+            sidebarLinks.forEach(navLink => navLink.classList.remove('active'));
+            // Add 'active' class to the clicked link
+            this.classList.add('active');
+
+            // Get the data-section attribute and show the corresponding section
+            const sectionId = this.dataset.section;
+            if (sectionId) {
+                showSection(sectionId); // Use the centralized showSection
+            }
+
+            // Hide sidebar on mobile after a link is clicked
+            if (window.innerWidth <= 992 && sidebar) { // Match CSS breakpoint
+                sidebar.classList.remove('active');
+            }
+        });
+    });
+
+    // Optional: Close sidebar if clicked outside on mobile (simplistic)
+    document.addEventListener('click', function(event) {
+        if (window.innerWidth <= 992 && sidebar && sidebar.classList.contains('active') &&
+            !sidebar.contains(event.target) && (!menuToggle || !menuToggle.contains(event.target))) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // Initial Dashboard Load and Section Display
+    initializeDashboard().then(() => {
+        // After fetching initial data and populating selects,
+        // set the initial active section based on localStorage or default.
+        const initialActiveSection = localStorage.getItem('activeDashboardSection') || 'dashboard-section';
+        showSection(initialActiveSection); // Display the correct section
+        const initialActiveLink = document.querySelector(`.sidebar ul li a[data-section="${initialActiveSection}"]`);
+        if (initialActiveLink) {
+            initialActiveLink.classList.add('active'); // Highlight the corresponding sidebar link
+        }
+    });
 });

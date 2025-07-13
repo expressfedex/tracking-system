@@ -20,16 +20,15 @@ exports.handler = async (event, context) => {
         console.log('Connecting to MongoDB...');
         try {
             cachedDb = await mongoose.connect(MONGODB_URI, {
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
+                // useNewUrlParser: true,   // Deprecated in Mongoose 6+
+                // useUnifiedTopology: true, // Deprecated in Mongoose 6+
                 bufferCommands: false, // Disable Mongoose's internal buffering
                 serverSelectionTimeoutMS: 5000, // Give up after 5 seconds if connection fails
-                dbName: 'fedex_db'
+                dbName: 'fedex_db' // Specify your database name
             });
             console.log('MongoDB connected successfully!');
-            // Optional: Run initial data population if needed, but carefully
-            // This is generally better as a separate one-time script.
-            // await require('../../server.js').populateInitialData();
+            // The populateInitialData() function should be called as a one-time script,
+            // not on every function invocation (even cold starts). Keep it commented out here.
         } catch (err) {
             console.error('MongoDB connection error in Netlify function:', err);
             // Return an error response if DB connection fails
