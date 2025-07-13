@@ -173,10 +173,10 @@
             const data = await response.json();
 
             if (response.ok) {
-                console.log('Login successful:', data); // This log confirms `data.role` is available
+                console.log('Login successful:', data); 
                 localStorage.setItem('adminToken', data.token);
-                // **** CRITICAL FIX HERE: Use data.role instead of data.user.role ****
-                localStorage.setItem('userRole', data.role); // Correctly sets the user role
+                // **** FIX APPLIED HERE ****
+                localStorage.setItem('userRole', data.role); // Correctly sets the user role based on server response
 
                 // Redirect to admin dashboard
                 window.location.href = '/admin_dashboard.html';

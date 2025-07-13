@@ -157,29 +157,29 @@ app.get('/track/:trackingId', async (req, res) => {
 
         // Return only necessary public details, NO sensitive info like recipientEmail
         const publicDetails = {
-            trackingId: trackingDetails.trackingId,
-            status: trackingDetails.status,
-            statusLineColor: trackingDetails.statusLineColor,
-            blinkingDotColor: trackingDetails.blinkingDotColor,
-            isBlinking: trackingDetails.isBlinking,
-            origin: trackingDetails.origin,
-            destination: trackingDetails.destination,
-            expectedDelivery: trackingDetails.expectedDelivery,
-            senderName: trackingDetails.senderName,
-            recipientName: trackingDetails.recipientName,
-            packageContents: trackingDetails.packageContents,
-            serviceType: trackingDetails.serviceType,
-            recipientAddress: trackingDetails.recipientAddress,
-            specialHandling: trackingDetails.specialHandling,
-            weight: trackingDetails.weight,
-            history: trackingDetails.history.map(item => ({
-                timestamp: item.timestamp,
-                location: item.location,
-                description: item.description,
-            })), // FIXED: Removed the extra '])' here
-            attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
-            lastUpdated: trackingDetails.lastUpdated
-        };
+            trackingId: trackingDetails.trackingId,
+            status: trackingDetails.status,
+            statusLineColor: trackingDetails.statusLineColor,
+            blinkingDotColor: trackingDetails.blinkingDotColor,
+            isBlinking: trackingDetails.isBlinking,
+            origin: trackingDetails.origin,
+            destination: trackingDetails.destination,
+            expectedDelivery: trackingDetails.expectedDelivery,
+            senderName: trackingDetails.senderName,
+            recipientName: trackingDetails.recipientName,
+            packageContents: trackingDetails.packageContents,
+            serviceType: trackingDetails.serviceType,
+            recipientAddress: trackingDetails.recipientAddress,
+            specialHandling: trackingDetails.specialHandling,
+            weight: trackingDetails.weight,
+            history: trackingDetails.history.map(item => ({
+                timestamp: item.timestamp,
+                location: item.location,
+                description: item.description,
+            })), // FIXED: Removed the extra '])' here <-- This comment indicates a fix was applied
+            attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
+            lastUpdated: trackingDetails.lastUpdated
+        };
 
         res.json(publicDetails);
 
