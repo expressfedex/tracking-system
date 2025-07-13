@@ -1,39 +1,54 @@
 // netlify/functions/api.js
-// This file acts as the entry point for your Netlify Function.
-// It wraps your Express app.
+const serverless = require('serverless-http');
+const app = require('../../server'); // Path to your Express app (server.js)
+const mongoose = require('mongoose');
 
-const serverless = require('serverless-http'); // Using serverless-http to wrap Express
-const app = require('../../server'); // Adjust the path to your main Express app file (server.js)
+// Cache the database connection across warm invocations
+let cachedDb = null;
 
-// Create a custom handler function for the Netlify Function
-const customHandler = async (event, context) => {
-    // Log the raw event body received by the Netlify Function before any parsing
-    console.log('[Netlify Function] Raw event.body received:', event.body);
-    console.log('[Netlify Function] event.headers[Content-Type]:', event.headers['content-type']);
-
-    // Check if event.body exists and if Content-Type indicates JSON
-    if (event.body && event.headers['content-type'] && event.headers['content-type'].includes('application/json')) {
-        try {
-            // IMPORTANT: Only parse if it's still a string. Netlify sometimes pre-parses,
-            // but your logs show it's arriving as a string buffer in req.body for Express.
-            if (typeof event.body === 'string') {
-                event.body = JSON.parse(event.body);
-                console.log('[Netlify Function] Manually parsed JSON body:', event.body);
-            }
-        } catch (e) {
-            console.error('[Netlify Function] Error manually parsing JSON body:', e);
-            // If JSON parsing fails, return a 400 Bad Request error immediately
-            return {
-                statusCode: 400,
-                body: JSON.stringify({ message: 'Invalid JSON format in request body.' }),
-            };
-        }
+async function connectToDatabase() {
+    if (cachedDb && mongoose.connection.readyState === 1) { // Check if already connected and ready
+        console.log('MongoDB already connected. Reusing connection.');
+        return cachedDb;
     }
 
-    // Now, pass the modified event (with potentially parsed body) to the serverless-http handler,
-    // which will then feed it into your Express app (server.js).
-    return serverless(app)(event, context);
-};
+    console.log('Connecting to MongoDB...');
+    try {
+        cachedDb = await mongoose.connect(process.env.MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            // IMPORTANT FOR SERVERLESS:
+            bufferCommands: false, // Disable Mongoose's internal buffering
+            serverSelectionTimeoutMS: 5000, // Timeout after 5s for initial server selection
+            socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+        });
+        console.log('MongoDB connected successfully!');
+        return cachedDb;
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        cachedDb = null; // Clear cache on failure to force re-connection next time
+        throw error; // Re-throw to propagate the error up
+    }
+}
 
-// Export the custom handler function for Netlify
-exports.handler = customHandler;
+// Wrap your Express app with serverless-http
+const handler = serverless(app);
+
+// Netlify Function handler
+exports.handler = async (event, context) => {
+    // Ensure the database connection is established BEFORE processing the request
+    try {
+        await connectToDatabase();
+    } catch (dbError) {
+        console.error('Handler caught DB connection error:', dbError);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'Database connection failed.', error: dbError.message }),
+        };
+    }
+
+    // Now, let serverless-http handle the request and pass it to Express.
+    // express.json() in your server.js will handle the event.body parsing.
+    console.log('[Netlify Function] Passing raw event to serverless-http for Express processing...');
+    return handler(event, context);
+};
