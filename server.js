@@ -152,252 +152,72 @@ const authenticateAdmin = (req, res, next) => {
 
 // --- User Authentication Routes ---
 app.post('/api/login', async (req, res) => {
-    // --- ADDED DETAILED LOGS FOR DEBUGGING ---
-    console.log('--- START LOGIN REQUEST DEBUGGING ---');
+    // --- START LOGIN REQUEST DEBUGGING ---
     console.log('Received login request. Full request object (DEBUG):', req);
     console.log('Received login request. Headers:', req.headers);
-    console.log('Received login request. Raw Body from Netlify (if available):', req.rawBody); // Netlify specific, sometimes useful for raw data
-    console.log('Received login request. Parsed Body:', req.body);
+    console.log('Received login request. Raw Body from Netlify (if available):', req.rawBody);
+    console.log('Received login request. Parsed Body (as Buffer/string from Netlify):', req.body);
     console.log('--- END LOGIN REQUEST DEBUGGING ---');
-    // --- END ADDED DETAILED LOGS ---
 
-    const { username, password } = req.body;
+    let parsedBody;
+    try {
+        // Manually attempt to parse req.body if it's a Buffer or string
+        if (Buffer.isBuffer(req.body)) {
+            parsedBody = JSON.parse(req.body.toString('utf8'));
+        } else if (typeof req.body === 'string') {
+            // Handle cases where body might be a string (e.g., base64 encoded by Netlify)
+            try {
+                parsedBody = JSON.parse(req.body);
+            } catch (e) {
+                // If it's a base64 string, decode it first
+                if (req.isBase64Encoded) { // Netlify specific property
+                    const decodedBody = Buffer.from(req.body, 'base64').toString('utf8');
+                    parsedBody = JSON.parse(decodedBody);
+                } else {
+                    throw e; // Not base64, rethrow parse error
+                }
+            }
+        } else {
+            // If express.json() *did* work correctly and it's already an object, use it directly
+            parsedBody = req.body;
+        }
+    } catch (e) {
+        console.error('Error manually parsing request body:', e);
+        return res.status(400).json({ message: 'Invalid request body format (parsing error).' });
+    }
 
-    // --- Original debug logs for username ---
-    console.log('Login attempt for username:', username);
-    // console.log('Password received (DO NOT LOG IN PRODUCTION):', password); // ONLY FOR DEBUGGING, REMOVE LATER!
-    // --- END Original debug logs ---
+    // Now, destructure username and password from the correctly parsed object
+    const { username, password } = parsedBody;
+
+    console.log('Login attempt for username (after custom parsing):', username);
+    // console.log('Password received (DO NOT LOG IN PRODUCTION):', password); // Remove this line in production!
 
     try {
         const user = await User.findOne({ username });
 
-        // --- ADDED CONSOLE.LOG FOR DEBUGGING ---
         if (!user) {
             console.log('User not found for username:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
         }
-        console.log('User found:', user.username); // User was found
-        // --- END ADDED LOGS ---
+        console.log('User found:', user.username);
 
         const isMatch = await bcrypt.compare(password, user.password);
 
-        // --- ADDED CONSOLE.LOGS FOR DEBUGGING ---
         console.log('Password comparison result (isMatch):', isMatch);
         if (!isMatch) {
             console.log('Password mismatch for user:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
         }
-        // --- END ADDED LOGS ---
 
         const token = jwt.sign(
             { id: user._id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '24h' } // Token expires in 24 hour
+            { expiresIn: '24h' }
         );
         res.json({ message: 'Logged in successfully!', token, role: user.role });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ message: 'Server error during login.' });
-    }
-});
-
-// --- Multer for File Uploads ---
-// IMPORTANT: THIS SECTION NEEDS MAJOR REFACTORING FOR NETLIFY
-// Netlify Functions are stateless and read-only. Local file system operations will NOT work.
-// You need to integrate with a cloud storage service (e.g., AWS S3, Cloudinary, Google Cloud Storage).
-// You'll need to update frontend to send files directly to S3 or to a function that proxies to S3.
-/*
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // This path is local, won't work on Netlify Functions
-        const uploadPath = path.join(__dirname, 'uploads');
-        // Ensure the directory exists (also problematic on read-only file system)
-        require('fs').mkdirSync(uploadPath, { recursive: true });
-        cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
-});
-const upload = multer({ storage: storage }); // Multer setup is specific to local disk storage
-
-// Your file upload route - Needs complete rewrite for cloud storage
-app.post('/api/admin/upload-package-file', authenticateAdmin, upload.single('packageFile'), async (req, res) => {
-    // ... (logic that uses req.file.path and fs.unlink/existsSync)
-    // This entire block needs to be replaced with cloud storage logic.
-    // E.g., using AWS S3 SDK to upload, and store the S3 URL in MongoDB.
-});
-*/
-
-
-// --- Nodemailer for Email Sending ---
-// IMPORTANT: Attachments logic will need update if files are from cloud storage.
-const transporter = nodemailer.createTransport({
-    service: 'gmail', // You can use other services or SMTP
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-
-// Original email route - will need adjustments for file attachments
-app.post('/api/admin/send-email', authenticateAdmin, /* If you had multer here, remove it */ async (req, res) => {
-    const { to, subject, body, trackingId } = req.body;
-
-    if (!to || !subject || !body) {
-        // If req.file was from multer, you'd have unlink logic here for local cleanup
-        return res.status(400).json({ message: 'Recipient, Subject, and Message are required.' });
-    }
-
-    let attachments = [];
-    // If you enable file uploads via S3, the req.file logic would change.
-    // You'd get a URL from the frontend or fetch the file stream from S3 using its SDK.
-    /*
-    // Example for fetching from S3 (pseudocode - requires S3 SDK setup)
-    if (trackingId) {
-        try {
-            const tracking = await Tracking.findOne({ trackingId });
-            if (tracking && tracking.attachedFileName) {
-                // Assuming attachedFileName is now an S3 object key or public URL
-                // If it's an S3 key, you'd fetch the object stream from S3
-                // If it's a direct public URL, Nodemailer can often use that directly
-                const s3Key = tracking.attachedFileName; // e.g., 'uploads/12345-myfile.pdf'
-                // Replace with actual S3 fetch and pipe
-                // const fileStream = await s3.getObject({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key }).createReadStream();
-                // attachments.push({ filename: s3Key.split('/').pop(), content: fileStream });
-            }
-        } catch (error) {
-            console.error('Error fetching attached file for email from storage:', error);
-        }
-    }
-    */
-
-    // --- HTML Email Template with White and Purple Glowing Colors ---
-    const htmlEmailBody = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #0d1117; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h1 style="color: #ffffff; text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #bb00ff, 0 0 20px #bb00ff; animation: glow-white-purple 1.5s infinite alternate;">
-                    Tracking Update Notification
-                </h1>
-                <style>
-                    @keyframes glow-white-purple {
-                        from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #bb00ff, 0 0 20px #bb00ff; }
-                        to { text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #bb00ff, 0 0 40px #bb00ff; }
-                    }
-                </style>
-            </div>
-            <div style="background-color: #161b22; padding: 15px; border-radius: 5px; border: 1px solid #30363d;">
-                <p style="color: #e6e6e6;">Dear recipient,</p>
-                <p style="color: #e6e6e6;">You have received an important update regarding your package.</p>
-                <p style="color: #e6e6e6;"><strong>Subject:</strong> ${subject}</p>
-                <p style="color: #e6e6e6;"><strong>Message:</strong></p>
-                <div style="padding: 10px; background-color: #21262d; border-radius: 4px; border: 1px solid #444c56; color: #c9d1d9;">
-                    <p style="margin: 0;">${body.replace(/\n/g, '<br>')}</p>
-                </div>
-                ${trackingId ? `<p style="color: #e6e6e6; margin-top: 15px;">You can view detailed tracking information here: <a href="${process.env.FRONTEND_URL}/track_details.html?trackingId=${trackingId}" style="color: #bb00ff; text-decoration: none;">Track Your Package</a></p>` : ''}
-                <p style="color: #e6e6e6; margin-top: 20px;">Thank you for your patience.</p>
-                <p style="color: #e6e6e6; font-size: 0.9em;">Best regards,<br>Your Shipping Team</p>
-            </div>
-        </div>
-    `;
-
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: to,
-        subject: subject,
-        html: htmlEmailBody, // Use the HTML email body
-        attachments: attachments // This will be empty for now without cloud file storage solution
-    };
-
-    try {
-        await transporter.sendMail(mailOptions);
-        res.json({ message: 'Email sent successfully!' });
-    } catch (error) {
-        console.error('Error sending email:', error);
-        res.status(500).json({ message: 'Server error while sending email.', error: error.message });
-    }
-});
-
-
-// Public Route to get a single tracking by ID (No Authentication)
-app.get('/api/track/:trackingId', async (req, res) => {
-    const { trackingId } = req.params;
-    console.log(`Received public request for tracking ID: ${trackingId}`);
-    try {
-        const tracking = await Tracking.findOne({ trackingId });
-        if (tracking) {
-            res.json({
-                ...tracking.toObject(),
-                statusLineColor: tracking.statusLineColor || '#2196F3',
-                blinkingDotColor: tracking.blinkingDotColor || '#FFFFFF',
-                isBlinking: tracking.isBlinking,
-                // IMPORTANT: Replace this with your actual cloud storage URL base!
-                // Example if using S3: `https://your-s3-bucket-name.s3.amazonaws.com/${tracking.attachedFileName}`
-                attachedFileUrl: tracking.attachedFileName ? `${process.env.CLOUD_STORAGE_BASE_URL}/${tracking.attachedFileName}` : null
-            });
-        } else {
-            res.status(404).json({ message: 'Tracking ID not found.' });
-        }
-    } catch (error) {
-        console.error('Error fetching tracking data:', error);
-        res.status(500).json({ message: 'Server error while fetching tracking data.' });
-    }
-});
-
-
-// Add new history events to a tracking record
-app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res) => {
-    const { id } = req.params;
-    const { date, time, location, description } = req.body;
-
-    if (!description || description.trim() === '') {
-        return res.status(400).json({ message: 'History event description is required.' });
-    }
-    if (!date || date.trim() === '') {
-        return res.status(400).json({ message: 'History event date is required.' });
-    }
-    if (!time || time.trim() === '') {
-        return res.status(400).json({ message: 'History event time is required.' });
-    }
-
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-        return res.status(400).json({ message: 'Invalid date format for new history event. Expected YYYY-MM-DD.' });
-    }
-    const timeRegex = /^(?:2[0-3]|[01]?[0-9]):[0-5][0-9]$/;
-    if (!timeRegex.test(time)) {
-        return res.status(400).json({ message: 'Invalid time format for new history event. Expected HH:MM.' });
-    }
-
-    const combinedTimestamp = `${date}T${time}:00`;
-
-    try {
-        const tracking = await Tracking.findById(id);
-
-        if (!tracking) {
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
-
-        if (!tracking.history) {
-            tracking.history = [];
-        }
-
-        const newHistoryItem = {
-            timestamp: new Date(combinedTimestamp),
-            location: location || '',
-            description: description
-        };
-
-        tracking.history.push(newHistoryItem);
-        tracking.history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-        tracking.lastUpdated = new Date();
-        await tracking.save();
-
-        res.status(201).json({ message: 'History event added successfully!', historyEvent: tracking.history[tracking.history.length -1] });
-    } catch (error) {
-        console.error('Error adding history event:', error);
-        res.status(500).json({ message: 'Server error while adding history event.', error: error.message });
     }
 });
 
