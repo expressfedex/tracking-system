@@ -10,7 +10,6 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const path = require('path');
-// const multer = require('multer'); // <--- COMMENTED OUT: LOCAL FILE UPLOADS WON'T WORK ON NETLIFY
 const nodemailer = require('nodemailer');
 
 const app = express();
@@ -25,10 +24,6 @@ app.use(cors());
 
 // Keep this if you need to parse URL-encoded bodies (e.g., from HTML forms that aren't JSON)
 app.use(express.urlencoded({ extended: true }));
-
-// app.use(express.static(path.join(__dirname, 'public'))); // <--- COMMENTED OUT: Frontend served directly by Netlify
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // <--- COMMENTED OUT: Local file serving won't work on Netlify
-
 
 // --- Mongoose Schemas and Models ---
 
@@ -49,7 +44,6 @@ const TrackingSchema = new mongoose.Schema({
     expectedDelivery: { type: Date },
     senderName: { type: String, default: '' },
     recipientName: { type: String, default: '' },
-    // recipientEmail: { type: String, default: '' }, // REMOVED: Recipient Email field
     packageContents: { type: String, default: '' },
     serviceType: { type: String, default: '' },
     recipientAddress: { type: String, default: '' },
@@ -99,7 +93,6 @@ async function populateInitialData() {
             expectedDelivery: new Date('2025-07-13T00:00:00Z'),
             senderName: 'UNDEF Program',
             recipientName: 'David R Fox',
-            // recipientEmail: 'mistycpayne@gmail.com', // REMOVED: Recipient email from initial data
             packageContents: '$250,000 USD',
             serviceType: 'Express',
             recipientAddress: 'Hollywood, Barangay Narvarte, Nibaliw west. San Fabian, Pangasinan, Philippines ,2433.',
@@ -183,7 +176,7 @@ app.get('/track/:trackingId', async (req, res) => {
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            ])),
+            })), // FIXED: Removed the extra '])' here
             attachedFileName: trackingDetails.attachedFileName, // Still include filename, but actual file serving is handled externally
             lastUpdated: trackingDetails.lastUpdated
         };
@@ -260,7 +253,7 @@ app.get('/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
     }
 });
 
-// POST /api/admin/trackings - Create a new tracking record (Admin only)
+// POST /admin/trackings - Create a new tracking record (Admin only)
 // Changed from '/api/admin/trackings' to '/admin/trackings'
 app.post('/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
@@ -276,7 +269,6 @@ app.post('/admin/trackings', authenticateAdmin, async (req, res) => {
             expectedDelivery,
             senderName,
             recipientName,
-            // recipientEmail, // REMOVED from payload destructuring to prevent even accidental capture
             packageContents,
             serviceType,
             recipientAddress,
@@ -307,7 +299,6 @@ app.post('/admin/trackings', authenticateAdmin, async (req, res) => {
             expectedDelivery: expectedDelivery ? new Date(expectedDelivery) : undefined, // Convert to Date object
             senderName,
             recipientName,
-            // recipientEmail: recipientEmail, // REMOVED from new Tracking object creation
             packageContents,
             serviceType,
             recipientAddress,
@@ -329,6 +320,43 @@ app.post('/admin/trackings', authenticateAdmin, async (req, res) => {
         res.status(500).json({ message: 'Server error while creating tracking record.', error: error.message });
     }
 });
+
+
+// Helper function to parse time including AM/PM
+function parseTimeWithAmPm(timeStr) {
+    const timeRegex12Hr = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i; // Handles 12:30 PM, 2:15am, 10:00
+    const timeRegex24Hr = /^(\d{2}):(\d{2})$/; // Handles 14:30
+
+    let match = timeStr.match(timeRegex12Hr);
+    if (match) {
+        let hour = parseInt(match[1], 10);
+        let minute = parseInt(match[2], 10);
+        const ampm = match[3] ? match[3].toUpperCase() : '';
+
+        if (ampm === 'PM' && hour < 12) {
+            hour += 12;
+        } else if (ampm === 'AM' && hour === 12) { // 12 AM (midnight) is 00 in 24-hour format
+            hour = 0;
+        }
+
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+            return null; // Invalid time components
+        }
+        return { hour, minute };
+    }
+
+    match = timeStr.match(timeRegex24Hr);
+    if (match) {
+        let hour = parseInt(match[1], 10);
+        let minute = parseInt(match[2], 10);
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+            return null; // Invalid time components
+        }
+        return { hour, minute };
+    }
+
+    return null; // No match
+}
 
 
 // Edit a specific history event
@@ -359,24 +387,36 @@ app.put('/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req
 
         let newTimestamp;
         if (date !== undefined || time !== undefined) {
-            const effectiveDate = date !== undefined ? date : historyEvent.timestamp.toISOString().split('T')[0];
-            const effectiveTime = time !== undefined ? time : historyEvent.timestamp.toISOString().split('T')[1].substring(0, 5);
+            // Get current components from existing timestamp if not provided in request
+            const existingDateISO = historyEvent.timestamp.toISOString().split('T')[0]; // YYYY-MM-DD
+            const existingTimeISO = historyEvent.timestamp.toISOString().split('T')[1].substring(0, 5); // HH:MM (24-hour)
+
+            const effectiveDate = date !== undefined ? date : existingDateISO;
+            const effectiveTimeInput = time !== undefined ? time : existingTimeISO;
 
             const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-            const timeRegex = /^(?:2[0-3]|[01]?[0-9]):[0-5][0-9]$/;
-
-            if (date !== undefined && !dateRegex.test(effectiveDate)) {
-                console.warn(`Invalid date format for history event update: ${effectiveDate}`); // Log the invalid format
+            if (!dateRegex.test(effectiveDate)) {
+                console.warn(`Invalid date format for history event update: ${effectiveDate}`);
                 return res.status(400).json({ message: 'Invalid date format for history event update. Expected YYYY-MM-DD.' });
             }
-            if (time !== undefined && !timeRegex.test(effectiveTime)) {
-                console.warn(`Invalid time format for history event update: ${effectiveTime}`); // Log the invalid format
-                return res.status(400).json({ message: 'Invalid time format for history event update. Expected HH:MM.' });
+
+            const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
+            if (!parsedTime) {
+                console.warn(`Invalid time format for history event update: ${effectiveTimeInput}`);
+                return res.status(400).json({ message: 'Invalid time format for history event update. Expected HH:MM or HH:MM AM/PM.' });
             }
 
-            newTimestamp = new Date(`${effectiveDate}T${effectiveTime}:00`);
+            // Construct new Date object in UTC to avoid server timezone issues
+            newTimestamp = new Date(Date.UTC(
+                new Date(effectiveDate).getUTCFullYear(),
+                new Date(effectiveDate).getUTCMonth(),
+                new Date(effectiveDate).getUTCDate(),
+                parsedTime.hour,
+                parsedTime.minute
+            ));
+
             if (isNaN(newTimestamp.getTime())) {
-                console.warn(`Could not parse combined timestamp: ${effectiveDate}T${effectiveTime}:00`);
+                console.warn(`Could not parse combined timestamp from admin input: ${effectiveDate} ${effectiveTimeInput}`);
                 return res.status(400).json({ message: 'Invalid date or time provided for history event update.' });
             }
             historyEvent.timestamp = newTimestamp;
@@ -434,37 +474,56 @@ app.put('/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 
             if (key === 'expectedDeliveryDate') {
                 const effectiveDate = updateData.expectedDeliveryDate;
-                const effectiveTime = updateData.expectedDeliveryTime || (currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[1].substring(0, 5) : '00:00');
+                const effectiveTimeInput = updateData.expectedDeliveryTime || (currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[1].substring(0, 5) : '00:00');
 
                 if (effectiveDate) {
                     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
                     if (!dateRegex.test(effectiveDate)) {
                         console.warn(`Invalid date format for expectedDeliveryDate: ${effectiveDate}`);
-                        return; // Or handle more gracefully
+                        return;
                     }
-                    const newExpectedDelivery = new Date(`${effectiveDate}T${effectiveTime}:00`);
+                    const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
+                    if (!parsedTime) {
+                        console.warn(`Could not parse expectedDeliveryTime for combined timestamp: ${effectiveTimeInput}`);
+                        return;
+                    }
+
+                    const newExpectedDelivery = new Date(Date.UTC(
+                        new Date(effectiveDate).getUTCFullYear(),
+                        new Date(effectiveDate).getUTCMonth(),
+                        new Date(effectiveDate).getUTCDate(),
+                        parsedTime.hour,
+                        parsedTime.minute
+                    ));
+                    
                     if (!isNaN(newExpectedDelivery.getTime())) {
                         currentTracking.expectedDelivery = newExpectedDelivery;
                     } else {
-                        console.warn(`Could not parse new expectedDelivery: ${effectiveDate} ${effectiveTime}`);
+                        console.warn(`Could not parse new expectedDelivery: ${effectiveDate} ${effectiveTimeInput}`);
                     }
                 }
             } else if (key === 'expectedDeliveryTime') {
                 if (updateData.expectedDeliveryDate === undefined) { // Only update time if date wasn't also provided
                     const effectiveDate = currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]);
-                    const effectiveTime = updateData.expectedDeliveryTime;
+                    const effectiveTimeInput = updateData.expectedDeliveryTime;
 
-                    if (effectiveTime) {
-                        const timeRegex = /^(?:2[0-3]|[01]?[0-9]):[0-5][0-9]$/;
-                        if (!timeRegex.test(effectiveTime)) {
-                            console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTime}`);
-                            return; // Or handle more gracefully
+                    if (effectiveTimeInput) {
+                        const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
+                        if (!parsedTime) {
+                            console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
+                            return;
                         }
-                        const newExpectedDelivery = new Date(`${effectiveDate}T${effectiveTime}:00`);
+                        const newExpectedDelivery = new Date(Date.UTC(
+                            new Date(effectiveDate).getUTCFullYear(),
+                            new Date(effectiveDate).getUTCMonth(),
+                            new Date(effectiveDate).getUTCDate(),
+                            parsedTime.hour,
+                            parsedTime.minute
+                        ));
                         if (!isNaN(newExpectedDelivery.getTime())) {
                             currentTracking.expectedDelivery = newExpectedDelivery;
                         } else {
-                            console.warn(`Could not parse new expectedDelivery with existing date: ${effectiveDate} ${effectiveTime}`);
+                            console.warn(`Could not parse new expectedDelivery with existing date: ${effectiveDate} ${effectiveTimeInput}`);
                         }
                     }
                 }
