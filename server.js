@@ -6,7 +6,6 @@ require('dotenv').config(); // Good for local development/testing
 
 const express = require('express');
 const mongoose = require('mongoose');
-// const bodyParser = require('body-parser'); // REMOVED: express.json() and express.urlencoded() are sufficient
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
@@ -29,7 +28,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // app.use(express.static(path.join(__dirname, 'public'))); // <--- COMMENTED OUT: Frontend served directly by Netlify
 // app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // <--- COMMENTED OUT: Local file serving won't work on Netlify
-
 
 // --- Mongoose Schemas and Models ---
 
@@ -78,7 +76,6 @@ UserSchema.pre('save', async function (next) {
 const Tracking = mongoose.model('Tracking', TrackingSchema);
 const User = mongoose.model('User', UserSchema);
 
-
 // --- Initial Data Population Function (Exported, not automatically run by app.listen) ---
 // This function can be called once, manually, or as part of a deployment script.
 async function populateInitialData() {
@@ -117,7 +114,6 @@ async function populateInitialData() {
     }
 }
 
-
 // --- JWT Authentication Middleware ---
 console.log('Server JWT_SECRET (active):', process.env.JWT_SECRET ? 'Loaded' : 'Not Loaded'); // Improved log
 const authenticateToken = (req, res, next) => {
@@ -148,7 +144,6 @@ const authenticateAdmin = (req, res, next) => {
         }
     });
 };
-
 
 // --- API Routes ---
 
@@ -196,7 +191,6 @@ app.get('/api/track/:trackingId', async (req, res) => {
     }
 });
 
-
 // Admin Route: Get all tracking records
 app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
@@ -209,15 +203,55 @@ app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     }
 });
 
+// Admin Route: Get a single tracking record by ID
+app.get('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`Received GET /api/admin/trackings/${id} request.`); // For debugging
+
+        const tracking = await Tracking.findById(id);
+
+        if (!tracking) {
+            return res.status(404).json({ message: 'Tracking record not found.' });
+        }
+
+        res.json(tracking); // Return the full tracking object for admin
+    } catch (error) {
+        console.error(`Error fetching single tracking ${req.params.id} for admin:`, error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'Invalid tracking ID format.' });
+        }
+        res.status(500).json({ message: 'Server error while fetching single tracking details.', error: error.message });
+    }
+});
+
+// Admin Route: Get dashboard statistics
+app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
+    try {
+        console.log('Received GET /api/admin/dashboard-stats request.');
+        const totalTrackings = await Tracking.countDocuments({});
+        const deliveredTrackings = await Tracking.countDocuments({ status: 'Delivered' });
+        const inTransitTrackings = await Tracking.countDocuments({
+            status: { $nin: ['Delivered', 'Cancelled', 'On Hold'] } // Assuming these are not in transit
+        });
+        const onHoldTrackings = await Tracking.countDocuments({ status: 'On Hold' });
+
+        res.json({
+            totalTrackings,
+            deliveredTrackings,
+            inTransitTrackings,
+            onHoldTrackings,
+            // Add more stats as needed (e.g., last 7 days, by origin/destination)
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        res.status(500).json({ message: 'Server error while fetching dashboard statistics.', error: error.message });
+    }
+});
+
+
 // User Authentication Route
 app.post('/api/login', async (req, res) => {
-    // --- REMOVED: Extensive LOGIN REQUEST DEBUGGING for production readiness ---
-    // console.log('Received login request. Full request object (DEBUG):', req);
-    // console.log('Received login request. Headers:', req.headers);
-    // console.log('Received login request. Raw Body from Netlify (if available):', req.rawBody);
-    // console.log('Received login request. Parsed Body (as Buffer/string from Netlify):', req.body);
-    // --- END LOGIN REQUEST DEBUGGING ---
-
     let parsedBody;
     try {
         // Manually attempt to parse req.body if it's a Buffer or string
@@ -248,9 +282,6 @@ app.post('/api/login', async (req, res) => {
     // Now, destructure username and password from the correctly parsed object
     const { username, password } = parsedBody;
 
-    // console.log('Login attempt for username (after custom parsing):', username); // Keep only essential logs
-    // console.log('Password received (DO NOT LOG IN PRODUCTION):', password); // Remove this line in production!
-
     try {
         const user = await User.findOne({ username });
 
@@ -258,11 +289,9 @@ app.post('/api/login', async (req, res) => {
             console.log('User not found for username:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
         }
-        // console.log('User found:', user.username); // Keep only essential logs
 
         const isMatch = await bcrypt.compare(password, user.password);
 
-        // console.log('Password comparison result (isMatch):', isMatch); // Keep only essential logs
         if (!isMatch) {
             console.log('Password mismatch for user:', username);
             return res.status(400).json({ message: 'Invalid credentials.' });
@@ -279,7 +308,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ message: 'Server error during login.' });
     }
 });
-
 
 // Edit a specific history event
 app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
@@ -345,7 +373,6 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
         res.status(500).json({ message: 'Server error while updating history event.', error: error.message });
     }
 });
-
 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
 app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
@@ -462,7 +489,6 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
     }
 });
 
-
 // Delete an entire tracking record
 app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
@@ -522,7 +548,6 @@ app.post('/api/admin/create-user', async (req, res) => {
     }
 });
 
-
 // --- Serve Static HTML Files ---
 // IMPORTANT: These routes are for local development ONLY.
 // Netlify will serve your 'public' folder directly.
@@ -548,7 +573,6 @@ app.get('/track_details.html', (req, res) => {
 app.use((req, res, next) => {
     res.status(404).json({ message: 'Endpoint not found.' });
 });
-
 
 // Error handling middleware (should be last)
 app.use((err, req, res, next) => {
