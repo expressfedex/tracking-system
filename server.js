@@ -152,12 +152,21 @@ const authenticateAdmin = (req, res, next) => {
 
 // --- User Authentication Routes ---
 app.post('/api/login', async (req, res) => {
+    // --- ADDED DETAILED LOGS FOR DEBUGGING ---
+    console.log('--- START LOGIN REQUEST DEBUGGING ---');
+    console.log('Received login request. Full request object (DEBUG):', req);
+    console.log('Received login request. Headers:', req.headers);
+    console.log('Received login request. Raw Body from Netlify (if available):', req.rawBody); // Netlify specific, sometimes useful for raw data
+    console.log('Received login request. Parsed Body:', req.body);
+    console.log('--- END LOGIN REQUEST DEBUGGING ---');
+    // --- END ADDED DETAILED LOGS ---
+
     const { username, password } = req.body;
 
-    // --- ADDED CONSOLE.LOGS FOR DEBUGGING ---
+    // --- Original debug logs for username ---
     console.log('Login attempt for username:', username);
     // console.log('Password received (DO NOT LOG IN PRODUCTION):', password); // ONLY FOR DEBUGGING, REMOVE LATER!
-    // --- END ADDED LOGS ---
+    // --- END Original debug logs ---
 
     try {
         const user = await User.findOne({ username });
@@ -191,7 +200,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ message: 'Server error during login.' });
     }
 });
-
 
 // --- Multer for File Uploads ---
 // IMPORTANT: THIS SECTION NEEDS MAJOR REFACTORING FOR NETLIFY
