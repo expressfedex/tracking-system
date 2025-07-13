@@ -15,8 +15,8 @@ async function connectToDatabase() {
     console.log('Connecting to MongoDB...');
     try {
         cachedDb = await mongoose.connect(process.env.MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
+            // REMOVED: useNewUrlParser: true,  (This was the culprit)
+            // REMOVED: useUnifiedTopology: true, (This was also removed)
             // IMPORTANT FOR SERVERLESS:
             bufferCommands: false, // Disable Mongoose's internal buffering
             serverSelectionTimeoutMS: 5000, // Timeout after 5s for initial server selection
