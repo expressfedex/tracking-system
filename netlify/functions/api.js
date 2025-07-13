@@ -23,8 +23,8 @@ exports.handler = async (event, context) => {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
                 bufferCommands: false, // Disable Mongoose's internal buffering
-                serverSelectionTimeoutMS: 5000 // Give up after 5 seconds if connection fails
-                dbName: 'fedex_tracking_data'
+                serverSelectionTimeoutMS: 5000, // Give up after 5 seconds if connection fails
+                dbName: 'fedex_db'
             });
             console.log('MongoDB connected successfully!');
             // Optional: Run initial data population if needed, but carefully
