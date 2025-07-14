@@ -21,7 +21,7 @@ app.use(express.json());
 // Enable CORS for all origins. Consider restricting this in production for security.
 app.use(cors());
 
-// If you send data from HTML forms with 'application/x-www-form-urlencoded' Content-Type.
+// If you send data from HTML forms with 'application/x-form-urlencoded' Content-Type.
 // If all your front-end interactions are JSON, you might not strictly need this.
 app.use(express.urlencoded({ extended: true }));
 
@@ -75,7 +75,8 @@ UserSchema.pre('save', async function (next) {
 });
 
 const Tracking = mongoose.model('Tracking', TrackingSchema);
-const User = mongoose.model('User', UserSchema);
+// --- CORRECTED LINE BELOW ---
+const User = mongoose.model('User', UserSchema, 'fedex_db.users'); // <-- THIS IS THE CORRECTION
 
 
 // --- Initial Data Population Function (Exported, not automatically run by app.listen) ---
@@ -93,7 +94,7 @@ async function populateInitialData() {
                 blinkingDotColor: '#b93737', // Red
                 isBlinking: true,
                 origin: 'Texas, USA',
-                destination: 'Guangzhou, China',
+                to: 'Guangzhou, China',
                 expectedDelivery: new Date('2025-07-13T00:00:00Z'),
                 senderName: 'UNDEF Program',
                 recipientName: 'David R Fox',
@@ -196,7 +197,7 @@ app.get('/api/track/:trackingId', async (req, res) => {
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-        })),
+            })),
             attachedFileName: trackingDetails.attachedFileName,
             lastUpdated: trackingDetails.lastUpdated
         };
