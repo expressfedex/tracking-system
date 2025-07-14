@@ -75,7 +75,7 @@ UserSchema.pre('save', async function (next) {
 });
 
 const Tracking = mongoose.model('Tracking', TrackingSchema);
-const User = mongoose.model('User', UserSchema, 'fedex_db.users'); // Corrected collection name
+const User = mongoose.model('User', UserSchema, 'users'); // Corrected collection name
 
 
 // --- Initial Data Population Function (Exported, not automatically run by app.listen) ---
@@ -752,4 +752,8 @@ app.use((err, req, res, next) => {
 
 
 // Export the Express app instance for Netlify Function
-module.exports = app;
+module.exports = {
+    app,
+    populateInitialData, // Export the function for population logic
+    mongoose // Export mongoose for connection handling in api.js
+};

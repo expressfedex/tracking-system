@@ -1,28 +1,31 @@
 // netlify/functions/api.js
 const serverless = require('serverless-http');
-const app = require('../../server'); // Path to your Express app (server.js)
-const mongoose = require('mongoose');
+// CHANGE 1: Import populateInitialData and mongoose from server.js
+const { app, populateInitialData, mongoose } = require('../../server'); // Path to your Express app (server.js)
 
 // Cache the database connection across warm invocations
 let cachedDb = null;
 
 async function connectToDatabase() {
-    if (cachedDb && mongoose.connection.readyState === 1) { // Check if already connected and ready
+    if (cachedDb && mongoose.connection.readyState === 1) {
         console.log('MongoDB already connected. Reusing connection.');
         return cachedDb;
     }
 
     console.log('Connecting to MongoDB...');
     try {
-        cachedDb = await mongoose.connect(process.env.MONGODB_URI, {
-            // REMOVED: useNewUrlParser: true,  (This was the culprit)
-            // REMOVED: useUnifiedTopology: true, (This was also removed)
-            // IMPORTANT FOR SERVERLESS:
-            bufferCommands: false, // Disable Mongoose's internal buffering
-            serverSelectionTimeoutMS: 5000, // Timeout after 5s for initial server selection
-            socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+        cachedDb = await mongoose.connect(process.env.MONGO_URI, { // Use MONGO_URI, not MONGODB_URI if that's your env var name
+            bufferCommands: false,
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
         });
         console.log('MongoDB connected successfully!');
+
+        // CHANGE 2: Call populateInitialData after successful connection
+        console.log('Attempting to populate initial data...');
+        await populateInitialData(); // This will create the admin user if not present
+        console.log('Initial data population attempt complete.');
+
         return cachedDb;
     } catch (error) {
         console.error('MongoDB connection error:', error);
@@ -48,7 +51,6 @@ exports.handler = async (event, context) => {
     }
 
     // Now, let serverless-http handle the request and pass it to Express.
-    // express.json() in your server.js will handle the event.body parsing.
     console.log('[Netlify Function] Passing raw event to serverless-http for Express processing...');
     return handler(event, context);
 };
