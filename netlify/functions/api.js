@@ -14,7 +14,7 @@ async function connectToDatabase() {
 
     console.log('Connecting to MongoDB...');
     try {
-        cachedDb = await mongoose.connect(process.env.MONGO_URI, { // Use MONGO_URI, not MONGODB_URI if that's your env var name
+        cachedDb = await mongoose.connect(process.env.MONGODB_URI, { // Use MONGO_URI, not MONGODB_URI if that's your env var name
             bufferCommands: false,
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000,
