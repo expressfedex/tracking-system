@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 M.updateTextFields();
             }
         });
-    }); // This '});' closes the sidebarLinks.forEach(link => { ... }); block
+    });
 
     // Toggle sidebar for mobile
     menuToggle.addEventListener('click', function() {
@@ -564,7 +564,6 @@ document.addEventListener('DOMContentLoaded', function() {
             location: document.getElementById('editHistoryLocation').value,
             description: document.getElementById('editHistoryDescription').value,
         };
-
         fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, { // <--- CORRECTED URL: Added '/admin'
             method: 'PUT',
             headers: {
@@ -597,6 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 updatedTracking.trackingHistory = data.tracking.trackingHistory; // Get updated history from server
                 selectedOption.dataset.trackingData = JSON.stringify(updatedTracking); // Update stored data
                 renderTrackingHistory(updatedTracking.trackingHistory); // Re-render history
+                editHistoryModalInstance.close(); // Close modal on success
             } else {
                 M.toast({
                     html: `Error: ${data.message || 'Could not update history event.'}`,
@@ -1089,4 +1089,3 @@ document.addEventListener('DOMContentLoaded', function() {
     showSection('dashboard-section');
     fetchAllTrackings(); // This will also call updateDashboardStats
 }); // <--- This is the final closing brace for the DOMContentLoaded listener.
-    // This was the missing '}' for the "Uncaught SyntaxError: Unexpected end of input".
