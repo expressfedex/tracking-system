@@ -191,72 +191,125 @@ document.addEventListener('DOMContentLoaded', function() {
             trackingHistory: [] // New tracking starts with an empty history
         };
 
-        fetch('/api/trackings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    M.toast({
-                        html: 'Tracking added successfully!',
-                        classes: 'green darken-2'
-                    });
-                    document.getElementById('addTrackingForm').reset();
-                    updateAddStatusIndicator(); // Reset status indicator visuals
-                    // Optionally, refresh 'Manage All Trackings' table
-                    // fetchAllTrackings();
-                } else {
-                    M.toast({
-                        html: `Error: ${data.message || 'Could not add tracking.'}`,
-                        classes: 'red darken-2'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error adding tracking:', error);
-                M.toast({
-                    html: 'Network error or server issue.',
-                    classes: 'red darken-2'
-                });
-            });
-    });
-
-    // 2. Manage Single Tracking - Populate Select Dropdown
-    const singleTrackingIdSelect = document.getElementById('singleTrackingIdSelect');
-
-    function fetchTrackingIdsForSelect() {
-        fetch('/api/trackings')
-            .then(response => response.json())
-            .then(trackings => {
-                singleTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
-                trackings.forEach(tracking => {
-                    const option = document.createElement('option');
-                    option.value = tracking._id; // Use MongoDB _id for internal management
-                    option.textContent = tracking.trackingId; // Display trackingId to user
-                    option.dataset.trackingData = JSON.stringify(tracking); // Store full tracking data
-                    singleTrackingIdSelect.appendChild(option);
-                });
-                M.FormSelect.init(singleTrackingIdSelect); // Re-initialize Materialize select
-            })
-            .catch(error => console.error('Error fetching tracking IDs:', error));
-    }
-
-    singleTrackingIdSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption.value) {
-            const trackingData = JSON.parse(selectedOption.dataset.trackingData);
-            populateUpdateForm(trackingData);
-            document.getElementById('updateTrackingForm').style.display = 'block';
-            updateUpdateStatusIndicator(); // Update status indicator for loaded data
-            M.updateTextFields(); // Important for Materialize labels to adjust for populated fields
-        } else {
-            document.getElementById('updateTrackingForm').style.display = 'none';
+      // Inside your addTrackingForm event listener
+fetch('/api/admin/trackings', { // <--- CORRECTED URL: Added '/admin'
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+    },
+    body: JSON.stringify(formData),
+})
+.then(response => {
+    // Check for non-OK responses (e.g., 400, 401, 403, 409, 500)
+    if (!response.ok) {
+        // If it's a 401 or 403, you might want to redirect to login
+        if (response.status === 401 || response.status === 403) {
+            M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+            setTimeout(() => window.location.href = 'admin_login.html', 2000); // Redirect to login
         }
+        return response.json().then(errorData => {
+            throw new Error(errorData.message || 'Server error');
+        });
+    }
+    return response.json();
+})
+.then(data => {
+    // Note: Your backend now returns { message, tracking } not { success }
+    // Adjust data.success to check for data.tracking or response.ok directly
+    if (data.tracking) { // Assuming a successful response includes the tracking object
+        M.toast({
+            html: 'Tracking added successfully!',
+            classes: 'green darken-2'
+        });
+        document.getElementById('addTrackingForm').reset();
+        updateAddStatusIndicator(); // Reset status indicator visuals
+        // Optionally, refresh 'Manage All Trackings' table (uncomment this if you have it)
+        // fetchAllTrackings();
+        fetchTrackingIdsForSelect(); // Refresh the dropdown after adding a new one
+    } else {
+        // This 'else' block might be less common if you're throwing errors for !response.ok
+        M.toast({
+            html: `Error: ${data.message || 'Could not add tracking.'}`,
+            classes: 'red darken-2'
+        });
+    }
+})
+.catch(error => {
+    console.error('Error adding tracking:', error);
+    M.toast({
+        html: `Network error or server issue: ${error.message}`, // Display specific error message
+        classes: 'red darken-2'
     });
+});
+
+   // 2. Manage Single Tracking - Populate Select Dropdown
+const singleTrackingIdSelect = document.getElementById('singleTrackingIdSelect');
+
+function fetchTrackingIdsForSelect() {
+    // Corrected fetch URL and added Authorization header
+    fetch('/api/admin/trackings', { // <--- CHANGE IS HERE: /api/admin/trackings
+        method: 'GET', // Explicitly state method for clarity, though GET is default
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+        }
+    })
+    .then(response => {
+        // --- IMPROVED ERROR HANDLING START ---
+        if (!response.ok) {
+            // If it's a 401 or 403, suggest re-login
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                // Redirect to login page after a short delay
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
+            // Parse error message from server response if available
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error fetching trackings');
+            });
+        }
+        // --- IMPROVED ERROR HANDLING END ---
+        return response.json();
+    })
+    .then(trackings => {
+        singleTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
+        trackings.forEach(tracking => {
+            const option = document.createElement('option');
+            option.value = tracking._id; // Use MongoDB _id for internal management
+            option.textContent = tracking.trackingId; // Display trackingId to user
+            option.dataset.trackingData = JSON.stringify(tracking); // Store full tracking data
+            singleTrackingIdSelect.appendChild(option);
+        });
+        M.FormSelect.init(singleTrackingIdSelect); // Re-initialize Materialize select
+    })
+    .catch(error => {
+        console.error('Error fetching tracking IDs:', error);
+        M.toast({
+            html: `Error fetching tracking IDs: ${error.message}`, // Display specific error message
+            classes: 'red darken-2'
+        });
+    });
+}
+
+singleTrackingIdSelect.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    if (selectedOption.value) {
+        const trackingData = JSON.parse(selectedOption.dataset.trackingData);
+        populateUpdateForm(trackingData);
+        document.getElementById('updateTrackingForm').style.display = 'block';
+        updateUpdateStatusIndicator(); // Update status indicator for loaded data
+        M.updateTextFields(); // Important for Materialize labels to adjust for populated fields
+    } else {
+        document.getElementById('updateTrackingForm').style.display = 'none';
+    }
+});
+
+// You should call fetchTrackingIdsForSelect() when the admin dashboard loads
+// For example, at the end of your DOMContentLoaded listener or similar init function:
+// document.addEventListener('DOMContentLoaded', function() {
+//    // ... other initializations
+//    fetchTrackingIdsForSelect(); // Call to populate on page load
+// });
 
     function populateUpdateForm(tracking) {
         document.getElementById('updateTrackingMongoId').value = tracking._id;
