@@ -63,7 +63,7 @@ const TrackingSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'admin' }
+    role: { type: String, enum: ['user', 'admin'], default: 'admin' } // Corrected: default 'admin'
 });
 
 // Hash password before saving
@@ -75,8 +75,7 @@ UserSchema.pre('save', async function (next) {
 });
 
 const Tracking = mongoose.model('Tracking', TrackingSchema);
-// --- CORRECTED LINE BELOW ---
-const User = mongoose.model('User', UserSchema, 'fedex_db.users'); // <-- THIS IS THE CORRECTION
+const User = mongoose.model('User', UserSchema, 'fedex_db.users'); // Corrected collection name
 
 
 // --- Initial Data Population Function (Exported, not automatically run by app.listen) ---
@@ -94,7 +93,7 @@ async function populateInitialData() {
                 blinkingDotColor: '#b93737', // Red
                 isBlinking: true,
                 origin: 'Texas, USA',
-                to: 'Guangzhou, China',
+                destination: 'Guangzhou, China', // Corrected 'to' to 'destination' for consistency
                 expectedDelivery: new Date('2025-07-13T00:00:00Z'),
                 senderName: 'UNDEF Program',
                 recipientName: 'David R Fox',
@@ -509,7 +508,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                     if (!isNaN(newExpectedDelivery.getTime())) {
                         currentTracking.expectedDelivery = newExpectedDelivery;
                     } else {
-                        console.warn(`Could not parse new expectedDelivery: ${effectiveDate} ${effectiveTimeInput}`);
+                        console.warn(`Could not parse new expectedDelivery with existing date: ${effectiveDate} ${effectiveTimeInput}`);
                     }
                 }
             } else if (key === 'expectedDeliveryTime') {
@@ -557,8 +556,6 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         res.status(500).json({ message: 'Server error when updating tracking details.', error: error.message });
     }
 });
-
-
 // Delete a specific history event by _id
 app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
@@ -681,16 +678,12 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).json({ message: 'Please enter all fields' });
     }
 
-
-    try {
-        // *** ADD THESE TWO LOG LINES BELOW ***
+    try { // This is the main try block for the route
+        // Your debug logs before the findOne call
         console.log(`[DEBUG] Attempting User.findOne for username: "${username}"`);
         const user = await User.findOne({ username });
         console.log(`[DEBUG] Result of User.findOne for "${username}":`, user ? `User found with ID: ${user._id} and role: ${user.role}` : 'No user document found.');
-        //
 
-    try {
-        const user = await User.findOne({ username });
         if (!user) {
             console.log('Login failed: User not found for username:', username);
             return res.status(401).json({ message: 'Invalid credentials.' });
@@ -711,7 +704,7 @@ app.post('/api/login', async (req, res) => {
 
         console.log('Login successful for user:', username, 'Role:', user.role);
         res.json({ message: 'Login successful!', token, role: user.role });
-    } catch (error) {
+    } catch (error) { // This catch block correctly handles errors for the entire route's logic
         console.error('Error during login route execution:', error);
         res.status(500).json({ message: 'Server error during login.' });
     }
