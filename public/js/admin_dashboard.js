@@ -174,7 +174,6 @@ document.addEventListener('DOMContentLoaded', function() {
             trackingId: document.getElementById('addTrackingId').value,
             status: document.getElementById('addStatus').value,
             isBlinking: document.getElementById('addIsBlinking').checked,
-            description: document.getElementById('addDescription').value,
             statusLineColor: document.getElementById('addStatusLineColor').value,
             blinkingDotColor: document.getElementById('addBlinkingDotColor').value,
             senderName: document.getElementById('addSenderName').value,
@@ -264,7 +263,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('updateTrackingId').value = tracking.trackingId;
         document.getElementById('updateStatus').value = tracking.status;
         document.getElementById('updateIsBlinkingOriginal').checked = tracking.isBlinking || false;
-        document.getElementById('updateDescription').value = tracking.description;
         document.getElementById('updateStatusLineColor').value = tracking.statusLineColor || '#2196F3';
         document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
         document.getElementById('updateSenderName').value = tracking.senderName;
@@ -297,7 +295,6 @@ document.addEventListener('DOMContentLoaded', function() {
             trackingId: document.getElementById('updateTrackingId').value,
             status: document.getElementById('updateStatus').value,
             isBlinking: document.getElementById('updateIsBlinkingOriginal').checked,
-            description: document.getElementById('updateDescription').value,
             statusLineColor: document.getElementById('updateStatusLineColor').value,
             blinkingDotColor: document.getElementById('updateBlinkingDotColor').value,
             senderName: document.getElementById('updateSenderName').value,
