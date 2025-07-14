@@ -681,6 +681,14 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).json({ message: 'Please enter all fields' });
     }
 
+
+    try {
+        // *** ADD THESE TWO LOG LINES BELOW ***
+        console.log(`[DEBUG] Attempting User.findOne for username: "${username}"`);
+        const user = await User.findOne({ username });
+        console.log(`[DEBUG] Result of User.findOne for "${username}":`, user ? `User found with ID: ${user._id} and role: ${user.role}` : 'No user document found.');
+        //
+
     try {
         const user = await User.findOne({ username });
         if (!user) {
@@ -698,7 +706,7 @@ app.post('/api/login', async (req, res) => {
         const token = jwt.sign(
             { id: user._id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '24h' }
         );
 
         console.log('Login successful for user:', username, 'Role:', user.role);
