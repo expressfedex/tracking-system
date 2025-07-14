@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
             blinkingDotColor: document.getElementById('addBlinkingDotColor').value,
             senderName: document.getElementById('addSenderName').value,
             recipientName: document.getElementById('addRecipientName').value,
-            // recipientEmail: document.getElementById('addRecipientEmail').value, // REMOVED
+            recipientEmail: document.getElementById('addRecipientEmail').value, 
             packageContents: document.getElementById('addPackageContents').value,
             serviceType: document.getElementById('addServiceType').value,
             recipientAddress: document.getElementById('addRecipientAddress').value,
@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
         document.getElementById('updateSenderName').value = tracking.senderName;
         document.getElementById('updateRecipientName').value = tracking.recipientName;
-        // document.getElementById('updateRecipientEmail').value = tracking.recipientEmail; // REMOVED
+        /document.getElementById('updateRecipientEmail').value = tracking.recipientEmail; 
         document.getElementById('updatePackageContents').value = tracking.packageContents;
         document.getElementById('updateServiceType').value = tracking.serviceType;
         document.getElementById('updateRecipientAddress').value = tracking.recipientAddress;
@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             blinkingDotColor: document.getElementById('updateBlinkingDotColor').value,
             senderName: document.getElementById('updateSenderName').value,
             recipientName: document.getElementById('updateRecipientName').value,
-            // recipientEmail: document.getElementById('updateRecipientEmail').value, // REMOVED
+            recipientEmail: document.getElementById('updateRecipientEmail').value, 
             packageContents: document.getElementById('updatePackageContents').value,
             serviceType: document.getElementById('updateServiceType').value,
             recipientAddress: document.getElementById('updateRecipientAddress').value,
