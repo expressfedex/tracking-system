@@ -151,78 +151,45 @@
         </div>
     </div>
 
-    <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+  <script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const errorMessageElement = document.getElementById('errorMessage');
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const errorMessageElement = document.getElementById('errorMessage');
 
-        errorMessageElement.style.display = 'none'; // Hide previous errors
+    errorMessageElement.style.display = 'none'; // Hide previous errors
 
-        try {
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password }),
-            });
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+        });
 
-            const data = await response.json();
+        const data = await response.json();
 
-            if (response.ok) {
-                console.log('Login successful:', data); 
-                localStorage.setItem('adminToken', data.token);
-                // **** FIX APPLIED HERE ****
-                localStorage.setItem('userRole', data.role); // Correctly sets the user role based on server response
+        if (response.ok) {
+            console.log('Login successful:', data);
+            // **** FIX APPLIED HERE ****
+            localStorage.setItem('token', data.token); // CHANGE THIS LINE from 'adminToken' to 'token'
+            localStorage.setItem('userRole', data.role); // Correctly sets the user role based on server response
 
-                // Redirect to admin dashboard
-                window.location.href = '/admin_dashboard.html';
-            } else {
-                errorMessageElement.textContent = data.message || 'Login failed. Please check your username and password.';
-                errorMessageElement.style.display = 'block';
-            }
-        } catch (error) {
-            console.error('Error during login:', error);
-            errorMessageElement.textContent = 'An unexpected error occurred during login. Please try again.';
+            // Redirect to admin dashboard
+            window.location.href = '/admin_dashboard.html';
+        } else {
+            errorMessageElement.textContent = data.message || 'Login failed. Please check your username and password.';
             errorMessageElement.style.display = 'block';
         }
-    });
-
-
-    // Function to create an initial admin user (for testing/setup)
-    async function createAdminUser() {
-        const defaultUsername = 'admin';
-        const defaultPassword = 'adminpassword'; // Use a strong password in production!
-
-        if (confirm(`Do you want to create a default admin user?
-            Username: ${defaultUsername}
-            Password: ${defaultPassword}
-            (This is for initial setup/testing only!)`)) {
-            try {
-                const response = await fetch('/api/admin/create-user', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username: defaultUsername, password: defaultPassword, role: 'admin' }),
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    alert(`User created: ${data.user.username} with role ${data.user.role}. You can now log in.`);
-                } else {
-                    alert('Error creating user: ' + (data.message || 'Something went wrong.'));
-                }
-            } catch (error) {
-                console.error('Create user error:', error);
-                alert('Network error during user creation.');
-            }
-        }
+    } catch (error) {
+        console.error('Error during login:', error);
+        errorMessageElement.textContent = 'An unexpected error occurred during login. Please try again.';
+        errorMessageElement.style.display = 'block';
     }
+});
 </script>
 </body>
 </html>
