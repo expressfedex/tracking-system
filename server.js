@@ -462,7 +462,7 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
     console.log('Backend: req.params.id (Tracking ID from URL):', req.params.id);
     console.log('Backend: Full req.body received:', req.body); // Check if body is empty {}
 
-    // Explicitly log each field from req.body
+    // Explicitly log each field from req.body (these will be undefined initially if req.body is a Buffer)
     console.log('Backend: req.body.date:', req.body.date, 'Type:', typeof req.body.date);
     console.log('Backend: req.body.time:', req.body.time, 'Type:', typeof req.body.time);
     console.log('Backend: req.body.location:', req.body.location, 'Type:', typeof req.body.location);
@@ -471,7 +471,34 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
 
     try {
         const { id } = req.params; // Get the tracking's MongoDB _id from the URL
-        const { date, time, location, description } = req.body; // Get history data from the request body
+
+        // --- START: ADDED REQ.BODY PARSING WORKAROUND ---
+        let bodyData = req.body; // Create a mutable variable for the body
+
+        if (bodyData instanceof Buffer) {
+            console.log('Backend: req.body for history is a Buffer, attempting to parse it as JSON...');
+            try {
+                bodyData = JSON.parse(bodyData.toString('utf8'));
+                console.log('Backend: Successfully parsed req.body Buffer for history:', bodyData);
+            } catch (parseError) {
+                console.error('Backend: Failed to parse req.body Buffer as JSON for history:', parseError);
+                return res.status(400).json({ message: 'Invalid JSON body for history from Buffer parsing.' });
+            }
+        } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0 && req.rawBody && req.rawBody instanceof Buffer) {
+            // Fallback for cases where req.body is an empty object but rawBody exists (less common with serverless-http)
+            console.log('Backend: req.body for history was empty object, checking req.rawBody...');
+            try {
+                bodyData = JSON.parse(req.rawBody.toString('utf8'));
+                console.log('Backend: Successfully parsed from req.rawBody for history:', bodyData);
+            } catch (parseError) {
+                console.error('Backend: Failed to parse req.rawBody as JSON for history:', parseError);
+                return res.status(400).json({ message: 'Invalid JSON body in rawBody for history.' });
+            }
+        }
+        // --- END: ADDED REQ.BODY PARSING WORKAROUND ---
+
+        // Get history data from the parsed bodyData (CHANGED from req.body)
+        const { date, time, location, description } = bodyData;
 
         // Basic validation for required fields for adding a new event
         // This check will pass if the values are not strictly falsy (e.g., '0' is not falsy)
@@ -523,12 +550,14 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
             description: description
         };
 
-        // --- CRITICAL CHECK: Make sure 'history' is the correct field name in your Mongoose schema
+        // --- START: CORRECTED HISTORY FIELD NAME ---
+        // CRITICAL CHECK: Make sure 'history' is the correct field name in your Mongoose schema
         // It was often called 'trackingHistory' in earlier discussions/code.
-        if (!tracking.trackingHistory) { // <-- Check your schema. Is it 'history' or 'trackingHistory'?
-            tracking.trackingHistory = []; // Initialize if it doesn't exist
+        if (!tracking.history) { // <--- CHANGED from tracking.trackingHistory to tracking.history
+            tracking.history = []; // Initialize if it doesn't exist
         }
-        tracking.trackingHistory.push(newHistoryEvent); // <-- Use the correct field name
+        tracking.history.push(newHistoryEvent); // <--- CHANGED from tracking.trackingHistory to tracking.history
+        // --- END: CORRECTED HISTORY FIELD NAME ---
 
         tracking.lastUpdated = new Date(); // Update the lastUpdated field
 
@@ -545,6 +574,7 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
         res.status(500).json({ message: 'Server error while adding history event.', error: error.message });
     }
 });
+
 
 // Edit a specific history event
 app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
