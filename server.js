@@ -200,6 +200,11 @@ app.get('/api/track/:trackingId', async (req, res) => {
             return res.status(404).json({ message: 'Tracking ID not found.' });
         }
 
+         // --- ADD THESE CACHE CONTROL HEADERS ---
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+
        // Return only necessary public details, NO sensitive info
 const publicDetails = {
     trackingId: trackingDetails.trackingId,
