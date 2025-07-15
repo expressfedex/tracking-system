@@ -438,6 +438,69 @@ function parseTimeWithAmPm(timeStr) {
     return null;
 }
 
+// POST /api/admin/trackings/:id/history - Add a new history event to a tracking (Admin only)
+app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res) => {
+    try {
+        const { id } = req.params; // Get the tracking's MongoDB _id from the URL
+        const { date, time, location, description } = req.body; // Get history data from the request body
+
+        // Basic validation for required fields for adding a new event
+        if (!date || !time || !location || !description) {
+            return res.status(400).json({ message: 'Date, Time, Location, and Description are required to add a new history event.' });
+        }
+
+        // Find the tracking by its MongoDB _id
+        const tracking = await Tracking.findById(id);
+
+        if (!tracking) {
+            return res.status(404).json({ message: 'Tracking record not found.' });
+        }
+
+        // Combine date and time into a single Date object
+        let eventTimestamp;
+        const parsedTime = parseTimeWithAmPm(time); // Reuse your helper function
+        if (parsedTime) {
+            // It's good practice to create UTC date to avoid timezone issues during storage
+            eventTimestamp = new Date(Date.UTC(
+                new Date(date).getUTCFullYear(),
+                new Date(date).getUTCMonth(),
+                new Date(date).getUTCDate(),
+                parsedTime.hour,
+                parsedTime.minute
+            ));
+            if (isNaN(eventTimestamp.getTime())) {
+                console.warn(`Could not parse combined history date/time: ${date} ${time}`);
+                return res.status(400).json({ message: 'Invalid date or time format provided for history event.' });
+            }
+        } else {
+            console.warn(`Invalid time format for history time: ${time}`);
+            return res.status(400).json({ message: 'Invalid time format for history event. Expected HH:MM or HH:MM AM/PM.' });
+        }
+
+
+        // Add the new history event
+        const newHistoryEvent = {
+            timestamp: eventTimestamp,
+            location: location,
+            description: description
+        };
+
+        tracking.history.push(newHistoryEvent);
+        tracking.lastUpdated = new Date(); // Update the lastUpdated field
+
+        await tracking.save();
+
+        // Respond with the newly added event and potentially the updated tracking to refresh UI
+        res.status(201).json({ message: 'History event added successfully!', tracking: tracking.toObject(), newEvent: newHistoryEvent });
+
+    } catch (error) {
+        console.error('Error adding history event:', error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'Invalid tracking ID format.' });
+        }
+        res.status(500).json({ message: 'Server error while adding history event.', error: error.message });
+    }
+});
 
 // Edit a specific history event
 app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
