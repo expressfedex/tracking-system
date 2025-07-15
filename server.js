@@ -176,34 +176,34 @@ app.get('/api/track/:trackingId', async (req, res) => {
             return res.status(404).json({ message: 'Tracking ID not found.' });
         }
 
-        // Return only necessary public details, NO sensitive info
-        const publicDetails = {
-            trackingId: trackingDetails.trackingId,
-            status: trackingDetails.status,
-            statusLineColor: trackingDetails.statusLineColor,
-            blinkingDotColor: trackingDetails.blinkingDotColor,
-            isBlinking: trackingDetails.isBlinking,
-            origin: trackingDetails.origin,
-            destination: trackingDetails.destination,
-            expectedDelivery: trackingDetails.expectedDelivery,
-            senderName: trackingDetails.senderName,
-            recipientName: trackingDetails.recipientName,
-            recipientEmail: trackingDetails.recipientEmail,
-            packageContents: trackingDetails.packageContents,
-            serviceType: trackingDetails.serviceType,
-            recipientAddress: trackingDetails.recipientAddress,
-            specialHandling: trackingDetails.specialHandling,
-            weight: trackingDetails.weight,
-            history: trackingDetails.history.map(item => ({
-                timestamp: item.timestamp,
-                location: item.location,
-                description: item.description,
-            ])),
-            attachedFileName: trackingDetails.attachedFileName,
-            lastUpdated: trackingDetails.lastUpdated
-        };
+       // Return only necessary public details, NO sensitive info
+const publicDetails = {
+    trackingId: trackingDetails.trackingId,
+    status: trackingDetails.status,
+    statusLineColor: trackingDetails.statusLineColor,
+    blinkingDotColor: trackingDetails.blinkingDotColor,
+    isBlinking: trackingDetails.isBlinking,
+    origin: trackingDetails.origin,
+    destination: trackingDetails.destination,
+    expectedDelivery: trackingDetails.expectedDelivery,
+    senderName: trackingDetails.senderName,
+    recipientName: trackingDetails.recipientName,
+    recipientEmail: trackingDetails.recipientEmail,
+    packageContents: trackingDetails.packageContents,
+    serviceType: trackingDetails.serviceType,
+    recipientAddress: trackingDetails.recipientAddress,
+    specialHandling: trackingDetails.specialHandling,
+    weight: trackingDetails.weight,
+    history: trackingDetails.history.map(item => ({
+        timestamp: item.timestamp,
+        location: item.location,
+        description: item.description,
+    })), // Corrected: changed ']))' to '})'
+    attachedFileName: trackingDetails.attachedFileName,
+    lastUpdated: trackingDetails.lastUpdated
+};
 
-        res.json(publicDetails);
+res.json(publicDetails);
 
     } catch (error) {
         console.error('Error fetching public tracking details:', error);
