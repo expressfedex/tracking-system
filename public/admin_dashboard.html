@@ -222,8 +222,7 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label>
-                        <input type="checkbox" id="addIsBlinking" name="isBlinking" />
+                    <label for="addIsBlinking"> <input type="checkbox" id="addIsBlinking" name="isBlinking" />
                         <span>Tracking is Blinking (for visual emphasis)</span>
                     </label>
                 </div>
@@ -255,7 +254,6 @@
                     <small class="form-text text-muted">Email address for notifications.</small>
                 </div>
 
-
                 <div class="input-field">
                     <input type="text" id="addPackageContents" name="packageContents" required>
                     <label for="addPackageContents">Package Contents:</label>
@@ -276,7 +274,8 @@
                     <label for="addSpecialHandling">Special Handling/Notes:</label>
                 </div>
 
-                <div class="row"> <div class="input-field col s6">
+                <div class="row">
+                    <div class="input-field col s6">
                         <input type="text" id="addExpectedDeliveryDate" name="expectedDeliveryDate" class="datepicker">
                         <label for="addExpectedDeliveryDate">Expected Delivery Date:</label>
                     </div>
@@ -310,11 +309,10 @@
             <p>Select a tracking ID to view and update its details.</p>
 
             <div class="input-field">
-                <select id="singleTrackingIdSelect">
+                <select id="singleTrackingIdSelect" name="selectedTrackingId">
                     <option value="" disabled selected>Select Tracking ID</option>
-                    </select>
-                <label>Select Tracking to Edit</label>
-            </div>
+                </select>
+                <label for="singleTrackingIdSelect">Select Tracking to Edit</label> </div>
 
             <form id="updateTrackingForm" style="display: none;">
                 <h4>Update Tracking Details</h4>
@@ -335,8 +333,7 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label>
-                        <input type="checkbox" id="updateIsBlinkingOriginal" name="isBlinking" />
+                    <label for="updateIsBlinkingOriginal"> <input type="checkbox" id="updateIsBlinkingOriginal" name="isBlinking" />
                         <span>Tracking is Blinking (for visual emphasis)</span>
                     </label>
                 </div>
@@ -363,7 +360,6 @@
                     <input type="email" id="updateRecipientEmail" name="recipientEmail" required>
                     <label for="updateRecipientEmail">Recipient Email:</label>
                 </div>
-
 
                 <div class="input-field">
                     <input type="text" id="updatePackageContents" name="packageContents">
@@ -416,20 +412,16 @@
             <form id="addHistoryForm">
                 <h4>Add New History Event</h4>
                 <div class="input-field">
-                    <input type="text" id="newHistoryDate" class="datepicker" required>
-                    <label for="newHistoryDate">Date:</label>
+                    <input type="text" id="newHistoryDate" name="newHistoryDate" class="datepicker" required> <label for="newHistoryDate">Date:</label>
                 </div>
                 <div class="input-field">
-                    <input type="text" id="newHistoryTime" class="timepicker" required>
-                    <label for="newHistoryTime">Time:</label>
+                    <input type="text" id="newHistoryTime" name="newHistoryTime" class="timepicker" required> <label for="newHistoryTime">Time:</label>
                 </div>
                 <div class="input-field">
-                    <input type="text" id="newHistoryLocation">
-                    <label for="newHistoryLocation">Location:</label>
+                    <input type="text" id="newHistoryLocation" name="newHistoryLocation"> <label for="newHistoryLocation">Location:</label>
                 </div>
                 <div class="input-field">
-                    <textarea id="newHistoryDescription" class="materialize-textarea" required></textarea>
-                    <label for="newHistoryDescription">Description:</label>
+                    <textarea id="newHistoryDescription" name="newHistoryDescription" class="materialize-textarea" required></textarea> <label for="newHistoryDescription">Description:</label>
                 </div>
                 <button type="submit" class="btn waves-effect waves-light teal lighten-1"><i class="fas fa-calendar-plus"></i> Add Event</button>
             </form>
@@ -438,7 +430,8 @@
         <section id="all-trackings-section" class="dashboard-section">
             <h3><i class="fas fa-list"></i> Manage All Trackings</h3>
             <div class="table-responsive">
-                <table id="trackingTable" class="data-table striped responsive-table"> <thead>
+                <table id="trackingTable" class="data-table striped responsive-table">
+                    <thead>
                         <tr>
                             <th>Tracking ID</th>
                             <th>Status</th>
@@ -446,7 +439,8 @@
                             <th>Blinking</th>
                             <th>Sender Name</th>
                             <th>Recipient Name</th>
-                            <th>Recipient Email</th> <th>Package Contents</th>
+                            <th>Recipient Email</th>
+                            <th>Package Contents</th>
                             <th>Service Type</th>
                             <th>Recipient Address</th>
                             <th>Special Handling</th>
@@ -477,22 +471,18 @@
                     <h3><i class="fas fa-envelope"></i> Send Email Notification with Optional Attachment</h3>
                     <form id="sendEmailForm">
                         <div class="input-field">
-                            <select id="emailTrackingIdSelect">
+                            <select id="emailTrackingIdSelect" name="emailTrackingId">
                                 <option value="" disabled selected>Select Tracking ID (Optional, for pre-filling email)</option>
                                 </select>
-                            <label>Link to Tracking (Optional)</label>
+                            <label for="emailTrackingIdSelect">Link to Tracking (Optional)</label> </div>
+                        <div class="input-field">
+                            <input type="email" id="notificationEmail" name="notificationEmail" required> <label for="notificationEmail">Recipient Email:</label>
                         </div>
                         <div class="input-field">
-                            <input type="email" id="notificationEmail" required>
-                            <label for="notificationEmail">Recipient Email:</label>
+                            <input type="text" id="emailSubject" name="emailSubject" required> <label for="emailSubject">Subject:</label>
                         </div>
                         <div class="input-field">
-                            <input type="text" id="emailSubject" required>
-                            <label for="emailSubject">Subject:</label>
-                        </div>
-                        <div class="input-field">
-                            <textarea id="notificationMessage" class="materialize-textarea" rows="8" required></textarea>
-                            <label for="notificationMessage">Message Body:</label>
+                            <textarea id="notificationMessage" name="notificationMessage" class="materialize-textarea" rows="8" required></textarea> <label for="notificationMessage">Message Body:</label>
                         </div>
                         <div class="file-field input-field">
                             <div class="btn">
@@ -500,7 +490,7 @@
                                 <input type="file" id="emailAttachmentFileUpload" name="emailAttachmentFile">
                             </div>
                             <div class="file-path-wrapper">
-                                <input class="file-path validate" type="text" placeholder="Upload optional attachment">
+                                <input class="file-path validate" type="text" name="emailAttachmentFileName" placeholder="Upload optional attachment">
                             </div>
                         </div>
                         <button type="submit" id="sendEmailButton" class="btn waves-effect waves-light light-blue darken-1"><i class="fas fa-paper-plane"></i> Send Email</button>
@@ -511,17 +501,17 @@
                     <h3><i class="fas fa-file-upload"></i> Upload Package File</h3>
                     <form id="uploadPackageFileForm">
                         <div class="input-field">
-                            <select id="attachFileTrackingIdSelect"> <option value="" disabled selected>Select Tracking ID</option>
+                            <select id="attachFileTrackingIdSelect" name="attachFileTrackingId">
+                                <option value="" disabled selected>Select Tracking ID</option>
                                 </select>
                             <label for="attachFileTrackingIdSelect">Tracking ID to link file to:</label>
                         </div>
                         <div class="file-field input-field">
                             <div class="btn">
                                 <span>Choose File</span>
-                                <input type="file" id="packageFileInput" required>
-                            </div>
+                                <input type="file" id="packageFileInput" name="packageFile" required> </div>
                             <div class="file-path-wrapper">
-                                <input class="file-path validate" type="text" placeholder="Upload package document">
+                                <input class="file-path validate" type="text" name="packageFileName" placeholder="Upload package document">
                             </div>
                         </div>
                         <button class="btn waves-effect waves-light green"><i class="material-icons left">cloud_upload</i> Upload & Link File</button>
@@ -550,31 +540,26 @@
     <div id="editHistoryModal" class="modal">
         <div class="modal-content">
             <h4>Edit History Event</h4>
-            <input type="hidden" id="editHistoryModalTrackingMongoId"> <input type="hidden" id="editHistoryModalHistoryId">
-            <div class="input-field">
-                <input type="text" id="editHistoryDate" class="datepicker">
-                <label for="editHistoryDate">Date:</label>
+            <input type="hidden" id="editHistoryModalTrackingMongoId" name="editHistoryModalTrackingMongoId"> <input type="hidden" id="editHistoryModalHistoryId" name="editHistoryModalHistoryId"> <div class="input-field">
+                <input type="text" id="editHistoryDate" name="editHistoryDate" class="datepicker"> <label for="editHistoryDate">Date:</label>
             </div>
             <div class="input-field">
-                <input type="text" id="editHistoryTime" class="timepicker">
-                <label for="editHistoryTime">Time:</label>
+                <input type="text" id="editHistoryTime" name="editHistoryTime" class="timepicker"> <label for="editHistoryTime">Time:</label>
             </div>
             <div class="input-field">
-                <input type="text" id="editHistoryLocation">
-                <label for="editHistoryLocation">Location:</label>
+                <input type="text" id="editHistoryLocation" name="editHistoryLocation"> <label for="editHistoryLocation">Location:</label>
             </div>
             <div class="input-field">
-                <textarea id="editHistoryDescription" class="materialize-textarea"></textarea>
-                <label for="editHistoryDescription">Description:</label>
+                <textarea id="editHistoryDescription" name="editHistoryDescription" class="materialize-textarea"></textarea> <label for="editHistoryDescription">Description:</label>
             </div>
         </div>
         <div class="modal-footer">
             <button type="button" id="saveHistoryEditBtn" class="modal-close waves-effect waves-green btn-flat">Save Changes</button>
-            <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button> </div>
+            <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+        </div>
     </div>
-
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="/js/admin_dashboard.js"></script>
-    </body>
+</body>
 </html>
