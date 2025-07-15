@@ -31,7 +31,32 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- Mongoose Schemas and Models ---
+// --- Mongoose Models ---
+// Import or define your Mongoose models here.
+// For example:
+// const Tracking = require('./models/Tracking');
+// const Admin = require('./models/Admin');
+// Make sure all models needed by your routes are imported/defined in server.js
+
+// --- Database Connection (from server.js, adapted for serverless context) ---
+// Define populateInitialData function here
+const populateInitialData = async () => {
+    try {
+        const Admin = mongoose.model('Admin'); // Get Admin model
+        const adminCount = await Admin.countDocuments();
+        if (adminCount === 0) {
+            const hashedPassword = await bcrypt.hash('adminpassword', 10); // Use a strong password
+            await Admin.create({ username: 'admin', email: 'admin@example.com', password: hashedPassword, role: 'admin' });
+            console.log('Initial admin user created.');
+        } else {
+            console.log('Admin user already exists.');
+        }
+    } catch (error) {
+        console.error('Error populating initial data:', error);
+        // Do not throw a hard error here as it might prevent function from starting if data already exists
+    }
+};
+
 
 const trackingHistorySchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
