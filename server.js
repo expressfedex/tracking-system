@@ -422,49 +422,57 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
 
 
 // Helper function to parse time including AM/PM
-function parseTimeWithAmPm(timeStr) {
-    const timeRegex12Hr = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i;
-    const timeRegex24Hr = /^(\d{2}):(\d{2})$/;
+function parseTimeWithAmPm(timeString) {
+    const timeRegex24 = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/; // HH:MM (24-hour)
+    const timeRegex12 = /^([0]?[1-9]|1[0-2]):([0-5][0-9])\s*([APap][Mm])$/; // HH:MM AM/PM
 
-    let match = timeStr.match(timeRegex12Hr);
-    if (match) {
-        let hour = parseInt(match[1], 10);
-        let minute = parseInt(match[2], 10);
-        const ampm = match[3] ? match[3].toUpperCase() : '';
+    let match24 = timeString.match(timeRegex24);
+    if (match24) {
+        return { hour: parseInt(match24[1], 10), minute: parseInt(match24[2], 10) };
+    }
 
-        if (ampm === 'PM' && hour < 12) {
+    let match12 = timeString.match(timeRegex12);
+    if (match12) {
+        let hour = parseInt(match12[1], 10);
+        let minute = parseInt(match12[2], 10);
+        const ampm = match12[3].toLowerCase();
+
+        if (ampm === 'pm' && hour !== 12) {
             hour += 12;
-        } else if (ampm === 'AM' && hour === 12) {
-            hour = 0;
-        }
-
-        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-            return null;
+        } else if (ampm === 'am' && hour === 12) {
+            hour = 0; // Midnight (12 AM)
         }
         return { hour, minute };
     }
 
-    match = timeStr.match(timeRegex24Hr);
-    if (match) {
-        let hour = parseInt(match[1], 10);
-        let minute = parseInt(match[2], 10);
-        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-            return null;
-        }
-        return { hour, minute };
-    }
-
-    return null;
+    return null; // Return null if no valid format is matched
 }
+
+
 
 // POST /api/admin/trackings/:id/history - Add a new history event to a tracking (Admin only)
 app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res) => {
+    // --- START DEBUGGING LOGS ---
+    console.log('\n--- Backend: Add History Event Request Received ---');
+    console.log('Backend: req.params.id (Tracking ID from URL):', req.params.id);
+    console.log('Backend: Full req.body received:', req.body); // Check if body is empty {}
+
+    // Explicitly log each field from req.body
+    console.log('Backend: req.body.date:', req.body.date, 'Type:', typeof req.body.date);
+    console.log('Backend: req.body.time:', req.body.time, 'Type:', typeof req.body.time);
+    console.log('Backend: req.body.location:', req.body.location, 'Type:', typeof req.body.location);
+    console.log('Backend: req.body.description:', req.body.description, 'Type:', typeof req.body.description);
+    // --- END DEBUGGING LOGS ---
+
     try {
         const { id } = req.params; // Get the tracking's MongoDB _id from the URL
         const { date, time, location, description } = req.body; // Get history data from the request body
 
         // Basic validation for required fields for adding a new event
-        if (!date || !time || !location || !description) {
+        // This check will pass if the values are not strictly falsy (e.g., '0' is not falsy)
+        // Ensure they are not empty strings if that's the intention.
+        if (!date || date.trim() === '' || !time || time.trim() === '' || !location || location.trim() === '' || !description || description.trim() === '') {
+            console.log('Backend: Validation FAILED - One or more required history fields are missing or empty.');
             return res.status(400).json({ message: 'Date, Time, Location, and Description are required to add a new history event.' });
         }
 
@@ -472,14 +480,20 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
         const tracking = await Tracking.findById(id);
 
         if (!tracking) {
+            console.log('Backend: Tracking record not found for ID:', id);
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
         // Combine date and time into a single Date object
         let eventTimestamp;
         const parsedTime = parseTimeWithAmPm(time); // Reuse your helper function
+
+        // --- DEBUGGING parseTimeWithAmPm ---
+        console.log('Backend: Raw time string for parsing:', time);
+        console.log('Backend: Result of parseTimeWithAmPm:', parsedTime);
+        // --- END DEBUGGING parseTimeWithAmPm ---
+
         if (parsedTime) {
-            // It's good practice to create UTC date to avoid timezone issues during storage
             eventTimestamp = new Date(Date.UTC(
                 new Date(date).getUTCFullYear(),
                 new Date(date).getUTCMonth(),
@@ -487,15 +501,15 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
                 parsedTime.hour,
                 parsedTime.minute
             ));
+
             if (isNaN(eventTimestamp.getTime())) {
-                console.warn(`Could not parse combined history date/time: ${date} ${time}`);
+                console.warn(`Backend: Could not parse combined history date/time. Resulting timestamp is NaN. Date: ${date}, Time: ${time}`);
                 return res.status(400).json({ message: 'Invalid date or time format provided for history event.' });
             }
         } else {
-            console.warn(`Invalid time format for history time: ${time}`);
+            console.warn(`Backend: Invalid time format for history event: "${time}". parseTimeWithAmPm returned null.`);
             return res.status(400).json({ message: 'Invalid time format for history event. Expected HH:MM or HH:MM AM/PM.' });
         }
-
 
         // Add the new history event
         const newHistoryEvent = {
@@ -504,16 +518,22 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
             description: description
         };
 
-        tracking.history.push(newHistoryEvent);
+        // --- CRITICAL CHECK: Make sure 'history' is the correct field name in your Mongoose schema
+        // It was often called 'trackingHistory' in earlier discussions/code.
+        if (!tracking.trackingHistory) { // <-- Check your schema. Is it 'history' or 'trackingHistory'?
+            tracking.trackingHistory = []; // Initialize if it doesn't exist
+        }
+        tracking.trackingHistory.push(newHistoryEvent); // <-- Use the correct field name
+
         tracking.lastUpdated = new Date(); // Update the lastUpdated field
 
         await tracking.save();
 
-        // Respond with the newly added event and potentially the updated tracking to refresh UI
+        console.log('Backend: History event successfully added to tracking ID:', id);
         res.status(201).json({ message: 'History event added successfully!', tracking: tracking.toObject(), newEvent: newHistoryEvent });
 
     } catch (error) {
-        console.error('Error adding history event:', error);
+        console.error('Backend: Uncaught error adding history event:', error);
         if (error.name === 'CastError') {
             return res.status(400).json({ message: 'Invalid tracking ID format.' });
         }
