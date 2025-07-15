@@ -272,31 +272,41 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
 
 // POST /admin/trackings - Create a new tracking record (Admin only)
 app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
-    try {
-        console.log('Received POST /api/admin/trackings request. Initial req.body:', req.body); // Log the body for debugging
+     try {
+        console.log('Received POST /api/admin/trackings request. Initial req.body:', req.body);
         console.log('Type of req.body:', typeof req.body);
-        console.log('Is req.rawBody present and type:', req.rawBody ? typeof req.rawBody : 'not present');
+        console.log('Is req.rawBody present and type:', req.rawBody ? typeof req.rawBody : 'not present'); // Still good to log for debugging
 
         let bodyData = req.body;
 
-        // --- IMPORTANT WORKAROUND FOR NETLIFY FUNCTIONS / serverless-http ---
-        // If req.body is empty or a Buffer (meaning express.json() might not have parsed it for some reason)
-        // try to parse from req.rawBody.
-        if (
-            (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0) && // Check if it's an empty object
-            req.rawBody && req.rawBody instanceof Buffer // Check if rawBody exists and is a Buffer
-        ) {
-            console.log('req.body was empty, attempting to parse from req.rawBody...');
+        // --- REFINED WORKAROUND FOR NETLIFY FUNCTIONS / serverless-http ---
+        // The problem is that express.json() is NOT parsing the body, and req.body IS the raw Buffer.
+        // We need to detect if req.body itself is a Buffer and parse it.
+        if (bodyData instanceof Buffer) {
+            console.log('req.body is a Buffer, attempting to parse it as JSON...');
             try {
-                bodyData = JSON.parse(req.rawBody.toString('utf8'));
-                console.log('Successfully parsed from rawBody:', bodyData);
+                bodyData = JSON.parse(bodyData.toString('utf8'));
+                console.log('Successfully parsed req.body from Buffer:', bodyData);
             } catch (parseError) {
-                console.error('Failed to parse rawBody as JSON:', parseError);
-                return res.status(400).json({ message: 'Invalid JSON body in rawBody.' });
+                console.error('Failed to parse req.body Buffer as JSON:', parseError);
+                return res.status(400).json({ message: 'Invalid JSON body from Buffer parsing.' });
+            }
+        } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0) {
+            // This original check might still be useful if req.body is an empty object,
+            // but for now, the Buffer check is primary.
+            console.log('req.body was an empty object, but not a Buffer. Checking for req.rawBody...');
+            if (req.rawBody && req.rawBody instanceof Buffer) {
+                 try {
+                    bodyData = JSON.parse(req.rawBody.toString('utf8'));
+                    console.log('Successfully parsed from req.rawBody:', bodyData);
+                } catch (parseError) {
+                    console.error('Failed to parse req.rawBody as JSON:', parseError);
+                    return res.status(400).json({ message: 'Invalid JSON body in rawBody.' });
+                }
             }
         }
-        // --- END WORKAROUND ---
-
+        // --- END REFINED WORKAROUND ---
+        
         const {
             trackingId,
             status,
