@@ -198,7 +198,7 @@ app.get('/api/track/:trackingId', async (req, res) => {
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            })),
+            ])),
             attachedFileName: trackingDetails.attachedFileName,
             lastUpdated: trackingDetails.lastUpdated
         };
@@ -273,7 +273,30 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
 // POST /admin/trackings - Create a new tracking record (Admin only)
 app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
-        console.log('Received POST /api/admin/trackings request. Body:', req.body); // Log the body for debugging
+        console.log('Received POST /api/admin/trackings request. Initial req.body:', req.body); // Log the body for debugging
+        console.log('Type of req.body:', typeof req.body);
+        console.log('Is req.rawBody present and type:', req.rawBody ? typeof req.rawBody : 'not present');
+
+        let bodyData = req.body;
+
+        // --- IMPORTANT WORKAROUND FOR NETLIFY FUNCTIONS / serverless-http ---
+        // If req.body is empty or a Buffer (meaning express.json() might not have parsed it for some reason)
+        // try to parse from req.rawBody.
+        if (
+            (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0) && // Check if it's an empty object
+            req.rawBody && req.rawBody instanceof Buffer // Check if rawBody exists and is a Buffer
+        ) {
+            console.log('req.body was empty, attempting to parse from req.rawBody...');
+            try {
+                bodyData = JSON.parse(req.rawBody.toString('utf8'));
+                console.log('Successfully parsed from rawBody:', bodyData);
+            } catch (parseError) {
+                console.error('Failed to parse rawBody as JSON:', parseError);
+                return res.status(400).json({ message: 'Invalid JSON body in rawBody.' });
+            }
+        }
+        // --- END WORKAROUND ---
+
         const {
             trackingId,
             status,
@@ -282,7 +305,8 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             isBlinking,
             origin,
             destination,
-            expectedDelivery,
+            // Note: 'expectedDelivery' directly from frontend's formData is the actual combined date
+            // But we're explicitly looking for 'expectedDeliveryDate' and 'expectedDeliveryTime' for robustness
             senderName,
             recipientName,
             recipientEmail,
@@ -291,11 +315,14 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             recipientAddress,
             specialHandling,
             weight,
-            history
-        } = req.body;
+            history,
+            expectedDeliveryDate, // Added for explicit parsing from frontend
+            expectedDeliveryTime  // Added for explicit parsing from frontend
+        } = bodyData; // *** IMPORTANT: Destructure from bodyData, not req.body ***
 
         // Basic validation (you might want more robust validation)
         if (!trackingId || !status) {
+            console.error('Validation failed: Tracking ID or Status is missing. Tracking ID:', trackingId, 'Status:', status);
             return res.status(400).json({ message: 'Tracking ID and Status are required.' });
         }
 
@@ -305,6 +332,32 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             return res.status(409).json({ message: 'Tracking ID already exists.' });
         }
 
+        // Combine expectedDeliveryDate and expectedDeliveryTime into a single Date object
+        let finalExpectedDelivery;
+        if (expectedDeliveryDate) { // Only process if date is provided
+            const effectiveDate = expectedDeliveryDate;
+            const effectiveTimeInput = expectedDeliveryTime || '00:00'; // Default to midnight if no time
+            const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
+
+            if (parsedTime) {
+                // Construct Date object in UTC to avoid timezone issues when saving to DB
+                finalExpectedDelivery = new Date(Date.UTC(
+                    new Date(effectiveDate).getUTCFullYear(),
+                    new Date(effectiveDate).getUTCMonth(),
+                    new Date(effectiveDate).getUTCDate(),
+                    parsedTime.hour,
+                    parsedTime.minute
+                ));
+                if (isNaN(finalExpectedDelivery.getTime())) {
+                    console.warn(`Could not parse combined expected delivery date/time: ${effectiveDate} ${effectiveTimeInput}`);
+                    finalExpectedDelivery = undefined; // Set to undefined if invalid
+                }
+            } else {
+                console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
+            }
+        }
+
+
         const newTracking = new Tracking({
             trackingId,
             status,
@@ -313,7 +366,7 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             isBlinking: typeof isBlinking === 'boolean' ? isBlinking : false,
             origin,
             destination,
-            expectedDelivery: expectedDelivery ? new Date(expectedDelivery) : undefined,
+            expectedDelivery: finalExpectedDelivery, // Use the combined date here
             senderName,
             recipientName,
             recipientEmail,
@@ -657,6 +710,7 @@ app.post('/api/login', async (req, res) => {
     let requestBody;
 
     // Check if req.body is already a plain object with 'username' or if it's a Buffer that needs parsing
+    // This logic is good for the login route as it seems to have had similar issues.
     if (typeof req.body === 'object' && req.body !== null && !req.body.username && req.body instanceof Buffer) {
         try {
             // Attempt to convert buffer to string and then parse JSON
