@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
         document.getElementById('updateSenderName').value = tracking.senderName;
         document.getElementById('updateRecipientName').value = tracking.recipientName;
-        /document.getElementById('updateRecipientEmail').value = tracking.recipientEmail; 
+        document.getElementById('updateRecipientEmail').value = tracking.recipientEmail; 
         document.getElementById('updatePackageContents').value = tracking.packageContents;
         document.getElementById('updateServiceType').value = tracking.serviceType;
         document.getElementById('updateRecipientAddress').value = tracking.recipientAddress;
