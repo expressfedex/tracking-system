@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
             blinkingDotColor: document.getElementById('addBlinkingDotColor').value,
             senderName: document.getElementById('addSenderName').value,
             recipientName: document.getElementById('addRecipientName').value,
-            recipientEmail: document.getElementById('addRecipientEmail').value, 
+            recipientEmail: document.getElementById('addRecipientEmail').value,
             packageContents: document.getElementById('addPackageContents').value,
             serviceType: document.getElementById('addServiceType').value,
             recipientAddress: document.getElementById('addRecipientAddress').value,
@@ -192,61 +192,64 @@ document.addEventListener('DOMContentLoaded', function() {
             trackingHistory: [] // New tracking starts with an empty history
         };
 
-         console.log("Submitting formData:", formData);
-         console.log("Tracking ID value:", formData.trackingId);
+        console.log("Submitting formData:", formData);
+        console.log("Tracking ID value:", formData.trackingId);
         console.log("Status value:", formData.status);
 
         // Inside your addTrackingForm event listener
         fetch('/api/admin/trackings', { // CORRECTED URL: Added '/admin'
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // ADDED THIS LINE!
-            },
-            body: JSON.stringify(formData),
-        })
-        .then(response => {
-            // Check for non-OK responses (e.g., 400, 401, 403, 409, 500)
-            if (!response.ok) {
-                // If it's a 401 or 403, you might want to redirect to login
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000); // Redirect to login
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // ADDED THIS LINE!
+                },
+                body: JSON.stringify(formData),
+            })
+            .then(response => {
+                // Check for non-OK responses (e.g., 400, 401, 403, 409, 500)
+                if (!response.ok) {
+                    // If it's a 401 or 403, you might want to redirect to login
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000); // Redirect to login
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Note: Your backend now returns { message, tracking } not { success }
-            // Adjust data.success to check for data.tracking or response.ok directly
-            if (data.tracking) { // Assuming a successful response includes the tracking object
+                return response.json();
+            })
+            .then(data => {
+                // Note: Your backend now returns { message, tracking } not { success }
+                // Adjust data.success to check for data.tracking or response.ok directly
+                if (data.tracking) { // Assuming a successful response includes the tracking object
+                    M.toast({
+                        html: 'Tracking added successfully!',
+                        classes: 'green darken-2'
+                    });
+                    document.getElementById('addTrackingForm').reset();
+                    updateAddStatusIndicator(); // Reset status indicator visuals
+                    // Optionally, refresh 'Manage All Trackings' table (uncomment this if you have it)
+                    // fetchAllTrackings();
+                    fetchTrackingIdsForSelect(); // Refresh the dropdown after adding a new one
+                } else {
+                    // This 'else' block might be less common if you're throwing errors for !response.ok
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not add tracking.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error adding tracking:', error);
                 M.toast({
-                    html: 'Tracking added successfully!',
-                    classes: 'green darken-2'
-                });
-                document.getElementById('addTrackingForm').reset();
-                updateAddStatusIndicator(); // Reset status indicator visuals
-                // Optionally, refresh 'Manage All Trackings' table (uncomment this if you have it)
-                // fetchAllTrackings();
-                fetchTrackingIdsForSelect(); // Refresh the dropdown after adding a new one
-            } else {
-                // This 'else' block might be less common if you're throwing errors for !response.ok
-                M.toast({
-                    html: `Error: ${data.message || 'Could not add tracking.'}`,
+                    html: `Network error or server issue: ${error.message}`, // Display specific error message
                     classes: 'red darken-2'
                 });
-            }
-        })
-        .catch(error => {
-            console.error('Error adding tracking:', error);
-            M.toast({
-                html: `Network error or server issue: ${error.message}`, // Display specific error message
-                classes: 'red darken-2'
             });
-        });
     });
 
     // 2. Manage Single Tracking - Populate Select Dropdown
@@ -255,46 +258,49 @@ document.addEventListener('DOMContentLoaded', function() {
     function fetchTrackingIdsForSelect() {
         // Corrected fetch URL and added Authorization header
         fetch('/api/admin/trackings', { // CHANGE IS HERE: /api/admin/trackings
-            method: 'GET', // Explicitly state method for clarity, though GET is default
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // ADD THIS LINE!
-            }
-        })
-        .then(response => {
-            // --- IMPROVED ERROR HANDLING START ---
-            if (!response.ok) {
-                // If it's a 401 or 403, suggest re-login
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    // Redirect to login page after a short delay
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'GET', // Explicitly state method for clarity, though GET is default
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // ADD THIS LINE!
                 }
-                // Parse error message from server response if available
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error fetching trackings');
+            })
+            .then(response => {
+                // --- IMPROVED ERROR HANDLING START ---
+                if (!response.ok) {
+                    // If it's a 401 or 403, suggest re-login
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        // Redirect to login page after a short delay
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    // Parse error message from server response if available
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching trackings');
+                    });
+                }
+                // --- IMPROVED ERROR HANDLING END ---
+                return response.json();
+            })
+            .then(trackings => {
+                singleTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
+                trackings.forEach(tracking => {
+                    const option = document.createElement('option');
+                    option.value = tracking._id; // Use MongoDB _id for internal management
+                    option.textContent = tracking.trackingId; // Display trackingId to user
+                    option.dataset.trackingData = JSON.stringify(tracking); // Store full tracking data
+                    singleTrackingIdSelect.appendChild(option);
                 });
-            }
-            // --- IMPROVED ERROR HANDLING END ---
-            return response.json();
-        })
-        .then(trackings => {
-            singleTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
-            trackings.forEach(tracking => {
-                const option = document.createElement('option');
-                option.value = tracking._id; // Use MongoDB _id for internal management
-                option.textContent = tracking.trackingId; // Display trackingId to user
-                option.dataset.trackingData = JSON.stringify(tracking); // Store full tracking data
-                singleTrackingIdSelect.appendChild(option);
+                M.FormSelect.init(singleTrackingIdSelect); // Re-initialize Materialize select
+            })
+            .catch(error => {
+                console.error('Error fetching tracking IDs:', error);
+                M.toast({
+                    html: `Error fetching tracking IDs: ${error.message}`, // Display specific error message
+                    classes: 'red darken-2'
+                });
             });
-            M.FormSelect.init(singleTrackingIdSelect); // Re-initialize Materialize select
-        })
-        .catch(error => {
-            console.error('Error fetching tracking IDs:', error);
-            M.toast({
-                html: `Error fetching tracking IDs: ${error.message}`, // Display specific error message
-                classes: 'red darken-2'
-            });
-        });
     }
 
     singleTrackingIdSelect.addEventListener('change', function() {
@@ -310,6 +316,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Helper function to load/reload tracking details and populate the form/history
+    async function loadTrackingDetails(trackingMongoId) {
+        try {
+            const token = localStorage.getItem('token'); // Use 'token' as per your existing code
+            if (!token) {
+                M.toast({html: 'Authentication token not found. Please log in.', classes: 'red darken-2'});
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                return;
+            }
+
+            const response = await fetch(`/api/admin/trackings/${trackingMongoId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2'});
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Server error fetching tracking details');
+            }
+
+            const tracking = await response.json();
+            populateUpdateForm(tracking);
+
+            // Update the dataset.trackingData for the selected option to keep it fresh
+            const selectedOption = singleTrackingIdSelect.options[singleTrackingIdSelect.selectedIndex];
+            if (selectedOption && selectedOption.value === trackingMongoId) {
+                selectedOption.dataset.trackingData = JSON.stringify(tracking);
+            }
+
+            M.updateTextFields();
+            initDatePickers(); // Re-init in case values changed
+            initTimePickers(); // Re-init in case values changed
+
+        } catch (error) {
+            console.error('Error loading tracking details:', error);
+            M.toast({html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2'});
+        }
+    }
+
+
     function populateUpdateForm(tracking) {
         document.getElementById('updateTrackingMongoId').value = tracking._id;
         document.getElementById('updateTrackingId').value = tracking.trackingId;
@@ -319,7 +371,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
         document.getElementById('updateSenderName').value = tracking.senderName;
         document.getElementById('updateRecipientName').value = tracking.recipientName;
-        document.getElementById('updateRecipientEmail').value = tracking.recipientEmail; 
+        document.getElementById('updateRecipientEmail').value = tracking.recipientEmail;
         document.getElementById('updatePackageContents').value = tracking.packageContents;
         document.getElementById('updateServiceType').value = tracking.serviceType;
         document.getElementById('updateRecipientAddress').value = tracking.recipientAddress;
@@ -351,7 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
             blinkingDotColor: document.getElementById('updateBlinkingDotColor').value,
             senderName: document.getElementById('updateSenderName').value,
             recipientName: document.getElementById('updateRecipientName').value,
-            recipientEmail: document.getElementById('updateRecipientEmail').value, 
+            recipientEmail: document.getElementById('updateRecipientEmail').value,
             packageContents: document.getElementById('updatePackageContents').value,
             serviceType: document.getElementById('updateServiceType').value,
             recipientAddress: document.getElementById('updateRecipientAddress').value,
@@ -364,50 +416,56 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         fetch(`/api/admin/trackings/${mongoId}`, { // <--- CORRECTED URL: Added '/admin'
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-            },
-            body: JSON.stringify(updatedData),
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+                },
+                body: JSON.stringify(updatedData),
+            })
+            .then(response => {
+                if (!response.ok) { // Improved error handling
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error updating tracking');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error updating tracking');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.tracking) { // Assuming a successful response returns the updated tracking object
-                M.toast({
-                    html: 'Tracking updated successfully!',
-                    classes: 'blue darken-2'
-                });
-                fetchTrackingIdsForSelect(); // Refresh dropdown
-                // Also refresh the 'all trackings' table if visible
-                if (document.getElementById('all-trackings-section').classList.contains('active-section')) {
-                    fetchAllTrackings();
+                return response.json();
+            })
+            .then(data => {
+                if (data.tracking) { // Assuming a successful response returns the updated tracking object
+                    M.toast({
+                        html: 'Tracking updated successfully!',
+                        classes: 'blue darken-2'
+                    });
+                    fetchTrackingIdsForSelect(); // Refresh dropdown
+                    // Also refresh the 'all trackings' table if visible
+                    if (document.getElementById('all-trackings-section').classList.contains('active-section')) {
+                        fetchAllTrackings();
+                    }
+                    // Re-fetch and populate for the current single tracking view
+                    loadTrackingDetails(mongoId);
+
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not update tracking.'}`,
+                        classes: 'red darken-2'
+                    });
                 }
-            } else {
+            })
+            .catch(error => {
+                console.error('Error updating tracking:', error);
                 M.toast({
-                    html: `Error: ${data.message || 'Could not update tracking.'}`,
+                    html: `Network error or server issue: ${error.message}`,
                     classes: 'red darken-2'
                 });
-            }
-        })
-        .catch(error => {
-            console.error('Error updating tracking:', error);
-            M.toast({
-                html: `Network error or server issue: ${error.message}`,
-                classes: 'red darken-2'
             });
-        });
     });
 
     // 2.2 Tracking History Management (Add, Edit, Delete)
@@ -453,74 +511,76 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Add History Event
-    document.getElementById('addHistoryForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const trackingMongoId = document.getElementById('singleTrackingIdSelect').value;
-        if (!trackingMongoId) {
-            M.toast({
-                html: 'Please select a tracking ID first.',
-                classes: 'red darken-2'
-            });
-            return;
-        }
+    // Add History Event - REPLACED WITH YOUR NEW LOGIC
+    const addHistoryForm = document.getElementById('addHistoryForm'); // Re-declare for scope if needed, or ensure it's accessible
 
-        const newHistoryEvent = {
-            date: document.getElementById('newHistoryDate').value,
-            time: document.getElementById('newHistoryTime').value,
-            location: document.getElementById('newHistoryLocation').value,
-            description: document.getElementById('newHistoryDescription').value,
-        };
+    if (addHistoryForm) {
+        addHistoryForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default form submission
 
-        fetch(`/api/admin/trackings/${trackingMongoId}/history`, { // <--- CORRECTED URL: Added '/admin'
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-            },
-            body: JSON.stringify(newHistoryEvent),
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+            const trackingMongoId = document.getElementById('updateTrackingMongoId').value;
+
+            if (!trackingMongoId) {
+                M.toast({html: 'Please select a tracking ID first!', classes: 'red darken-2'});
+                return;
+            }
+
+            const newHistoryDate = document.getElementById('newHistoryDate').value;
+            const newHistoryTime = document.getElementById('newHistoryTime').value;
+            const newHistoryLocation = document.getElementById('newHistoryLocation').value;
+            const newHistoryDescription = document.getElementById('newHistoryDescription').value;
+
+            console.log('Frontend: Attempting to send new history event data:');
+            console.log('Tracking ID:', trackingMongoId);
+            console.log('Date:', newHistoryDate);
+            console.log('Time:', newHistoryTime);
+            console.log('Location:', newHistoryLocation);
+            console.log('Description:', newHistoryDescription);
+
+            const requestBody = {
+                date: newHistoryDate,
+                time: newHistoryTime,
+                location: newHistoryLocation,
+                description: newHistoryDescription
+            };
+
+            try {
+                const token = localStorage.getItem('token'); // Use 'token' as per your existing code
+                if (!token) {
+                    M.toast({html: 'Authentication token not found. Please log in.', classes: 'red darken-2'});
                     setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    return;
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error adding history event');
+
+                const response = await fetch(`/api/admin/trackings/${trackingMongoId}/history`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(requestBody)
                 });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    M.toast({html: result.message, classes: 'green darken-2'});
+                    addHistoryForm.reset();
+                    M.updateTextFields();
+                    // Re-initialize date/time pickers for the add form after reset
+                    initDatePickers();
+                    initTimePickers();
+                    loadTrackingDetails(trackingMongoId); // Refresh the history list for the current tracking
+                } else {
+                    console.error('Server Error Adding History:', result.message);
+                    M.toast({html: `Error: ${result.message}`, classes: 'red darken-2'});
+                }
+            } catch (error) {
+                console.error('Network or client-side error adding history:', error);
+                M.toast({html: `An unexpected error occurred: ${error.message}`, classes: 'red darken-2'});
             }
-            return response.json();
-        })
-        .then(data => {
-            if (data.tracking) { // Assuming a successful response includes the updated tracking object
-                M.toast({
-                    html: 'History event added!',
-                    classes: 'teal lighten-1'
-                });
-                document.getElementById('addHistoryForm').reset();
-                // Refresh current tracking's history
-                const selectedOption = singleTrackingIdSelect.options[singleTrackingIdSelect.selectedIndex];
-                const updatedTracking = JSON.parse(selectedOption.dataset.trackingData);
-                updatedTracking.trackingHistory = data.tracking.trackingHistory; // Get updated history from server
-                selectedOption.dataset.trackingData = JSON.stringify(updatedTracking); // Update stored data
-                renderTrackingHistory(updatedTracking.trackingHistory); // Re-render history
-                M.updateTextFields();
-            } else {
-                M.toast({
-                    html: `Error: ${data.message || 'Could not add history event.'}`,
-                    classes: 'red darken-2'
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error adding history event:', error);
-            M.toast({
-                html: `Network error or server issue: ${error.message}`,
-                classes: 'red darken-2'
-            });
         });
-    });
+    }
 
     // Edit History Modal Logic
     const editHistoryModal = document.getElementById('editHistoryModal');
@@ -569,52 +629,51 @@ document.addEventListener('DOMContentLoaded', function() {
             description: document.getElementById('editHistoryDescription').value,
         };
         fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, { // <--- CORRECTED URL: Added '/admin'
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-            },
-            body: JSON.stringify(updatedHistoryEvent),
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+                },
+                body: JSON.stringify(updatedHistoryEvent),
+            })
+            .then(response => {
+                if (!response.ok) { // Improved error handling
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error updating history event');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error updating history event');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.tracking) { // Assuming a successful response returns the updated tracking object
+                return response.json();
+            })
+            .then(data => {
+                if (data.tracking) { // Assuming a successful response returns the updated tracking object
+                    M.toast({
+                        html: 'History event updated!',
+                        classes: 'blue'
+                    });
+                    // Refresh current tracking's history
+                    loadTrackingDetails(trackingMongoId); // Use the new function to refresh the details
+                    editHistoryModalInstance.close(); // Close modal on success
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not update history event.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error updating history event:', error);
                 M.toast({
-                    html: 'History event updated!',
-                    classes: 'blue'
-                });
-                // Refresh current tracking's history
-                const selectedOption = singleTrackingIdSelect.options[singleTrackingIdSelect.selectedIndex];
-                const updatedTracking = JSON.parse(selectedOption.dataset.trackingData);
-                updatedTracking.trackingHistory = data.tracking.trackingHistory; // Get updated history from server
-                selectedOption.dataset.trackingData = JSON.stringify(updatedTracking); // Update stored data
-                renderTrackingHistory(updatedTracking.trackingHistory); // Re-render history
-                editHistoryModalInstance.close(); // Close modal on success
-            } else {
-                M.toast({
-                    html: `Error: ${data.message || 'Could not update history event.'}`,
+                    html: `Network error or server issue: ${error.message}`,
                     classes: 'red darken-2'
                 });
-            }
-        })
-        .catch(error => {
-            console.error('Error updating history event:', error);
-            M.toast({
-                html: `Network error or server issue: ${error.message}`,
-                classes: 'red darken-2'
             });
-        });
     });
 
     // Delete History Event
@@ -634,49 +693,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (confirm('Are you sure you want to delete this history event?')) {
             fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId || historyIndex}`, { // <--- CORRECTED URL: Added '/admin'
-                method: 'DELETE',
-                headers: { // <--- ADD THIS LINE!
-                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-                } // <--- ADD THIS LINE!
-            })
-            .then(response => {
-                if (!response.ok) { // Improved error handling
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    method: 'DELETE',
+                    headers: { // <--- ADD THIS LINE!
+                        'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+                    } // <--- ADD THIS LINE!
+                })
+                .then(response => {
+                    if (!response.ok) { // Improved error handling
+                        if (response.status === 401 || response.status === 403) {
+                            M.toast({
+                                html: 'Session expired or unauthorized. Please log in again.',
+                                classes: 'red darken-2'
+                            });
+                            setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                        }
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.message || 'Server error deleting history event');
+                        });
                     }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error deleting history event');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.tracking) { // Assuming success returns the updated tracking object
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.tracking) { // Assuming success returns the updated tracking object
+                        M.toast({
+                            html: 'History event deleted!',
+                            classes: 'red darken-2'
+                        });
+                        // Refresh current tracking's history
+                        loadTrackingDetails(trackingMongoId); // Use the new function to refresh the details
+                    } else {
+                        M.toast({
+                            html: `Error: ${data.message || 'Could not delete history event.'}`,
+                            classes: 'red darken-2'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting history event:', error);
                     M.toast({
-                        html: 'History event deleted!',
+                        html: `Network error or server issue: ${error.message}`,
                         classes: 'red darken-2'
                     });
-                    // Refresh current tracking's history
-                    const selectedOption = singleTrackingIdSelect.options[singleTrackingIdSelect.selectedIndex];
-                    const updatedTracking = JSON.parse(selectedOption.dataset.trackingData);
-                    updatedTracking.trackingHistory = data.tracking.trackingHistory; // Get updated history from server
-                    selectedOption.dataset.trackingData = JSON.stringify(updatedTracking); // Update stored data
-                    renderTrackingHistory(updatedTracking.trackingHistory); // Re-render history
-                } else {
-                    M.toast({
-                        html: `Error: ${data.message || 'Could not delete history event.'}`,
-                        classes: 'red darken-2'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting history event:', error);
-                M.toast({
-                    html: `Network error or server issue: ${error.message}`,
-                    classes: 'red darken-2'
                 });
-            });
         }
     }
 
@@ -688,32 +746,38 @@ document.addEventListener('DOMContentLoaded', function() {
         trackingTableBody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 20px;"><div class="preloader-wrapper active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p>Loading tracking data...</p></td></tr>';
 
         fetch('/api/admin/trackings', { // <--- CORRECTED URL: Added '/admin'
-            method: 'GET',
-            headers: { // <--- ADD THIS LINE!
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-            } // <--- ADD THIS LINE!
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'GET',
+                headers: { // <--- ADD THIS LINE!
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+                } // <--- ADD THIS LINE!
+            })
+            .then(response => {
+                if (!response.ok) { // Improved error handling
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching all trackings');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error fetching all trackings');
-                });
-            }
-            return response.json();
-        })
-        .then(trackings => {
-            renderTrackingsTable(trackings);
-            updateDashboardStats(trackings); // Update dashboard stats here
-        })
-        .catch(error => {
-            console.error('Error fetching all trackings:', error);
-            trackingTableBody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 20px; color: red;">Failed to load tracking data: ${error.message}.</td></tr>`;
-            M.toast({ html: `Failed to load all trackings: ${error.message}`, classes: 'red darken-2' }); // Toast for user
-        });
+                return response.json();
+            })
+            .then(trackings => {
+                renderTrackingsTable(trackings);
+                updateDashboardStats(trackings); // Update dashboard stats here
+            })
+            .catch(error => {
+                console.error('Error fetching all trackings:', error);
+                trackingTableBody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 20px; color: red;">Failed to load tracking data: ${error.message}.</td></tr>`;
+                M.toast({
+                    html: `Failed to load all trackings: ${error.message}`,
+                    classes: 'red darken-2'
+                }); // Toast for user
+            });
     }
 
     function renderTrackingsTable(trackings) {
@@ -781,45 +845,48 @@ document.addEventListener('DOMContentLoaded', function() {
         const trackingMongoId = e.currentTarget.dataset.id;
         if (confirm('Are you sure you want to delete this tracking entry? This action cannot be undone.')) {
             fetch(`/api/admin/trackings/${trackingMongoId}`, { // <--- CORRECTED URL: Added '/admin'
-                method: 'DELETE',
-                headers: { // <--- ADD THIS LINE!
-                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-                } // <--- ADD THIS LINE!
-            })
-            .then(response => {
-                if (!response.ok) { // Improved error handling
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    method: 'DELETE',
+                    headers: { // <--- ADD THIS LINE!
+                        'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+                    } // <--- ADD THIS LINE!
+                })
+                .then(response => {
+                    if (!response.ok) { // Improved error handling
+                        if (response.status === 401 || response.status === 403) {
+                            M.toast({
+                                html: 'Session expired or unauthorized. Please log in again.',
+                                classes: 'red darken-2'
+                            });
+                            setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                        }
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.message || 'Server error deleting tracking');
+                        });
                     }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error deleting tracking');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        M.toast({
+                            html: 'Tracking deleted successfully!',
+                            classes: 'red darken-2'
+                        });
+                        fetchAllTrackings(); // Refresh the table
+                        fetchTrackingIdsForSelect(); // Refresh single tracking dropdown
+                    } else {
+                        M.toast({
+                            html: `Error: ${data.message || 'Could not delete tracking.'}`,
+                            classes: 'red darken-2'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting tracking:', error);
                     M.toast({
-                        html: 'Tracking deleted successfully!',
+                        html: `Network error or server issue: ${error.message}`,
                         classes: 'red darken-2'
                     });
-                    fetchAllTrackings(); // Refresh the table
-                    fetchTrackingIdsForSelect(); // Refresh single tracking dropdown
-                } else {
-                    M.toast({
-                        html: `Error: ${data.message || 'Could not delete tracking.'}`,
-                        classes: 'red darken-2'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting tracking:', error);
-                M.toast({
-                    html: `Network error or server issue: ${error.message}`,
-                    classes: 'red darken-2'
                 });
-            });
         }
     }
 
@@ -833,38 +900,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchTrackingIdsForEmailSelect() {
         fetch('/api/admin/trackings', { // <--- CORRECTED URL: Added '/admin'
-            method: 'GET',
-            headers: { // <--- ADD THIS LINE!
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-            } // <--- ADD THIS LINE!
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'GET',
+                headers: { // <--- ADD THIS LINE!
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+                } // <--- ADD THIS LINE!
+            })
+            .then(response => {
+                if (!response.ok) { // Improved error handling
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching tracking IDs for email');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error fetching tracking IDs for email');
+                return response.json();
+            })
+            .then(trackings => {
+                emailTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID (Optional, for pre-filling email)</option>';
+                trackings.forEach(tracking => {
+                    const option = document.createElement('option');
+                    option.value = tracking._id; // Use MongoDB _id
+                    option.textContent = tracking.trackingId; // Display trackingId
+                    option.dataset.recipientEmail = tracking.recipientEmail || ''; // Store recipient email
+                    emailTrackingIdSelect.appendChild(option);
                 });
-            }
-            return response.json();
-        })
-        .then(trackings => {
-            emailTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID (Optional, for pre-filling email)</option>';
-            trackings.forEach(tracking => {
-                const option = document.createElement('option');
-                option.value = tracking._id; // Use MongoDB _id
-                option.textContent = tracking.trackingId; // Display trackingId
-                option.dataset.recipientEmail = tracking.recipientEmail || ''; // Store recipient email
-                emailTrackingIdSelect.appendChild(option);
+                M.FormSelect.init(emailTrackingIdSelect); // Re-initialize Materialize select
+            })
+            .catch(error => {
+                console.error('Error fetching tracking IDs for email:', error);
+                M.toast({
+                    html: `Error fetching email tracking IDs: ${error.message}`,
+                    classes: 'red darken-2'
+                });
             });
-            M.FormSelect.init(emailTrackingIdSelect); // Re-initialize Materialize select
-        })
-        .catch(error => {
-            console.error('Error fetching tracking IDs for email:', error);
-            M.toast({ html: `Error fetching email tracking IDs: ${error.message}`, classes: 'red darken-2' });
-        });
     }
 
     emailTrackingIdSelect.addEventListener('change', function() {
@@ -898,50 +971,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         fetch('/api/admin/send-email', { // <--- CORRECTED URL: Added '/admin'
-            method: 'POST',
-            headers: { // <--- ADDED HEADERS BLOCK
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADDED AUTHORIZATION
-                // 'Content-Type': 'multipart/form-data' is set automatically by FormData
-            }, // <--- END HEADERS BLOCK
-            body: formData, // FormData will set the correct Content-Type automatically
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'POST',
+                headers: { // <--- ADDED HEADERS BLOCK
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADDED AUTHORIZATION
+                    // 'Content-Type': 'multipart/form-data' is set automatically by FormData
+                }, // <--- END HEADERS BLOCK
+                body: formData, // FormData will set the correct Content-Type automatically
+            })
+            .then(response => {
+                if (!response.ok) { // Improved error handling
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error sending email');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error sending email');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({
+                        html: 'Email sent successfully!',
+                        classes: 'light-blue darken-1'
+                    });
+                    document.getElementById('sendEmailForm').reset();
+                    M.updateTextFields();
+                    // Clear file input path visually
+                    const filePathInput = document.querySelector('#emailAttachmentFileUpload + .file-path-wrapper .file-path');
+                    if (filePathInput) filePathInput.value = '';
+                } else {
+                    M.toast({
+                        html: `Error sending email: ${data.message || 'Unknown error.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error sending email:', error);
                 M.toast({
-                    html: 'Email sent successfully!',
-                    classes: 'light-blue darken-1'
-                });
-                document.getElementById('sendEmailForm').reset();
-                M.updateTextFields();
-                // Clear file input path visually
-                const filePathInput = document.querySelector('#emailAttachmentFileUpload + .file-path-wrapper .file-path');
-                if (filePathInput) filePathInput.value = '';
-            } else {
-                M.toast({
-                    html: `Error sending email: ${data.message || 'Unknown error.'}`,
+                    html: `Network error or server issue while sending email: ${error.message}`,
                     classes: 'red darken-2'
                 });
-            }
-        })
-        .catch(error => {
-            console.error('Error sending email:', error);
-            M.toast({
-                html: `Network error or server issue while sending email: ${error.message}`,
-                classes: 'red darken-2'
             });
-        });
     });
 
     // Package File Upload Logic
@@ -951,37 +1027,43 @@ document.addEventListener('DOMContentLoaded', function() {
     // Populate tracking IDs for file attachment
     function fetchTrackingIdsForAttachFileSelect() {
         fetch('/api/admin/trackings', { // <--- CORRECTED URL: Added '/admin'
-            method: 'GET',
-            headers: { // <--- ADD THIS LINE!
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-            } // <--- ADD THIS LINE!
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'GET',
+                headers: { // <--- ADD THIS LINE!
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
+                } // <--- ADD THIS LINE!
+            })
+            .then(response => {
+                if (!response.ok) { // Improved error handling
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching tracking IDs for file attachment');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error fetching tracking IDs for file attachment');
+                return response.json();
+            })
+            .then(trackings => {
+                attachFileTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
+                trackings.forEach(tracking => {
+                    const option = document.createElement('option');
+                    option.value = tracking._id; // Use MongoDB _id for linking
+                    option.textContent = tracking.trackingId; // Display trackingId to user
+                    attachFileTrackingIdSelect.appendChild(option);
                 });
-            }
-            return response.json();
-        })
-        .then(trackings => {
-            attachFileTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
-            trackings.forEach(tracking => {
-                const option = document.createElement('option');
-                option.value = tracking._id; // Use MongoDB _id for linking
-                option.textContent = tracking.trackingId; // Display trackingId to user
-                attachFileTrackingIdSelect.appendChild(option);
+                M.FormSelect.init(attachFileTrackingIdSelect); // Re-initialize Materialize select
+            })
+            .catch(error => {
+                console.error('Error fetching tracking IDs for file attachment:', error);
+                M.toast({
+                    html: `Error fetching file attachment IDs: ${error.message}`,
+                    classes: 'red darken-2'
+                });
             });
-            M.FormSelect.init(attachFileTrackingIdSelect); // Re-initialize Materialize select
-        })
-        .catch(error => {
-            console.error('Error fetching tracking IDs for file attachment:', error);
-            M.toast({ html: `Error fetching file attachment IDs: ${error.message}`, classes: 'red darken-2' });
-        });
     }
 
 
@@ -1011,50 +1093,53 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('trackingId', selectedTrackingMongoId); // Send MongoDB _id
 
         fetch('/api/admin/upload-package-file', { // <--- CORRECTED URL: Added '/admin'
-            method: 'POST',
-            headers: { // <--- ADDED HEADERS BLOCK
-                'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADDED AUTHORIZATION
-                // 'Content-Type': 'multipart/form-data' is set automatically by FormData
-            }, // <--- END HEADERS BLOCK
-            body: formData,
-        })
-        .then(response => {
-            if (!response.ok) { // Improved error handling
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                method: 'POST',
+                headers: { // <--- ADDED HEADERS BLOCK
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADDED AUTHORIZATION
+                    // 'Content-Type': 'multipart/form-data' is set automatically by FormData
+                }, // <--- END HEADERS BLOCK
+                body: formData,
+            })
+            .then(response => {
+                if (!response.ok) { // Improved error handling
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error uploading file');
+                    });
                 }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error uploading file');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({
+                        html: 'Package file uploaded and linked successfully!',
+                        classes: 'green'
+                    });
+                    document.getElementById('uploadPackageFileForm').reset();
+                    // Clear file input path visually
+                    const filePathInput = document.querySelector('#packageFileInput + .file-path-wrapper .file-path');
+                    if (filePathInput) filePathInput.value = '';
+                    M.FormSelect.init(attachFileTrackingIdSelect); // Reset select if needed
+                } else {
+                    M.toast({
+                        html: `Error uploading file: ${data.message || 'Unknown error.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading package file:', error);
                 M.toast({
-                    html: 'Package file uploaded and linked successfully!',
-                    classes: 'green'
-                });
-                document.getElementById('uploadPackageFileForm').reset();
-                // Clear file input path visually
-                const filePathInput = document.querySelector('#packageFileInput + .file-path-wrapper .file-path');
-                if (filePathInput) filePathInput.value = '';
-                M.FormSelect.init(attachFileTrackingIdSelect); // Reset select if needed
-            } else {
-                M.toast({
-                    html: `Error uploading file: ${data.message || 'Unknown error.'}`,
+                    html: `Network error or server issue during file upload: ${error.message}`,
                     classes: 'red darken-2'
                 });
-            }
-        })
-        .catch(error => {
-            console.error('Error uploading package file:', error);
-            M.toast({
-                html: `Network error or server issue during file upload: ${error.message}`,
-                classes: 'red darken-2'
             });
-        });
     });
 
 
@@ -1092,4 +1177,4 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial load: show dashboard and fetch all trackings to populate stats
     showSection('dashboard-section');
     fetchAllTrackings(); // This will also call updateDashboardStats
-}); // <--- This is the final closing brace for the DOMContentLoaded listener.
+});
