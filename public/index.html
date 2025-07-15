@@ -17,7 +17,7 @@
             background-color: #4D148C !important; /* Force purple background */
         }
         .navbar-fedex-purple .navbar-brand img {
-            height: 3.5rem; /* Increased logo size */
+            height: 2.5rem; /* Increased logo size */
         }
         .navbar-fedex-purple .nav-link,
         .navbar-fedex-purple .btn-link {
@@ -95,17 +95,113 @@
             padding: 0.75rem;
             border-radius: 50%;
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 1000; /* Ensure it stays on top */
         }
         .chat-btn:hover {
             background-color: #3b106e;
+        }
+
+        /* --- Mobile-specific adjustments --- */
+        @media (max-width: 767.98px) { /* For devices smaller than 768px (Bootstrap's 'md' breakpoint) */
+            .navbar-fedex-purple .navbar-brand img {
+                height: 2rem; /* Slightly smaller logo on mobile */
+            }
+            .hero-section {
+                height: 200px; /* Shorter hero section on mobile */
+                padding-top: 2rem; /* Adjust padding for smaller screens */
+                padding-bottom: 2rem;
+            }
+            .tracking-card {
+                /* Reduce max-width or let Bootstrap handle it with mx-auto and p-3 */
+                max-width: 100%; /* Allow it to take full width */
+                padding: 1.5rem; /* Slightly less padding */
+            }
+            .nav-tabs .nav-link {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+                padding-bottom: 0.5rem; /* Adjust padding for smaller icons/text */
+            }
+            .nav-tabs .nav-link svg {
+                width: 24px; /* Smaller icons on mobile tabs */
+                height: 24px;
+            }
+            .nav-tabs .nav-link .small {
+                font-size: 0.7rem; /* Smaller text for tab labels */
+            }
+            .input-group .form-control-lg {
+                font-size: 1rem; /* Smaller font for input */
+                padding: 0.5rem 1rem; /* Adjust padding */
+            }
+            .fedex-orange-btn.fs-5 {
+                font-size: 1rem !important; /* Smaller font for TRACK button */
+                padding: 0.5rem 1rem !important; /* Adjust button padding */
+            }
+            .feature-icon {
+                height: 3rem; /* Smaller feature icons */
+                width: 3rem;
+            }
+            .bg-white .row.g-4 {
+            gap: 0.75rem; /* Smaller gap on mobile devices for better fit */
+            }
+
+            .bg-white .col .feature-icon {
+            height: 2.5rem; /* Slightly smaller icon to make room for text */
+            width: 2.5rem;
+            }
+
+            .bg-white .col span.small {
+            font-size: 0.68rem; /* Make text smaller to fit on one or two lines */
+            line-height: 1.2; /* Adjust line height if text wraps to multiple lines */
+            text-align: center; /* Ensure text is centered below the icon */
+            max-width: 90%; /* Prevent text from going too wide within the column */
+            display: block; /* Ensure it takes up its own line for max-width to work */
+            }
+
+        }
+
+        @media (max-width: 576px) { /* For extra small devices (Bootstrap's 'sm' breakpoint) */
+             .navbar-fedex-purple .navbar-brand img {
+                height: 1rem;
+            }
+            .hero-section {
+                height: 350px;
+            }
+            .display-3 {
+                font-size: 1.5rem; /* Smaller heading */
+            }
+            .tracking-card {
+                padding: 1rem; /* Even less padding */
+            }
+            .input-group .form-control-lg,
+            .fedex-orange-btn.fs-5 {
+                font-size: 0.9rem !important; /* Even smaller font for input/button */
+                padding: 0.4rem 0.8rem !important; /* Adjust padding */
+            }
+            .nav-tabs .nav-link .small {
+                font-size: 0.65rem; /* Even smaller text for tab labels */
+            }
+            .bg-white .col .feature-icon {
+            height: 2.2rem; /* Even smaller icon for very narrow screens */
+            width: 2.2rem;
+             }
+
+            .bg-white .col span.small {
+            font-size: 0.6rem; /* Even smaller text for very narrow screens */
+            line-height: 1.1;
+            }
+    
+             /* You might want to even remove the gap for the smallest screens */
+        .bg-white .row.g-4 {
+        gap: 0.5rem; 
+    }
         }
     </style>
 </head>
 <body>
 
     <nav class="navbar navbar-expand-lg navbar-light shadow-sm border-bottom navbar-fedex-purple">
-        <div class="container-fluid px-4 py-2">
-            <a class="navbar-brand me-4" href="#">
+        <div class="container-fluid px-4 py-1">
+            <a class="navbar-brand me-3" href="#">
                 <img src="https://i.imgur.com/XVoYoiO.png" alt="FedEx Logo" style="height: 3.5rem;"> </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -175,7 +271,6 @@
         <div class="container text-white text-center position-relative z-1">
             <h1 class="display-3 fw-bold mb-4">Ship, manage, track, deliver</h1>
             
-
             <div class="tracking-card p-4 shadow-lg mx-auto" style="max-width: 650px;">
                 <ul class="nav nav-tabs justify-content-around border-bottom-0 mb-4" id="myTab" role="tablist">
                     <li class="nav-item" role="presentation">
@@ -222,32 +317,32 @@
         </div>
     </div>
 
-    <div class="bg-white py-5">
-        <div class="container text-center">
-            <div class="row row-cols-2 row-cols-md-5 g-4">
-                <div class="col d-flex flex-column align-items-center">
-                    <img src="https://www.fedex.com/content/dam/fedex/us-united-states/shipping/images/2020/Q2/icon_courier_purple_lg_1637809911.png" alt="Drop Off" class="feature-icon mb-2">
-                    <span class="small fw-semibold text-dark">DROP OFF A PACKAGE</span>
-                </div>
-                <div class="col d-flex flex-column align-items-center">
-                    <img src="https://www.fedex.com/content/dam/fedex/us-united-states/shipping/images/2020/Q3/icon_delivery_purple_lg_2143296207.png" alt="Redirect" class="feature-icon mb-2">
-                    <span class="small fw-semibold text-dark">REDIRECT A PACKAGE</span>
-                </div>
-                <div class="col d-flex flex-column align-items-center">
-                    <img src="https://www.fedex.com/content/dam/fedex-com/brand-icons/purple/retail-services.svg" alt="Store Hours" class="feature-icon mb-2">
-                    <span class="small fw-semibold text-dark">STORE HOURS AND SERVICES</span>
-                </div>
-                <div class="col d-flex flex-column align-items-center">
-                    <img src="https://www.fedex.com/content/dam/fedex/us-united-states/icons---png/icon_alert_purple_lg.png" alt="Alerts" class="feature-icon mb-2">
-                    <span class="small fw-semibold text-dark">SERVICE ALERTS</span>
-                </div>
-                <div class="col d-flex flex-column align-items-center">
-                    <img src="https://www.fedex.com/content/dam/fedex/us-united-states/shipping/images/2020/Q3/icon_returns_purple_lg_1184917500.png" alt="Return" class="feature-icon mb-2">
-                    <span class="small fw-semibold text-dark">RETURN A PACKAGE</span>
-                </div>
+   <div class="bg-white py-5">
+    <div class="container text-center">
+        <div class="row row-cols-3 row-cols-md-2 g-4 justify-content-center"> 
+            <div class="col d-flex flex-column align-items-center">
+                <img src="https://www.fedex.com/content/dam/fedex/us-united-states/shipping/images/2020/Q2/icon_courier_purple_lg_1637809911.png" alt="Drop Off" class="feature-icon mb-2">
+                <span class="small fw-semibold text-dark">DROP OFF A PACKAGE</span>
+            </div>
+            <div class="col d-flex flex-column align-items-center">
+                <img src="https://www.fedex.com/content/dam/fedex/us-united-states/shipping/images/2020/Q3/icon_delivery_purple_lg_2143296207.png" alt="Redirect" class="feature-icon mb-2">
+                <span class="small fw-semibold text-dark">REDIRECT A PACKAGE</span>
+            </div>
+            <div class="col d-flex flex-column align-items-center">
+                <img src="https://www.fedex.com/content/dam/fedex-com/brand-icons/purple/retail-services.svg" alt="Store Hours" class="feature-icon mb-2">
+                <span class="small fw-semibold text-dark">STORE HOURS AND SERVICES</span>
+            </div>
+            <div class="col d-flex flex-column align-items-center">
+                <img src="https://www.fedex.com/content/dam/fedex/us-united-states/icons---png/icon_alert_purple_lg.png" alt="Alerts" class="feature-icon mb-2">
+                <span class="small fw-semibold text-dark">SERVICE ALERTS</span>
+            </div>
+            <div class="col d-flex flex-column align-items-center">
+                <img src="https://www.fedex.com/content/dam/fedex/us-united-states/shipping/images/2020/Q3/icon_returns_purple_lg_1184917500.png" alt="Return" class="feature-icon mb-2">
+                <span class="small fw-semibold text-dark">RETURN A PACKAGE</span>
             </div>
         </div>
     </div>
+</div>
 
     <div class="bg-light py-5">
         <div class="container text-center">
