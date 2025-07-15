@@ -192,6 +192,10 @@ document.addEventListener('DOMContentLoaded', function() {
             trackingHistory: [] // New tracking starts with an empty history
         };
 
+         console.log("Submitting formData:", formData);
+         console.log("Tracking ID value:", formData.trackingId);
+        console.log("Status value:", formData.status);
+
         // Inside your addTrackingForm event listener
         fetch('/api/admin/trackings', { // CORRECTED URL: Added '/admin'
             method: 'POST',
