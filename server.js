@@ -409,7 +409,7 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             recipientAddress,
             specialHandling,
             weight: parseFloat(weight) || 0,
-            history: history && Array.isArray(history) ? history : [{ description: 'Shipment created', location: origin || 'Unknown' }],
+            history: history && Array.isArray(history) ? history : [],
             lastUpdated: new Date()
         });
 
