@@ -134,17 +134,34 @@ async function populateInitialData() {
 
 // --- JWT Authentication Middleware ---
 console.log('Server JWT_SECRET (active):', process.env.JWT_SECRET ? 'Loaded' : 'Not Loaded');
+
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
+    
+    // --- ADDED LOGGING HERE ---
+    console.log('Backend: Received Authorization header:', authHeader); 
+    // --- END ADDED LOGGING ---
+
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (token == null) return res.status(401).json({ message: 'Token required.' });
+    // --- ADDED LOGGING HERE ---
+    console.log('Backend: Extracted token:', token);
+    // --- END ADDED LOGGING ---
+
+    if (token == null) {
+        console.log('Backend: Token is null or undefined, returning 401.');
+        return res.status(401).json({ message: 'Token required.' });
+    }
 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
         if (err) {
             console.error('JWT verification error:', err);
             if (err.name === 'TokenExpiredError') {
                 return res.status(401).json({ message: 'Token expired. Please log in again.' });
+            }
+            // Add a specific log for malformed tokens
+            if (err.name === 'JsonWebTokenError' && err.message === 'jwt malformed') {
+                console.error('Backend: Received a malformed JWT. Check frontend token storage/transmission.');
             }
             return res.status(403).json({ message: 'Invalid token.' });
         }
@@ -154,6 +171,8 @@ const authenticateToken = (req, res, next) => {
 };
 
 const authenticateAdmin = (req, res, next) => {
+    // We can also add a log here to confirm authenticateAdmin is called
+    console.log('Backend: authenticateAdmin middleware triggered.');
     authenticateToken(req, res, () => {
         if (req.user && req.user.role === 'admin') {
             next();
