@@ -250,6 +250,13 @@
                 </div>
 
                 <div class="input-field">
+                    <input type="email" id="addRecipientEmail" name="recipientEmail" required>
+                    <label for="addRecipientEmail">Recipient Email:</label>
+                    <small class="form-text text-muted">Email address for notifications.</small>
+                </div>
+
+
+                <div class="input-field">
                     <input type="text" id="addPackageContents" name="packageContents" required>
                     <label for="addPackageContents">Package Contents:</label>
                 </div>
@@ -353,6 +360,12 @@
                 </div>
 
                 <div class="input-field">
+                    <input type="email" id="updateRecipientEmail" name="recipientEmail" required>
+                    <label for="updateRecipientEmail">Recipient Email:</label>
+                </div>
+
+
+                <div class="input-field">
                     <input type="text" id="updatePackageContents" name="packageContents">
                     <label for="updatePackageContents">Package Contents:</label>
                 </div>
@@ -433,7 +446,7 @@
                             <th>Blinking</th>
                             <th>Sender Name</th>
                             <th>Recipient Name</th>
-                            <th>Package Contents</th>
+                            <th>Recipient Email</th> <th>Package Contents</th>
                             <th>Service Type</th>
                             <th>Recipient Address</th>
                             <th>Special Handling</th>
@@ -443,7 +456,7 @@
                         </tr>
                     </thead>
                     <tbody id="all-trackings-table-body">
-                        <tr><td colspan="12" style="text-align: center; padding: 20px;">Loading tracking data...</td></tr>
+                        <tr><td colspan="14" style="text-align: center; padding: 20px;">Loading tracking data...</td></tr>
                     </tbody>
                 </table>
             </div>
