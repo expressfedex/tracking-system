@@ -50,6 +50,7 @@ const TrackingSchema = new mongoose.Schema({
     expectedDelivery: { type: Date },
     senderName: { type: String, default: '' },
     recipientName: { type: String, default: '' },
+    recipientEmail: { type: String, default: '' },
     packageContents: { type: String, default: '' },
     serviceType: { type: String, default: '' },
     recipientAddress: { type: String, default: '' },
