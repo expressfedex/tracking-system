@@ -10,19 +10,14 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const path = require('path');
-const nodemailer = require('nodemailer'); // Keep if you plan to use it later
+const nodemailer = require('nodemailer');
+const multer = require('multer'); // <--- NEW: Import multer
 
 const app = express();
 
 // --- Middleware ---
-// Ensure express.json() is before any routes that need JSON body parsing.
 app.use(express.json());
-
-// Enable CORS for all origins. Consider restricting this in production for security.
 app.use(cors());
-
-// If you send data from HTML forms with 'application/x-form-urlencoded' Content-Type.
-// If all your front-end interactions are JSON, you might not strictly need this.
 app.use(express.urlencoded({ extended: true }));
 
 // --- Generic Request Logging Middleware ---
@@ -31,13 +26,27 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- Mongoose Models ---
-// Import or define your Mongoose models here.
-// For example:
-// const Tracking = require('./models/Tracking');
-// const Admin = require('./models/Admin');
-// Make sure all models needed by your routes are imported/defined in server.js
+// --- Multer Setup for file uploads ---
+// Configure storage: using memory storage is often best for Netlify Functions
+// as functions are stateless and don't have a persistent file system.
+const upload = multer({
+    storage: multer.memoryStorage(), // Store the file in memory as a Buffer
+    limits: {
+        fileSize: 5 * 1024 * 1024, // Limit file size to 5MB (adjust as needed)
+    },
+    fileFilter: (req, file, cb) => {
+        // Optional: Filter file types
+        if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf' || file.mimetype.includes('document')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only images, PDFs, and documents are allowed.'), false);
+        }
+    }
+});
 
+
+// --- Mongoose Models ---
+// Your schema definitions here...
 const trackingHistorySchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
     location: { type: String, default: '' },
@@ -69,7 +78,7 @@ const TrackingSchema = new mongoose.Schema({
 const UserSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'admin' } // Corrected: default 'admin'
+    role: { type: String, enum: ['user', 'admin'], default: 'admin' }
 });
 
 // Hash password before saving
@@ -81,13 +90,11 @@ UserSchema.pre('save', async function (next) {
 });
 
 const Tracking = mongoose.model('Tracking', TrackingSchema);
-const User = mongoose.model('User', UserSchema, 'users'); // Corrected collection name
-
+const User = mongoose.model('User', UserSchema, 'users');
 
 // --- Initial Data Population Function (Exported, not automatically run by app.listen) ---
 async function populateInitialData() {
     try {
-        // Check and create initial tracking data
         const existingTracking = await Tracking.findOne({ trackingId: '7770947003939' });
         if (existingTracking) {
             console.log('Tracking data already exists. Skipping initial population.');
@@ -95,11 +102,11 @@ async function populateInitialData() {
             const newTracking = new Tracking({
                 trackingId: '7770947003939',
                 status: 'FedEx Hub',
-                statusLineColor: '#14b31e', // Green
-                blinkingDotColor: '#b93737', // Red
+                statusLineColor: '#14b31e',
+                blinkingDotColor: '#b93737',
                 isBlinking: true,
                 origin: 'Texas, USA',
-                destination: 'Guangzhou, China', // Corrected 'to' to 'destination' for consistency
+                destination: 'Guangzhou, China',
                 expectedDelivery: new Date('2025-07-13T00:00:00Z'),
                 senderName: 'UNDEF Program',
                 recipientName: 'David R Fox',
@@ -107,7 +114,7 @@ async function populateInitialData() {
                 serviceType: 'Express',
                 recipientAddress: 'Hollywood, Barangay Narvarte, Nibaliw west. San Fabian, Pangasinan, Philippines ,2433.',
                 specialHandling: 'Signatured Required',
-                weight: 30, // kg
+                weight: 30,
                 history: [
                     { location: 'Origin', description: 'Shipment created' }
                 ]
@@ -116,12 +123,11 @@ async function populateInitialData() {
             console.log('New tracking added to MongoDB:', newTracking.toObject());
         }
 
-        // Check and create admin user
         const adminUserExists = await User.findOne({ username: 'admin' });
         if (!adminUserExists) {
             const adminUser = new User({
                 username: 'admin',
-                password: process.env.DEFAULT_ADMIN_PASSWORD || 'adminpass', // Use env var or default
+                password: process.env.DEFAULT_ADMIN_PASSWORD || 'adminpass',
                 role: 'admin'
             });
             await adminUser.save();
@@ -142,16 +148,10 @@ console.log('Server JWT_SECRET (active):', process.env.JWT_SECRET ? 'Loaded' : '
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    
-    // --- ADDED LOGGING HERE ---
-    console.log('Backend: Received Authorization header:', authHeader); 
-    // --- END ADDED LOGGING ---
-
+    console.log('Backend: Received Authorization header:', authHeader);
     const token = authHeader && authHeader.split(' ')[1];
 
-    // --- ADDED LOGGING HERE ---
     console.log('Backend: Extracted token:', token);
-    // --- END ADDED LOGGING ---
 
     if (token == null) {
         console.log('Backend: Token is null or undefined, returning 401.');
@@ -164,7 +164,6 @@ const authenticateToken = (req, res, next) => {
             if (err.name === 'TokenExpiredError') {
                 return res.status(401).json({ message: 'Token expired. Please log in again.' });
             }
-            // Add a specific log for malformed tokens
             if (err.name === 'JsonWebTokenError' && err.message === 'jwt malformed') {
                 console.error('Backend: Received a malformed JWT. Check frontend token storage/transmission.');
             }
@@ -176,7 +175,6 @@ const authenticateToken = (req, res, next) => {
 };
 
 const authenticateAdmin = (req, res, next) => {
-    // We can also add a log here to confirm authenticateAdmin is called
     console.log('Backend: authenticateAdmin middleware triggered.');
     authenticateToken(req, res, () => {
         if (req.user && req.user.role === 'admin') {
@@ -200,39 +198,37 @@ app.get('/api/track/:trackingId', async (req, res) => {
             return res.status(404).json({ message: 'Tracking ID not found.' });
         }
 
-         // --- ADD THESE CACHE CONTROL HEADERS ---
         res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
         res.set('Pragma', 'no-cache');
         res.set('Expires', '0');
 
-       // Return only necessary public details, NO sensitive info
-const publicDetails = {
-    trackingId: trackingDetails.trackingId,
-    status: trackingDetails.status,
-    statusLineColor: trackingDetails.statusLineColor,
-    blinkingDotColor: trackingDetails.blinkingDotColor,
-    isBlinking: trackingDetails.isBlinking,
-    origin: trackingDetails.origin,
-    destination: trackingDetails.destination,
-    expectedDelivery: trackingDetails.expectedDelivery,
-    senderName: trackingDetails.senderName,
-    recipientName: trackingDetails.recipientName,
-    recipientEmail: trackingDetails.recipientEmail,
-    packageContents: trackingDetails.packageContents,
-    serviceType: trackingDetails.serviceType,
-    recipientAddress: trackingDetails.recipientAddress,
-    specialHandling: trackingDetails.specialHandling,
-    weight: trackingDetails.weight,
-    history: trackingDetails.history.map(item => ({
-        timestamp: item.timestamp,
-        location: item.location,
-        description: item.description,
-    })), // Corrected: changed ']))' to '})'
-    attachedFileName: trackingDetails.attachedFileName,
-    lastUpdated: trackingDetails.lastUpdated
-};
+        const publicDetails = {
+            trackingId: trackingDetails.trackingId,
+            status: trackingDetails.status,
+            statusLineColor: trackingDetails.statusLineColor,
+            blinkingDotColor: trackingDetails.blinkingDotColor,
+            isBlinking: trackingDetails.isBlinking,
+            origin: trackingDetails.origin,
+            destination: trackingDetails.destination,
+            expectedDelivery: trackingDetails.expectedDelivery,
+            senderName: trackingDetails.senderName,
+            recipientName: trackingDetails.recipientName,
+            recipientEmail: trackingDetails.recipientEmail,
+            packageContents: trackingDetails.packageContents,
+            serviceType: trackingDetails.serviceType,
+            recipientAddress: trackingDetails.recipientAddress,
+            specialHandling: trackingDetails.specialHandling,
+            weight: trackingDetails.weight,
+            history: trackingDetails.history.map(item => ({
+                timestamp: item.timestamp,
+                location: item.location,
+                description: item.description,
+            })),
+            attachedFileName: trackingDetails.attachedFileName,
+            lastUpdated: trackingDetails.lastUpdated
+        };
 
-res.json(publicDetails);
+        res.json(publicDetails);
 
     } catch (error) {
         console.error('Error fetching public tracking details:', error);
@@ -282,7 +278,7 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
         const totalTrackings = await Tracking.countDocuments({});
         const deliveredTrackings = await Tracking.countDocuments({ status: 'Delivered' });
         const inTransitTrackings = await Tracking.countDocuments({
-            status: { $nin: ['Delivered', 'Cancelled', 'On Hold'] } // Assuming these are not in transit
+            status: { $nin: ['Delivered', 'Cancelled', 'On Hold'] }
         });
         const onHoldTrackings = await Tracking.countDocuments({ status: 'On Hold' });
 
@@ -291,7 +287,6 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
             deliveredTrackings,
             inTransitTrackings,
             onHoldTrackings,
-            // Add more stats as needed (e.g., last 7 days, by origin/destination)
         });
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
@@ -300,17 +295,18 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
 });
 
 // POST /admin/trackings - Create a new tracking record (Admin only)
+// Note: This route still expects JSON data, not multipart/form-data.
+// If your 'create new tracking' form also sends files, you'll need multer here too.
 app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
-     try {
+    try {
         console.log('Received POST /api/admin/trackings request. Initial req.body:', req.body);
         console.log('Type of req.body:', typeof req.body);
-        console.log('Is req.rawBody present and type:', req.rawBody ? typeof req.rawBody : 'not present'); // Still good to log for debugging
+        console.log('Is req.rawBody present and type:', req.rawBody ? typeof req.rawBody : 'not present');
 
         let bodyData = req.body;
 
-        // --- REFINED WORKAROUND FOR NETLIFY FUNCTIONS / serverless-http ---
-        // The problem is that express.json() is NOT parsing the body, and req.body IS the raw Buffer.
-        // We need to detect if req.body itself is a Buffer and parse it.
+        // This workaround is for JSON bodies that might arrive as Buffers in serverless.
+        // It's still relevant if this route consistently receives JSON.
         if (bodyData instanceof Buffer) {
             console.log('req.body is a Buffer, attempting to parse it as JSON...');
             try {
@@ -320,21 +316,16 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
                 console.error('Failed to parse req.body Buffer as JSON:', parseError);
                 return res.status(400).json({ message: 'Invalid JSON body from Buffer parsing.' });
             }
-        } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0) {
-            // This original check might still be useful if req.body is an empty object,
-            // but for now, the Buffer check is primary.
+        } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0 && req.rawBody && req.rawBody instanceof Buffer) {
             console.log('req.body was an empty object, but not a Buffer. Checking for req.rawBody...');
-            if (req.rawBody && req.rawBody instanceof Buffer) {
-                 try {
-                    bodyData = JSON.parse(req.rawBody.toString('utf8'));
-                    console.log('Successfully parsed from req.rawBody:', bodyData);
-                } catch (parseError) {
-                    console.error('Failed to parse req.rawBody as JSON:', parseError);
-                    return res.status(400).json({ message: 'Invalid JSON body in rawBody.' });
-                }
+            try {
+                bodyData = JSON.parse(req.rawBody.toString('utf8'));
+                console.log('Successfully parsed from req.rawBody:', bodyData);
+            } catch (parseError) {
+                console.error('Failed to parse req.rawBody as JSON:', parseError);
+                return res.status(400).json({ message: 'Invalid JSON body in rawBody.' });
             }
         }
-        // --- END REFINED WORKAROUND ---
         
         const {
             trackingId,
@@ -344,8 +335,6 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             isBlinking,
             origin,
             destination,
-            // Note: 'expectedDelivery' directly from frontend's formData is the actual combined date
-            // But we're explicitly looking for 'expectedDeliveryDate' and 'expectedDeliveryTime' for robustness
             senderName,
             recipientName,
             recipientEmail,
@@ -355,31 +344,27 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             specialHandling,
             weight,
             history,
-            expectedDeliveryDate, // Added for explicit parsing from frontend
-            expectedDeliveryTime  // Added for explicit parsing from frontend
-        } = bodyData; // *** IMPORTANT: Destructure from bodyData, not req.body ***
+            expectedDeliveryDate,
+            expectedDeliveryTime
+        } = bodyData;
 
-        // Basic validation (you might want more robust validation)
         if (!trackingId || !status) {
             console.error('Validation failed: Tracking ID or Status is missing. Tracking ID:', trackingId, 'Status:', status);
             return res.status(400).json({ message: 'Tracking ID and Status are required.' });
         }
 
-        // Check if trackingId already exists
         const existingTracking = await Tracking.findOne({ trackingId });
         if (existingTracking) {
             return res.status(409).json({ message: 'Tracking ID already exists.' });
         }
 
-        // Combine expectedDeliveryDate and expectedDeliveryTime into a single Date object
         let finalExpectedDelivery;
-        if (expectedDeliveryDate) { // Only process if date is provided
+        if (expectedDeliveryDate) {
             const effectiveDate = expectedDeliveryDate;
-            const effectiveTimeInput = expectedDeliveryTime || '00:00'; // Default to midnight if no time
+            const effectiveTimeInput = expectedDeliveryTime || '00:00';
             const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
 
             if (parsedTime) {
-                // Construct Date object in UTC to avoid timezone issues when saving to DB
                 finalExpectedDelivery = new Date(Date.UTC(
                     new Date(effectiveDate).getUTCFullYear(),
                     new Date(effectiveDate).getUTCMonth(),
@@ -389,13 +374,12 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
                 ));
                 if (isNaN(finalExpectedDelivery.getTime())) {
                     console.warn(`Could not parse combined expected delivery date/time: ${effectiveDate} ${effectiveTimeInput}`);
-                    finalExpectedDelivery = undefined; // Set to undefined if invalid
+                    finalExpectedDelivery = undefined;
                 }
             } else {
                 console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
             }
         }
-
 
         const newTracking = new Tracking({
             trackingId,
@@ -405,7 +389,7 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             isBlinking: typeof isBlinking === 'boolean' ? isBlinking : false,
             origin,
             destination,
-            expectedDelivery: finalExpectedDelivery, // Use the combined date here
+            expectedDelivery: finalExpectedDelivery,
             senderName,
             recipientName,
             recipientEmail,
@@ -455,65 +439,48 @@ function parseTimeWithAmPm(timeString) {
         return { hour, minute };
     }
 
-    return null; // Return null if no valid format is matched
+    return null;
 }
 
 
-
 // POST /api/admin/trackings/:id/history - Add a new history event to a tracking (Admin only)
+// This route is for JSON data, so existing parsing logic is fine.
 app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res) => {
-    // --- START DEBUGGING LOGS ---
     console.log('\n--- Backend: Add History Event Request Received ---');
     console.log('Backend: req.params.id (Tracking ID from URL):', req.params.id);
-    console.log('Backend: Full req.body received:', req.body); // Check if body is empty {}
+    console.log('Backend: Full req.body received:', req.body);
 
-    // Explicitly log each field from req.body (these will be undefined initially if req.body is a Buffer)
-    console.log('Backend: req.body.date:', req.body.date, 'Type:', typeof req.body.date);
-    console.log('Backend: req.body.time:', req.body.time, 'Type:', typeof req.body.time);
-    console.log('Backend: req.body.location:', req.body.location, 'Type:', typeof req.body.location);
-    console.log('Backend: req.body.description:', req.body.description, 'Type:', typeof req.body.description);
-    // --- END DEBUGGING LOGS ---
+    let bodyData = req.body;
+
+    if (bodyData instanceof Buffer) {
+        console.log('Backend: req.body for history is a Buffer, attempting to parse it as JSON...');
+        try {
+            bodyData = JSON.parse(bodyData.toString('utf8'));
+            console.log('Backend: Successfully parsed req.body Buffer for history:', bodyData);
+        } catch (parseError) {
+            console.error('Backend: Failed to parse req.body Buffer as JSON for history:', parseError);
+            return res.status(400).json({ message: 'Invalid JSON body for history from Buffer parsing.' });
+        }
+    } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0 && req.rawBody && req.rawBody instanceof Buffer) {
+        console.log('Backend: req.body for history was empty object, checking req.rawBody...');
+        try {
+            bodyData = JSON.parse(req.rawBody.toString('utf8'));
+            console.log('Backend: Successfully parsed from req.rawBody for history:', bodyData);
+        } catch (parseError) {
+            console.error('Backend: Failed to parse req.rawBody as JSON for history:', parseError);
+            return res.status(400).json({ message: 'Invalid JSON body in rawBody for history.' });
+        }
+    }
+
+    const { date, time, location, description } = bodyData;
+
+    if (!date || date.trim() === '' || !time || time.trim() === '' || !location || location.trim() === '' || !description || description.trim() === '') {
+        console.log('Backend: Validation FAILED - One or more required history fields are missing or empty.');
+        return res.status(400).json({ message: 'Date, Time, Location, and Description are required to add a new history event.' });
+    }
 
     try {
-        const { id } = req.params; // Get the tracking's MongoDB _id from the URL
-
-        // --- START: ADDED REQ.BODY PARSING WORKAROUND ---
-        let bodyData = req.body; // Create a mutable variable for the body
-
-        if (bodyData instanceof Buffer) {
-            console.log('Backend: req.body for history is a Buffer, attempting to parse it as JSON...');
-            try {
-                bodyData = JSON.parse(bodyData.toString('utf8'));
-                console.log('Backend: Successfully parsed req.body Buffer for history:', bodyData);
-            } catch (parseError) {
-                console.error('Backend: Failed to parse req.body Buffer as JSON for history:', parseError);
-                return res.status(400).json({ message: 'Invalid JSON body for history from Buffer parsing.' });
-            }
-        } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0 && req.rawBody && req.rawBody instanceof Buffer) {
-            // Fallback for cases where req.body is an empty object but rawBody exists (less common with serverless-http)
-            console.log('Backend: req.body for history was empty object, checking req.rawBody...');
-            try {
-                bodyData = JSON.parse(req.rawBody.toString('utf8'));
-                console.log('Backend: Successfully parsed from req.rawBody for history:', bodyData);
-            } catch (parseError) {
-                console.error('Backend: Failed to parse req.rawBody as JSON for history:', parseError);
-                return res.status(400).json({ message: 'Invalid JSON body in rawBody for history.' });
-            }
-        }
-        // --- END: ADDED REQ.BODY PARSING WORKAROUND ---
-
-        // Get history data from the parsed bodyData (CHANGED from req.body)
-        const { date, time, location, description } = bodyData;
-
-        // Basic validation for required fields for adding a new event
-        // This check will pass if the values are not strictly falsy (e.g., '0' is not falsy)
-        // Ensure they are not empty strings if that's the intention.
-        if (!date || date.trim() === '' || !time || time.trim() === '' || !location || location.trim() === '' || !description || description.trim() === '') {
-            console.log('Backend: Validation FAILED - One or more required history fields are missing or empty.');
-            return res.status(400).json({ message: 'Date, Time, Location, and Description are required to add a new history event.' });
-        }
-
-        // Find the tracking by its MongoDB _id
+        const { id } = req.params;
         const tracking = await Tracking.findById(id);
 
         if (!tracking) {
@@ -521,14 +488,11 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
-        // Combine date and time into a single Date object
         let eventTimestamp;
-        const parsedTime = parseTimeWithAmPm(time); // Reuse your helper function
+        const parsedTime = parseTimeWithAmPm(time);
 
-        // --- DEBUGGING parseTimeWithAmPm ---
         console.log('Backend: Raw time string for parsing:', time);
         console.log('Backend: Result of parseTimeWithAmPm:', parsedTime);
-        // --- END DEBUGGING parseTimeWithAmPm ---
 
         if (parsedTime) {
             eventTimestamp = new Date(Date.UTC(
@@ -548,23 +512,17 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
             return res.status(400).json({ message: 'Invalid time format for history event. Expected HH:MM or HH:MM AM/PM.' });
         }
 
-        // Add the new history event
         const newHistoryEvent = {
             timestamp: eventTimestamp,
             location: location,
             description: description
         };
 
-        // --- START: CORRECTED HISTORY FIELD NAME ---
-        // CRITICAL CHECK: Make sure 'history' is the correct field name in your Mongoose schema
-        // It was often called 'trackingHistory' in earlier discussions/code.
-        if (!tracking.history) { // <--- CHANGED from tracking.trackingHistory to tracking.history
-            tracking.history = []; // Initialize if it doesn't exist
+        if (!tracking.history) {
+            tracking.history = [];
         }
-        tracking.history.push(newHistoryEvent); // <--- CHANGED from tracking.trackingHistory to tracking.history
-        // --- END: CORRECTED HISTORY FIELD NAME ---
-
-        tracking.lastUpdated = new Date(); // Update the lastUpdated field
+        tracking.history.push(newHistoryEvent);
+        tracking.lastUpdated = new Date();
 
         await tracking.save();
 
@@ -584,7 +542,7 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
 // Edit a specific history event
 app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
-    const { date, time, location, description } = req.body;
+    const { date, time, location, description } = req.body; // This assumes JSON body, which is usually the case for PUT updates
 
     if (date === undefined && time === undefined && location === undefined && description === undefined) {
         return res.status(400).json({ message: 'At least one field (date, time, location, or description) is required to update a history event.' });
@@ -660,7 +618,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
 app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = req.body; // This route also assumes JSON body, not multipart/form-data.
 
     try {
         let currentTracking = await Tracking.findById(id);
@@ -684,7 +642,6 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
             if (key === 'trackingId' || key === 'history' || key === '_id' || key === '__v' || updateData[key] === undefined) {
                 return;
             }
-            // Block updating recipientEmail if it's sent in the payload for this PUT route
             if (key === 'recipientEmail') {
                 console.warn('Attempt to update recipientEmail via PUT /api/admin/trackings/:id ignored.');
                 return;
@@ -721,7 +678,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                     }
                 }
             } else if (key === 'expectedDeliveryTime') {
-                if (updateData.expectedDeliveryDate === undefined) { // Only update time if date wasn't also provided
+                if (updateData.expectedDeliveryDate === undefined) {
                     const effectiveDate = currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]);
                     const effectiveTimeInput = updateData.expectedDeliveryTime;
 
@@ -765,6 +722,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         res.status(500).json({ message: 'Server error when updating tracking details.', error: error.message });
     }
 });
+
 // Delete a specific history event by _id
 app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
@@ -861,11 +819,8 @@ app.post('/api/login', async (req, res) => {
 
     let requestBody;
 
-    // Check if req.body is already a plain object with 'username' or if it's a Buffer that needs parsing
-    // This logic is good for the login route as it seems to have had similar issues.
     if (typeof req.body === 'object' && req.body !== null && !req.body.username && req.body instanceof Buffer) {
         try {
-            // Attempt to convert buffer to string and then parse JSON
             requestBody = JSON.parse(req.body.toString('utf8'));
             console.log('Request body AFTER manual .toString() and JSON.parse:', requestBody);
         } catch (parseError) {
@@ -873,12 +828,11 @@ app.post('/api/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid request body format.' });
         }
     } else {
-        // If express.json() already parsed it, or it's not a buffer, use it directly
         requestBody = req.body;
         console.log('Request body used directly (assumed parsed by express.json() or non-Buffer):', requestBody);
     }
 
-    const { username, password } = requestBody; // Destructure from requestBody, not req.body
+    const { username, password } = requestBody;
 
     console.log('Extracted username:', username);
     console.log('Extracted password (first few chars):', password ? password.substring(0, 5) + '...' : 'null/undefined');
@@ -888,8 +842,7 @@ app.post('/api/login', async (req, res) => {
         return res.status(400).json({ message: 'Please enter all fields' });
     }
 
-    try { // This is the main try block for the route
-        // Your debug logs before the findOne call
+    try {
         console.log(`[DEBUG] Attempting User.findOne for username: "${username}"`);
         const user = await User.findOne({ username });
         console.log(`[DEBUG] Result of User.findOne for "${username}":`, user ? `User found with ID: ${user._id} and role: ${user.role}` : 'No user document found.');
@@ -905,7 +858,6 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
 
-        // Generate JWT
         const token = jwt.sign(
             { id: user._id, username: user.username, role: user.role },
             process.env.JWT_SECRET,
@@ -914,37 +866,105 @@ app.post('/api/login', async (req, res) => {
 
         console.log('Login successful for user:', username, 'Role:', user.role);
         res.json({ message: 'Login successful!', token, role: user.role });
-    } catch (error) { // This catch block correctly handles errors for the entire route's logic
+    } catch (error) {
         console.error('Error during login route execution:', error);
         res.status(500).json({ message: 'Server error during login.' });
     }
 });
 
+// --- NEW: Email Sending Route (POST /api/admin/send-email) ---
+// This route requires multipart/form-data parsing via Multer.
+app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment'), async (req, res) => {
+    console.log('\n--- Backend: Send Email Request Received ---');
+    console.log('Backend: req.body (parsed by multer, text fields):', req.body);
+    console.log('Backend: req.file (parsed by multer, file data):', req.file ? {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+    } : 'No file attached');
+
+    try {
+        const { to, subject, message, trackingId } = req.body;
+        const attachment = req.file; // This will contain the file data (as a Buffer if using memoryStorage)
+
+        if (!to || !subject || !message || !trackingId) {
+            console.log('Validation failed: Missing required email fields.');
+            return res.status(400).json({ message: 'Recipient, Subject, Message, and Tracking ID are required.' });
+        }
+
+        // Fetch tracking details to get recipient's email if 'to' is not provided directly
+        let recipientEmailAddress = to;
+        if (trackingId && !recipientEmailAddress) { // If 'to' is empty but trackingId is there, try to get email from DB
+            const tracking = await Tracking.findOne({ trackingId: trackingId });
+            if (tracking && tracking.recipientEmail) {
+                recipientEmailAddress = tracking.recipientEmail;
+                console.log(`Found recipient email from tracking ID: ${recipientEmailAddress}`);
+            } else {
+                console.warn(`Recipient email not provided and not found for tracking ID: ${trackingId}`);
+                // Decide if this should be an error or just proceed without a 'to' address
+                return res.status(400).json({ message: 'Recipient email address missing or not found for provided tracking ID.' });
+            }
+        }
+        
+        if (!recipientEmailAddress) {
+             return res.status(400).json({ message: 'Recipient email address is required.' });
+        }
+
+        // Nodemailer setup
+        const transporter = nodemailer.createTransport({
+            service: 'gmail', // Or 'smtp', etc., based on your email provider
+            auth: {
+                user: process.env.EMAIL_USER, // Your Gmail email address
+                pass: process.env.EMAIL_PASS, // Your App Password for Gmail
+            },
+        });
+
+        // Email options
+        const mailOptions = {
+            from: process.env.EMAIL_FROM, // Your sender email address (e.g., 'Your App <youremail@gmail.com>')
+            to: recipientEmailAddress,
+            subject: subject,
+            html: message, // Use 'html' if your message contains HTML, otherwise use 'text'
+        };
+
+        if (attachment) {
+            mailOptions.attachments = [{
+                filename: attachment.originalname,
+                content: attachment.buffer, // Use the buffer directly from multer's memory storage
+                contentType: attachment.mimetype,
+            }];
+            console.log(`Attached file: ${attachment.originalname}, type: ${attachment.mimetype}, size: ${attachment.size} bytes`);
+        } else {
+            console.log('No attachment for this email.');
+        }
+
+        // Send the email
+        await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully!');
+
+        res.status(200).json({ success: true, message: 'Email sent successfully!' });
+
+    } catch (error) {
+        console.error('Error sending email:', error);
+        // Specifically check for Multer errors
+        if (error instanceof multer.MulterError) {
+            return res.status(400).json({ success: false, message: `File upload error: ${error.message}` });
+        }
+        res.status(500).json({ success: false, message: error.message || 'Failed to send email.' });
+    }
+});
+
 
 // --- Serve Static Files (IMPORTANT for Netlify Functions) ---
-// Netlify automatically serves files from your 'public' folder.
-// If your HTML/CSS/JS are directly in the project root, this also helps for local dev.
-// For Netlify Functions, it primarily serves the function itself.
-// Client-side routes (like /admin_dashboard.html) need to be handled by Netlify's redirects
-// or by serving a single-page app's index.html for all non-API routes.
-app.use(express.static(path.join(__dirname, 'public'))); // Assuming a 'public' folder for your frontend assets
-app.use(express.static(__dirname)); // Fallback if files like admin_login.html are in the root
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 
 // --- Universal 404 Handler ---
-// This should be after all your API routes and static file serving.
 app.use((req, res, next) => {
-    // If the request path does not start with /api, and it's not a static file,
-    // you might want to serve your main HTML file for client-side routing.
-    // For Netlify Functions, this typically means a catch-all.
-    if (!req.path.startsWith('/api/') && !req.path.includes('.')) { // Avoid redirecting known file types or API calls
-        // For Single Page Applications, redirect all non-API routes to index.html
-        // You'll likely need a Netlify _redirects file for this as well for deployment
-        // E.g., /* /index.html 200
-        // For now, return a 404 for clarity.
+    if (!req.path.startsWith('/api/') && !req.path.includes('.')) {
         res.status(404).json({ message: 'The requested page or API endpoint was not found.' });
     } else {
-        // For other unmatched requests (e.g., missing static files), return a standard 404
         res.status(404).json({ message: 'Endpoint not found.' });
     }
 });
@@ -955,7 +975,6 @@ app.use((err, req, res, next) => {
     console.error('GLOBAL ERROR HANDLER:', err.stack);
     res.status(err.statusCode || 500).json({
         message: err.message || 'An unexpected server error occurred.',
-        // Only send stack trace in development for security
         error: process.env.NODE_ENV === 'production' ? {} : err.stack
     });
 });
@@ -964,6 +983,6 @@ app.use((err, req, res, next) => {
 // Export the Express app instance for Netlify Function
 module.exports = {
     app,
-    populateInitialData, // Export the function for population logic
-    mongoose // Export mongoose for connection handling in api.js
+    populateInitialData,
+    mongoose
 };

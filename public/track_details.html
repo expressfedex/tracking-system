@@ -66,7 +66,7 @@
 
         .tracking-header h1 {
             margin: 0;
-            font-size: 1.2em;
+            font-size: 1em;
             font-weight: 700;
             color: #333;
         }
@@ -81,6 +81,7 @@
             background-color:rgb(159, 21, 201); /* Green button */
             color: #fff;
             padding: 6px 10px;
+            width: 40px;
             border-radius: 5px;
             text-decoration: none;
             font-size: 0.6em;
@@ -365,25 +366,47 @@
         <img src="https://i.imgur.com/KvViOIu.png" alt="FedEx Logo" class="fedex-footer-logo">
     </div>
 
-    <script>
+   <script>
+    let pollingIntervalId; // Store the interval ID so we can clear it later
+
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const trackingId = urlParams.get('trackingId');
 
+        let activeTrackingId;
+
         if (trackingId) {
             document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${trackingId}`;
-            fetchTrackingDetails(trackingId);
+            activeTrackingId = trackingId;
         } else {
             console.warn('No tracking ID provided in URL. Displaying placeholder data.');
-            // Default to a specific tracking ID from your initial data for testing if none provided
             document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : 77200452739`;
-            fetchTrackingDetails('77200452739');
+            activeTrackingId = '77200452739'; // Default for testing
         }
+
+        // --- Start polling for updates ---
+        // Call immediately on load, then every 15 seconds
+        fetchTrackingDetails(activeTrackingId); // Initial fetch
+        pollingIntervalId = setInterval(() => {
+            fetchTrackingDetails(activeTrackingId);
+        }, 15000); // Poll every 15 seconds (adjust as needed)
+        // --- End polling setup ---
+
         // Add event listener for "Track Parcel Again" button
         document.querySelector('.track-again-btn').addEventListener('click', (e) => {
             e.preventDefault();
-            // Redirect to your main tracking page (e.g., index.html)
+            // Clear the polling interval when leaving the page
+            if (pollingIntervalId) {
+                clearInterval(pollingIntervalId);
+            }
             window.location.href = '/';
+        });
+
+        // Optional: Clear interval if user navigates away or closes the tab
+        window.addEventListener('beforeunload', () => {
+            if (pollingIntervalId) {
+                clearInterval(pollingIntervalId);
+            }
         });
     });
 
@@ -396,66 +419,57 @@
                 populateTrackingData(data);
             } else {
                 alert('Tracking ID not found: ' + (data.message || 'Please try again.'));
-                // Optionally, redirect back to the main tracking page or show error on this page
-                window.location.href = '/'; // Go back to index page if not found
+                if (pollingIntervalId) {
+                    clearInterval(pollingIntervalId); // Stop polling if tracking ID is invalid
+                }
+                window.location.href = '/';
             }
         } catch (error) {
             console.error('Error fetching tracking data:', error);
-            alert('Network error or server unreachable. Could not fetch tracking details.');
+            // Don't stop polling on network error, as it might be temporary
+            // alert('Network error or server unreachable. Could not fetch tracking details.');
         }
     }
 
     function populateTrackingData(data) {
-        // --- ADDED ROBUSTNESS CHECK ---
         if (!data || typeof data !== 'object') {
             console.error('populateTrackingData received invalid or empty data:', data);
-            alert('Could not display tracking details due to invalid data received.');
-            return; // Stop execution if data is invalid
+            // Consider stopping polling or showing a persistent error if data consistently invalid
+            return;
         }
-        // --- END ADDED ROBUSTNESS CHECK ---
 
-        // Update Header
         document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${data.trackingId || 'N/A'}`;
 
-        // Update Status & Delivery Info
         const statusLine = document.getElementById('statusLine');
         const statusDot = document.getElementById('statusIndicatorDot');
-        const currentStatusElem = document.getElementById('currentStatus'); // Get reference to element
+        const currentStatusElem = document.getElementById('currentStatus');
 
-        // Clear existing classes
-        statusLine.className = 'status-line'; // Reset all classes
-        statusDot.className = 'status-indicator-dot'; // Reset all classes for the dot
+        statusLine.className = 'status-line';
+        statusDot.className = 'status-indicator-dot';
 
-        // --- START MODIFICATION FOR COLORS ---
-        // Set the background color of the status line directly from the API response
-        statusLine.style.backgroundColor = data.statusLineColor || '#2196F3'; // Use new color field
-        statusDot.style.backgroundColor = data.blinkingDotColor || '#FFFFFF'; // Use new color field
+        statusLine.style.backgroundColor = data.statusLineColor || '#2196F3';
+        statusDot.style.backgroundColor = data.blinkingDotColor || '#FFFFFF';
 
-        // Determine text color for statusLine based on its background brightness
         const statusLineHex = (data.statusLineColor || '2196F3').replace('#', '');
         const rLine = parseInt(statusLineHex.substring(0, 2), 16);
         const gLine = parseInt(statusLineHex.substring(2, 4), 16);
         const bLine = parseInt(statusLineHex.substring(4, 6), 16);
         const brightnessLine = ((rLine * 299) + (gLine * 587) + (bLine * 114)) / 1000;
-        statusLine.style.color = (brightnessLine > 180) ? '#333' : '#fff'; // Dark text for light background, white for dark
+        statusLine.style.color = (brightnessLine > 180) ? '#333' : '#fff';
 
-        // Determine border color for the dot based on its background brightness
         const dotHex = (data.blinkingDotColor || 'FFFFFF').replace('#', '');
         const rDot = parseInt(dotHex.substring(0, 2), 16);
         const gDot = parseInt(dotHex.substring(2, 4), 16);
         const bDot = parseInt(dotHex.substring(4, 6), 16);
         const brightnessDot = ((rDot * 299) + (gDot * 587) + (bDot * 114)) / 1000;
-        statusDot.style.border = (brightnessDot > 180) ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.2)'; // Adjust border for visibility
+        statusDot.style.border = (brightnessDot > 180) ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.2)';
 
-        // --- END MODIFICATION FOR COLORS ---
+        currentStatusElem.textContent = data.status || 'Unknown Status';
 
-        currentStatusElem.textContent = data.status || 'Unknown Status'; // Use the element reference
-
-        // Apply blinking if isBlinking is true
         if (data.isBlinking) {
             statusDot.classList.add('blinking');
         } else {
-            statusDot.classList.remove('blinking'); // Ensure it's removed if false
+            statusDot.classList.remove('blinking');
         }
 
         const expectedDeliveryDateElem = document.getElementById('expectedDeliveryDate');
@@ -470,24 +484,21 @@
             expectedDeliveryTimeElem.textContent = 'N/A';
         }
 
-        // Update Package Information
         document.getElementById('senderName').textContent = data.senderName || 'N/A';
         document.getElementById('originLocation').textContent = data.origin || 'N/A';
-        document.getElementById('currentLocation').textContent = data.status || 'Unknown'; // Using data.status for current location
+        document.getElementById('currentLocation').textContent = data.status || 'Unknown';
         document.getElementById('packageContents').textContent = data.packageContents || 'N/A';
         document.getElementById('packageWeight').textContent = data.weight ? `${data.weight} KG` : 'N/A';
         document.getElementById('serviceType').textContent = data.serviceType || 'N/A';
         document.getElementById('specialHandling').textContent = data.specialHandling || 'None';
 
-        // Update Delivery To
         document.getElementById('recipientName').textContent = data.recipientName || 'N/A';
         document.getElementById('recipientAddress').textContent = data.recipientAddress || 'N/A';
 
-        // Update Delivery History
         const historyContainer = document.getElementById('deliveryHistoryContainer');
-        historyContainer.innerHTML = ''; // Clear existing placeholder history
+        historyContainer.innerHTML = '';
 
-        if (data.history && Array.isArray(data.history) && data.history.length > 0) { // Added Array.isArray check
+        if (data.history && Array.isArray(data.history) && data.history.length > 0) {
             data.history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
             data.history.forEach((item, index) => {
@@ -497,10 +508,10 @@
                 const iconSpan = document.createElement('span');
                 iconSpan.classList.add('history-icon-circle');
 
-                let iconClass = 'grey'; // Default for past inactive points
-                let iconHTML = '<i class="fas fa-circle"></i>'; // Default circle icon
+                let iconClass = 'grey';
+                let iconHTML = '<i class="fas fa-circle"></i>';
 
-                const lowerDescription = (item.description || '').toLowerCase(); // Ensure description is a string
+                const lowerDescription = (item.description || '').toLowerCase();
                 if (lowerDescription.includes('departed') || lowerDescription.includes('transit')) {
                     iconClass = 'blue';
                     iconHTML = '<i class="fas fa-truck"></i>';
@@ -510,7 +521,7 @@
                 } else if (lowerDescription.includes('held') || lowerDescription.includes('officer') || lowerDescription.includes('exception')) {
                     iconClass = 'red';
                     iconHTML = '<i class="fas fa-exclamation-triangle"></i>';
-                } else if (index === 0) { // If it's the most recent entry and not an exception
+                } else if (index === 0) {
                     iconClass = 'green';
                     iconHTML = '<i class="fas fa-map-marker-alt"></i>';
                 }
@@ -523,15 +534,15 @@
 
                 const timeP = document.createElement('p');
                 timeP.classList.add('history-time');
-                timeP.textContent = formatHistoryDateTimeScreenshot(item.timestamp || new Date().toISOString()); // Fallback timestamp
+                timeP.textContent = formatHistoryDateTimeScreenshot(item.timestamp || new Date().toISOString());
 
                 const locationP = document.createElement('p');
                 locationP.classList.add('history-location');
-                locationP.textContent = item.description || 'N/A'; // Use description as main event
+                locationP.textContent = item.description || 'N/A';
 
                 const descriptionP = document.createElement('p');
                 descriptionP.classList.add('history-description-detailed');
-                descriptionP.textContent = item.location || 'N/A'; // Use location as detailed info
+                descriptionP.textContent = item.location || 'N/A';
 
                 contentDiv.appendChild(timeP);
                 contentDiv.appendChild(locationP);
@@ -547,11 +558,10 @@
         }
     }
 
-    // Helper function for formatting history date/time to match screenshot (YYYY-MM-DD • HH:MM PM)
     function formatHistoryDateTimeScreenshot(isoString) {
         try {
             const dateObj = new Date(isoString);
-            if (isNaN(dateObj.getTime())) { // Check for invalid date
+            if (isNaN(dateObj.getTime())) {
                 return 'Invalid Date';
             }
             const year = dateObj.getFullYear();
@@ -562,7 +572,7 @@
             const minutes = String(dateObj.getMinutes()).padStart(2, '0');
             const ampm = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12;
-            hours = hours ? hours : 12; // the hour '0' should be '12'
+            hours = hours ? hours : 12;
             const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
 
             return `${year}-${month}-${day} • ${formattedTime}`;
