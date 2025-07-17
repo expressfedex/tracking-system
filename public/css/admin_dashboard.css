@@ -240,7 +240,15 @@ body {
     display: none; /* Hidden by default on desktop */
     font-size: 1.8em;
     cursor: pointer;
-    color: #555;
+    color: var(--sidebar-text);
+    position: fixed; /* Keep toggle button visible */
+    top: 20px;
+    left: 20px;
+    z-index: 1001; /* Above sidebar */
+    background-color: var(--sidebar-bg);
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 992px) { /* Adjust breakpoint as needed */
@@ -259,14 +267,6 @@ body {
 
     .menu-toggle {
         display: block; /* Show menu toggle on smaller screens */
-        position: fixed; /* Keep toggle button visible */
-        top: 20px;
-        left: 20px;
-        z-index: 1001; /* Above sidebar */
-        background-color: white;
-        padding: 10px;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
     .main-content header {

@@ -18,6 +18,8 @@
             --info-blue: #2196F3; /* Materialize Blue */
             --danger-red: #F44336; /* Materialize Red */
             --warning-orange: #FF9800; /* Materialize Orange */
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #333333;
         }
         /* Basic styles to make Materialize forms look cohesive with your current setup */
         .form-group {
@@ -131,6 +133,20 @@
 
         .table-responsive {
             overflow-x: auto; /* Ensures table is scrollable on small screens */
+        }
+
+        .menu-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1000;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>

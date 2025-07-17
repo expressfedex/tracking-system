@@ -8,18 +8,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Navigation Logic ---
     function showSection(sectionId) {
-        document.querySelectorAll('.content-section').forEach(section => {
-            section.style.display = 'none';
+        document.querySelectorAll('.dashboard-section').forEach(section => {
+            section.classList.remove('active-section'); // Hide all sections
         });
-        document.getElementById(sectionId).style.display = 'block';
-        // Hide mobile sidenav if open
-        const sidenavInstance = M.Sidenav.getInstance(document.querySelector('.sidenav'));
-        if (sidenavInstance && sidenavInstance.isOpen) {
-            sidenavInstance.close();
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.classList.add('active-section'); // Show the selected section
+        } else {
+            console.error(`Section with ID "${sectionId}" not found.`);
         }
     }
 
-    document.querySelectorAll('.sidenav a, .nav-links a').forEach(link => {
+    document.querySelectorAll('.sidebar a').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const sectionId = this.getAttribute('data-section');
@@ -43,27 +43,42 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- Logout Logic ---
-    document.getElementById('logout-btn').addEventListener('click', function() {
-        localStorage.removeItem('token');
-        M.toast({
-            html: 'Logged out successfully!',
-            classes: 'green darken-2'
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            localStorage.removeItem('token');
+            M.toast({
+                html: 'Logged out successfully!',
+                classes: 'green darken-2'
+            });
+            setTimeout(() => window.location.href = 'admin_login.html', 1000);
         });
-        setTimeout(() => window.location.href = 'admin_login.html', 1000);
-    });
-
-    // --- Token Verification (Basic Client-Side Check) ---
-    const token = localStorage.getItem('token');
-    if (!token) {
-        M.toast({
-            html: 'No session found. Please log in.',
-            classes: 'red darken-2'
-        });
-        setTimeout(() => window.location.href = 'admin_login.html', 1500);
+    } else {
+        console.error("Logout button not found in the DOM.");
     }
+
+    // --- Sidebar Toggle Logic ---
+    const sidebar = document.querySelector('.sidebar');
+    const menuToggle = document.querySelector('.menu-toggle');
+
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active'); // Toggle the 'active' class to show/hide the sidebar
+        });
+    } else {
+        console.error("Sidebar or menu toggle button not found in the DOM.");
+    }
+
+    // Initial load: show dashboard and fetch all trackings to populate stats
+    showSection('dashboard-section');
+    fetchAllTrackings(); // This will also call updateDashboardStats
 
     // --- 1. Manage Tracking Section ---
     const trackingTableBody = document.getElementById('tracking-table-body');
+    if (!trackingTableBody) {
+        console.error("Tracking table body element not found.");
+        return;
+    }
     const createTrackingModal = document.getElementById('createTrackingModal');
     const createTrackingForm = document.getElementById('createTrackingForm');
     const editTrackingModal = document.getElementById('editTrackingModal');
