@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- Logout Logic ---
-    document.getElementById('logout-btn').addEventListener('click', function() {
+        document.getElementById('logoutBtn').addEventListener('click', function() {
         localStorage.removeItem('token');
         M.toast({
             html: 'Logged out successfully!',
