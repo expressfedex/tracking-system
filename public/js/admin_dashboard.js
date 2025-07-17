@@ -1,84 +1,110 @@
-// admin_dashboard.js
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Materialize components
-    M.Sidenav.init(document.querySelector('.sidenav'));
+    // Initialize Materialize Components
+    M.Sidenav.init(document.querySelectorAll('.sidenav'));
     M.FormSelect.init(document.querySelectorAll('select'));
-    M.Modal.init(document.querySelectorAll('.modal'));
     M.Datepicker.init(document.querySelectorAll('.datepicker'));
-    M.Timepicker.init(document.querySelectorAll('.timepicker'), {
-        twelveHour: false
-    });
+    M.Timepicker.init(document.querySelectorAll('.timepicker'));
+    M.Modal.init(document.querySelectorAll('.modal'));
 
-    const editHistoryModal = document.getElementById('editHistoryModal');
-    const editHistoryModalInstance = M.Modal.getInstance(editHistoryModal);
-
-
-    // Section Management
+    // Helper function to show/hide sections
     function showSection(sectionId) {
         document.querySelectorAll('.content-section').forEach(section => {
             section.style.display = 'none';
         });
         document.getElementById(sectionId).style.display = 'block';
 
-        // Specific actions on section change
-        if (sectionId === 'manage-all-trackings-section') {
-            fetchAllTrackings();
-        } else if (sectionId === 'communication-center-section') {
-            fetchTrackingIdsForEmailSelect();
-        } else if (sectionId === 'package-file-upload-section') {
-            fetchTrackingIdsForAttachFileSelect();
-        }
+        // Add active class to corresponding nav item
+        document.querySelectorAll('.sidenav li').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`.sidenav li a[href="#${sectionId}"]`).parentElement.classList.add('active');
     }
 
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            showSection(this.dataset.section);
-        });
+    // --- Navigation Event Listeners ---
+    document.getElementById('dashboard-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('dashboard-section');
+        fetchAllTrackings(); // Refresh dashboard stats
     });
 
-    // Logout Functionality
-    document.getElementById('logout-btn').addEventListener('click', function() {
+    document.getElementById('create-tracking-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('create-tracking-section');
+        // Clear form fields when navigating to create new tracking
+        document.getElementById('createTrackingForm').reset();
+        M.updateTextFields();
+        M.FormSelect.init(document.querySelectorAll('#createTrackingForm select')); // Re-init selects
+    });
+
+    document.getElementById('manage-tracking-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('manage-tracking-section');
+        fetchTrackingIdsForSelect(); // Populate the dropdown for managing single trackings
+        document.getElementById('singleTrackingForm').reset(); // Clear form
+        M.updateTextFields();
+    });
+
+    document.getElementById('all-trackings-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('all-trackings-section');
+        fetchAllTrackings(); // Refresh all trackings table
+    });
+
+    document.getElementById('manage-users-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('manage-users-section');
+        fetchAllUsers(); // Populate the users table
+    });
+
+    document.getElementById('communication-center-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('communication-center-section');
+        fetchTrackingIdsForEmailSelect(); // Populate tracking IDs for email
+    });
+
+    document.getElementById('file-upload-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        showSection('file-upload-section');
+        fetchTrackingIdsForAttachFileSelect(); // Populate tracking IDs for file upload
+    });
+
+    document.getElementById('logout-link').addEventListener('click', function(e) {
+        e.preventDefault();
         localStorage.removeItem('token');
-        window.location.href = 'admin_login.html';
+        M.toast({
+            html: 'Logged out successfully.',
+            classes: 'green'
+        });
+        setTimeout(() => window.location.href = 'admin_login.html', 1500);
     });
 
-
-    // 1. Create New Tracking Form
-    const createTrackingForm = document.getElementById('createTrackingForm');
-
-    createTrackingForm.addEventListener('submit', function(e) {
+    // --- 1. Create New Tracking Form ---
+    document.getElementById('createTrackingForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
-        const newTracking = {
-            trackingId: document.getElementById('createTrackingId').value,
-            status: document.getElementById('createStatus').value,
-            statusLineColor: document.getElementById('createStatusLineColor').value,
-            isBlinking: document.getElementById('createIsBlinking').checked,
-            senderName: document.getElementById('createSenderName').value,
-            senderAddress: document.getElementById('createSenderAddress').value,
-            senderEmail: document.getElementById('createSenderEmail').value,
-            senderPhone: document.getElementById('createSenderPhone').value,
-            recipientName: document.getElementById('createRecipientName').value,
-            recipientAddress: document.getElementById('createRecipientAddress').value,
-            recipientEmail: document.getElementById('createRecipientEmail').value,
-            recipientPhone: document.getElementById('createRecipientPhone').value,
-            packageContents: document.getElementById('createPackageContents').value,
-            serviceType: document.getElementById('createServiceType').value,
-            weight: document.getElementById('createWeight').value,
-            dimensions: document.getElementById('createDimensions').value,
-            origin: document.getElementById('createOrigin').value,
-            destination: document.getElementById('createDestination').value,
-            pickupDate: document.getElementById('createPickupDate').value,
-            pickupTime: document.getElementById('createPickupTime').value,
-            expectedDeliveryDate: document.getElementById('createExpectedDeliveryDate').value,
-            expectedDeliveryTime: document.getElementById('createExpectedDeliveryTime').value,
-            specialHandling: document.getElementById('createSpecialHandling').value,
-            carrier: document.getElementById('createCarrier').value,
-            currentLocation: document.getElementById('createCurrentLocation').value,
-            customsStatus: document.getElementById('createCustomsStatus').value,
-            // History will be empty initially or added separately
+        const formData = {
+            trackingId: document.getElementById('newTrackingId').value,
+            status: document.getElementById('newStatus').value,
+            statusLineColor: document.getElementById('newStatusLineColor').value,
+            isBlinking: document.getElementById('newIsBlinking').checked,
+            senderName: document.getElementById('newSenderName').value,
+            senderAddress: document.getElementById('newSenderAddress').value,
+            recipientName: document.getElementById('newRecipientName').value,
+            recipientAddress: document.getElementById('newRecipientAddress').value,
+            recipientEmail: document.getElementById('newRecipientEmail').value,
+            packageContents: document.getElementById('newPackageContents').value,
+            serviceType: document.getElementById('newServiceType').value,
+            weight: document.getElementById('newWeight').value,
+            dimensions: document.getElementById('newDimensions').value,
+            specialHandling: document.getElementById('newSpecialHandling').value,
+            originFacility: document.getElementById('newOriginFacility').value,
+            destinationFacility: document.getElementById('newDestinationFacility').value,
+            currentLocation: document.getElementById('newCurrentLocation').value,
+            expectedDeliveryDate: document.getElementById('newExpectedDeliveryDate').value,
+            expectedDeliveryTime: document.getElementById('newExpectedDeliveryTime').value,
+            remarks: document.getElementById('newRemarks').value,
+            cost: document.getElementById('newCost').value,
+            paymentStatus: document.getElementById('newPaymentStatus').value,
         };
 
         fetch('/api/admin/trackings', {
@@ -87,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify(newTracking),
+                body: JSON.stringify(formData)
             })
             .then(response => {
                 if (!response.ok) {
@@ -105,15 +131,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                if (data.tracking) {
+                if (data.success) {
                     M.toast({
                         html: 'Tracking created successfully!',
-                        classes: 'green'
+                        classes: 'green darken-2'
                     });
-                    createTrackingForm.reset();
-                    M.updateTextFields(); // Update Materialize labels
-                    M.FormSelect.init(document.querySelectorAll('select')); // Re-initialize selects
-                    fetchTrackingIdsForSelect(); // Refresh tracking IDs in other sections
+                    document.getElementById('createTrackingForm').reset();
+                    M.updateTextFields(); // Reset Materialize textfield labels
+                    M.FormSelect.init(document.querySelectorAll('#createTrackingForm select')); // Re-init selects
+                    fetchAllTrackings(); // Refresh the all trackings table and dashboard stats
+                    fetchTrackingIdsForSelect(); // Refresh single tracking dropdown
+                    fetchTrackingIdsForEmailSelect(); // Refresh email tracking dropdown
+                    fetchTrackingIdsForAttachFileSelect(); // Refresh file upload tracking dropdown
                 } else {
                     M.toast({
                         html: `Error: ${data.message || 'Could not create tracking.'}`,
@@ -130,17 +159,22 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-
-    // 2. Manage Single Tracking Details
+    // --- 2. Manage Single Tracking ---
     const singleTrackingIdSelect = document.getElementById('singleTrackingIdSelect');
-    const trackingDetailsForm = document.getElementById('trackingDetailsForm');
-    const historyEventsContainer = document.getElementById('historyEvents');
-    const addHistoryForm = document.getElementById('addHistoryForm');
+    const singleTrackingForm = document.getElementById('singleTrackingForm');
     const updateTrackingBtn = document.getElementById('updateTrackingBtn');
-    const addHistoryBtn = document.getElementById('addHistoryBtn');
+    const addTrackingHistoryBtn = document.getElementById('addTrackingHistoryBtn');
+    const trackingHistoryList = document.getElementById('trackingHistoryList');
+    const deleteHistoryModalTrigger = document.getElementById('deleteTrackingHistoryModalTrigger');
+    const deleteTrackingHistoryBtn = document.getElementById('deleteTrackingHistoryBtn');
+    const historyIdToDeleteInput = document.getElementById('historyIdToDelete');
+    const viewFilesBtn = document.getElementById('viewFilesBtn');
+    const packageFilesList = document.getElementById('packageFilesList');
+    const deleteFileModalTrigger = document.getElementById('deleteFileModalTrigger');
+    const deletePackageFileBtn = document.getElementById('deletePackageFileBtn');
+    const fileIdToDeleteInput = document.getElementById('fileIdToDelete');
 
 
-    // Populate Tracking IDs for Select
     function fetchTrackingIdsForSelect() {
         fetch('/api/admin/trackings', {
                 method: 'GET',
@@ -167,8 +201,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 singleTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
                 trackings.forEach(tracking => {
                     const option = document.createElement('option');
-                    option.value = tracking._id; // Use MongoDB _id as the value
-                    option.textContent = tracking.trackingId; // Display trackingId to user
+                    option.value = tracking._id; // Use MongoDB _id
+                    option.textContent = tracking.trackingId; // Display trackingId
                     singleTrackingIdSelect.appendChild(option);
                 });
                 M.FormSelect.init(singleTrackingIdSelect); // Re-initialize Materialize select
@@ -182,20 +216,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    // Load Tracking Details when a tracking ID is selected
     singleTrackingIdSelect.addEventListener('change', function() {
         const trackingMongoId = this.value;
         if (trackingMongoId) {
-            loadTrackingDetails(trackingMongoId);
+            fetchTrackingDetails(trackingMongoId);
         } else {
-            trackingDetailsForm.reset();
-            historyEventsContainer.innerHTML = '<li class="collection-item">No tracking selected.</li>';
-            updateTrackingBtn.disabled = true;
-            addHistoryBtn.disabled = true;
+            singleTrackingForm.reset();
+            M.updateTextFields();
+            trackingHistoryList.innerHTML = '<li class="collection-item">Select a tracking to view history.</li>';
+            packageFilesList.innerHTML = '<li class="collection-item">Select a tracking to view files.</li>';
         }
     });
 
-    function loadTrackingDetails(trackingMongoId) {
+    function fetchTrackingDetails(trackingMongoId) {
         fetch(`/api/admin/trackings/${trackingMongoId}`, {
                 method: 'GET',
                 headers: {
@@ -218,94 +251,85 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(tracking => {
-                document.getElementById('editTrackingId').value = tracking.trackingId;
-                document.getElementById('editStatus').value = tracking.status;
-                document.getElementById('editStatusLineColor').value = tracking.statusLineColor;
-                document.getElementById('editIsBlinking').checked = tracking.isBlinking;
-                document.getElementById('editSenderName').value = tracking.senderName;
-                document.getElementById('editSenderAddress').value = tracking.senderAddress;
-                document.getElementById('editSenderEmail').value = tracking.senderEmail;
-                document.getElementById('editSenderPhone').value = tracking.senderPhone;
-                document.getElementById('editRecipientName').value = tracking.recipientName;
-                document.getElementById('editRecipientAddress').value = tracking.recipientAddress;
-                document.getElementById('editRecipientEmail').value = tracking.recipientEmail;
-                document.getElementById('editRecipientPhone').value = tracking.recipientPhone;
-                document.getElementById('editPackageContents').value = tracking.packageContents;
-                document.getElementById('editServiceType').value = tracking.serviceType;
-                document.getElementById('editWeight').value = tracking.weight;
-                document.getElementById('editDimensions').value = tracking.dimensions;
-                document.getElementById('editOrigin').value = tracking.origin;
-                document.getElementById('editDestination').value = tracking.destination;
-                document.getElementById('editPickupDate').value = tracking.pickupDate;
-                document.getElementById('editPickupTime').value = tracking.pickupTime;
-                document.getElementById('editExpectedDeliveryDate').value = tracking.expectedDeliveryDate;
-                document.getElementById('editExpectedDeliveryTime').value = tracking.expectedDeliveryTime;
-                document.getElementById('editSpecialHandling').value = tracking.specialHandling;
-                document.getElementById('editCarrier').value = tracking.carrier;
-                document.getElementById('editCurrentLocation').value = tracking.currentLocation;
-                document.getElementById('editCustomsStatus').value = tracking.customsStatus;
+                document.getElementById('trackingMongoId').value = tracking._id; // Hidden field for _id
+                document.getElementById('currentTrackingId').value = tracking.trackingId;
+                document.getElementById('status').value = tracking.status;
+                document.getElementById('statusLineColor').value = tracking.statusLineColor;
+                document.getElementById('isBlinking').checked = tracking.isBlinking;
+                document.getElementById('senderName').value = tracking.senderName;
+                document.getElementById('senderAddress').value = tracking.senderAddress;
+                document.getElementById('recipientName').value = tracking.recipientName;
+                document.getElementById('recipientAddress').value = tracking.recipientAddress;
+                document.getElementById('recipientEmail').value = tracking.recipientEmail;
+                document.getElementById('packageContents').value = tracking.packageContents;
+                document.getElementById('serviceType').value = tracking.serviceType;
+                document.getElementById('weight').value = tracking.weight;
+                document.getElementById('dimensions').value = tracking.dimensions;
+                document.getElementById('specialHandling').value = tracking.specialHandling;
+                document.getElementById('originFacility').value = tracking.originFacility;
+                document.getElementById('destinationFacility').value = tracking.destinationFacility;
+                document.getElementById('currentLocation').value = tracking.currentLocation;
+                document.getElementById('expectedDeliveryDate').value = tracking.expectedDeliveryDate; // Datepicker will parse this
+                document.getElementById('expectedDeliveryTime').value = tracking.expectedDeliveryTime; // Timepicker will parse this
+                document.getElementById('remarks').value = tracking.remarks;
+                document.getElementById('cost').value = tracking.cost;
+                document.getElementById('paymentStatus').value = tracking.paymentStatus;
 
+                M.updateTextFields(); // Re-initialize text field labels
+                M.FormSelect.init(document.querySelectorAll('#singleTrackingForm select')); // Re-init selects
+                M.Datepicker.getInstance(document.getElementById('expectedDeliveryDate')).setDate(new Date(tracking.expectedDeliveryDate));
+                M.Timepicker.getInstance(document.getElementById('expectedDeliveryTime')).setDate(new Date(`2000-01-01T${tracking.expectedDeliveryTime}`)); // Dummy date for timepicker
 
-                M.updateTextFields(); // Update Materialize labels for pre-filled inputs
-                M.FormSelect.init(document.querySelectorAll('select')); // Re-initialize selects
-                updateTrackingBtn.disabled = false;
-                addHistoryBtn.disabled = false;
-
-                renderHistoryEvents(tracking.history || []);
+                renderTrackingHistory(tracking.history);
+                renderPackageFiles(tracking.packageFiles);
             })
             .catch(error => {
-                console.error('Error loading tracking details:', error);
+                console.error('Error fetching tracking details:', error);
                 M.toast({
                     html: `Failed to load tracking details: ${error.message}`,
                     classes: 'red darken-2'
                 });
-                trackingDetailsForm.reset();
-                historyEventsContainer.innerHTML = '<li class="collection-item">Error loading history.</li>';
-                updateTrackingBtn.disabled = true;
-                addHistoryBtn.disabled = true;
+                singleTrackingForm.reset();
+                M.updateTextFields();
+                trackingHistoryList.innerHTML = '<li class="collection-item">Error loading history.</li>';
+                packageFilesList.innerHTML = '<li class="collection-item">Error loading files.</li>';
             });
     }
 
-    // Update Tracking Form Submission
-    trackingDetailsForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const trackingMongoId = singleTrackingIdSelect.value;
+    // Update Tracking Details
+    updateTrackingBtn.addEventListener('click', function() {
+        const trackingMongoId = document.getElementById('trackingMongoId').value;
         if (!trackingMongoId) {
             M.toast({
-                html: 'Please select a tracking ID to update.',
+                html: 'Please select a tracking to update.',
                 classes: 'red darken-2'
             });
             return;
         }
 
-        const updatedTracking = {
-            trackingId: document.getElementById('editTrackingId').value,
-            status: document.getElementById('editStatus').value,
-            statusLineColor: document.getElementById('editStatusLineColor').value,
-            isBlinking: document.getElementById('editIsBlinking').checked,
-            senderName: document.getElementById('editSenderName').value,
-            senderAddress: document.getElementById('editSenderAddress').value,
-            senderEmail: document.getElementById('editSenderEmail').value,
-            senderPhone: document.getElementById('editSenderPhone').value,
-            recipientName: document.getElementById('editRecipientName').value,
-            recipientAddress: document.getElementById('editRecipientAddress').value,
-            recipientEmail: document.getElementById('editRecipientEmail').value,
-            recipientPhone: document.getElementById('editRecipientPhone').value,
-            packageContents: document.getElementById('editPackageContents').value,
-            serviceType: document.getElementById('editServiceType').value,
-            weight: document.getElementById('editWeight').value,
-            dimensions: document.getElementById('editDimensions').value,
-            origin: document.getElementById('editOrigin').value,
-            destination: document.getElementById('editDestination').value,
-            pickupDate: document.getElementById('editPickupDate').value,
-            pickupTime: document.getElementById('editPickupTime').value,
-            expectedDeliveryDate: document.getElementById('editExpectedDeliveryDate').value,
-            expectedDeliveryTime: document.getElementById('editExpectedDeliveryTime').value,
-            specialHandling: document.getElementById('editSpecialHandling').value,
-            carrier: document.getElementById('editCarrier').value,
-            currentLocation: document.getElementById('editCurrentLocation').value,
-            customsStatus: document.getElementById('editCustomsStatus').value,
+        const updatedData = {
+            trackingId: document.getElementById('currentTrackingId').value,
+            status: document.getElementById('status').value,
+            statusLineColor: document.getElementById('statusLineColor').value,
+            isBlinking: document.getElementById('isBlinking').checked,
+            senderName: document.getElementById('senderName').value,
+            senderAddress: document.getElementById('senderAddress').value,
+            recipientName: document.getElementById('recipientName').value,
+            recipientAddress: document.getElementById('recipientAddress').value,
+            recipientEmail: document.getElementById('recipientEmail').value,
+            packageContents: document.getElementById('packageContents').value,
+            serviceType: document.getElementById('serviceType').value,
+            weight: document.getElementById('weight').value,
+            dimensions: document.getElementById('dimensions').value,
+            specialHandling: document.getElementById('specialHandling').value,
+            originFacility: document.getElementById('originFacility').value,
+            destinationFacility: document.getElementById('destinationFacility').value,
+            currentLocation: document.getElementById('currentLocation').value,
+            expectedDeliveryDate: document.getElementById('expectedDeliveryDate').value,
+            expectedDeliveryTime: document.getElementById('expectedDeliveryTime').value,
+            remarks: document.getElementById('remarks').value,
+            cost: document.getElementById('cost').value,
+            paymentStatus: document.getElementById('paymentStatus').value,
         };
 
         fetch(`/api/admin/trackings/${trackingMongoId}`, {
@@ -314,7 +338,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify(updatedTracking),
+                body: JSON.stringify(updatedData)
             })
             .then(response => {
                 if (!response.ok) {
@@ -332,14 +356,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
-                if (data.tracking) {
+                if (data.success) {
                     M.toast({
                         html: 'Tracking updated successfully!',
-                        classes: 'blue'
+                        classes: 'green darken-2'
                     });
-                    // Re-load details to ensure all fields and history are fresh
-                    loadTrackingDetails(trackingMongoId);
-                    fetchAllTrackings(); // Refresh the main table
+                    fetchAllTrackings(); // Refresh all trackings table and dashboard stats
+                    fetchTrackingIdsForSelect(); // Refresh single tracking dropdown
                 } else {
                     M.toast({
                         html: `Error: ${data.message || 'Could not update tracking.'}`,
@@ -356,72 +379,36 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    // Render History Events
-    function renderHistoryEvents(history) {
-        historyEventsContainer.innerHTML = '';
-        if (history.length === 0) {
-            historyEventsContainer.innerHTML = '<li class="collection-item">No history events for this tracking.</li>';
-            return;
-        }
-
-        history.forEach((event, index) => {
-            const li = document.createElement('li');
-            li.className = 'collection-item';
-            const eventDate = event.date ? new Date(event.date).toLocaleString() : 'N/A';
-            li.innerHTML = `
-                <div>
-                    <strong>Date:</strong> ${eventDate}<br>
-                    <strong>Location:</strong> ${event.location}<br>
-                    <strong>Status:</strong> ${event.status}<br>
-                    <strong>Description:</strong> ${event.description || 'N/A'}
-                    <div class="secondary-content">
-                        <button class="btn-small waves-effect waves-light blue edit-history-btn"
-                                data-id="${event._id}"
-                                data-location="${event.location}"
-                                data-status="${event.status}"
-                                data-description="${event.description || ''}"
-                                data-date="${event.date ? new Date(event.date).toISOString().substring(0, 16) : ''}"
-                        >
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-small waves-effect waves-light red delete-history-btn"
-                                data-id="${event._id}" data-index="${index}">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            historyEventsContainer.appendChild(li);
-        });
-
-        document.querySelectorAll('.edit-history-btn').forEach(button => {
-            button.addEventListener('click', openEditHistoryModal);
-        });
-
-        document.querySelectorAll('.delete-history-btn').forEach(button => {
-            button.addEventListener('click', deleteHistoryEvent);
-        });
-    }
-
-
-    // Add History Event
-    addHistoryForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const trackingMongoId = singleTrackingIdSelect.value;
+    // Add Tracking History
+    addTrackingHistoryBtn.addEventListener('click', function() {
+        const trackingMongoId = document.getElementById('trackingMongoId').value;
         if (!trackingMongoId) {
             M.toast({
-                html: 'Please select a tracking ID first.',
+                html: 'Please select a tracking to add history to.',
                 classes: 'red darken-2'
             });
             return;
         }
 
-        const newHistoryEvent = {
-            date: document.getElementById('addHistoryDate').value,
-            location: document.getElementById('addHistoryLocation').value,
-            status: document.getElementById('addHistoryStatus').value,
-            description: document.getElementById('addHistoryDescription').value,
+        const newLocation = document.getElementById('historyLocation').value;
+        const newStatus = document.getElementById('historyStatus').value;
+        const newDate = document.getElementById('historyDate').value;
+        const newTime = document.getElementById('historyTime').value;
+        const newDescription = document.getElementById('historyDescription').value;
+
+        if (!newLocation || !newStatus || !newDate || !newTime) {
+            M.toast({
+                html: 'Please fill in all history fields.',
+                classes: 'red darken-2'
+            });
+            return;
+        }
+
+        const historyEntry = {
+            location: newLocation,
+            status: newStatus,
+            timestamp: `${newDate} ${newTime}`,
+            description: newDescription
         };
 
         fetch(`/api/admin/trackings/${trackingMongoId}/history`, {
@@ -430,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify(newHistoryEvent),
+                body: JSON.stringify(historyEntry)
             })
             .then(response => {
                 if (!response.ok) {
@@ -442,29 +429,34 @@ document.addEventListener('DOMContentLoaded', function() {
                         setTimeout(() => window.location.href = 'admin_login.html', 2000);
                     }
                     return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error adding history event');
+                        throw new Error(errorData.message || 'Server error adding tracking history');
                     });
                 }
                 return response.json();
             })
             .then(data => {
-                if (data.tracking) { // Assuming a successful response returns the updated tracking object
+                if (data.success) {
                     M.toast({
-                        html: 'History event added!',
-                        classes: 'green'
+                        html: 'Tracking history added successfully!',
+                        classes: 'green darken-2'
                     });
-                    addHistoryForm.reset();
-                    M.updateTextFields(); // Update Materialize labels
-                    loadTrackingDetails(trackingMongoId); // Refresh current tracking's history
+                    document.getElementById('historyLocation').value = '';
+                    document.getElementById('historyStatus').value = '';
+                    document.getElementById('historyDate').value = '';
+                    document.getElementById('historyTime').value = '';
+                    document.getElementById('historyDescription').value = '';
+                    M.updateTextFields();
+                    M.FormSelect.init(document.querySelectorAll('#addHistoryModal select')); // Re-init selects
+                    fetchTrackingDetails(trackingMongoId); // Refresh history list
                 } else {
                     M.toast({
-                        html: `Error: ${data.message || 'Could not add history event.'}`,
+                        html: `Error: ${data.message || 'Could not add tracking history.'}`,
                         classes: 'red darken-2'
                     });
                 }
             })
             .catch(error => {
-                console.error('Error adding history event:', error);
+                console.error('Error adding tracking history:', error);
                 M.toast({
                     html: `Network error or server issue: ${error.message}`,
                     classes: 'red darken-2'
@@ -472,53 +464,58 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    // Edit History Modal Logic
-    function openEditHistoryModal(e) {
-        const btn = e.currentTarget;
-        document.getElementById('editHistoryId').value = btn.dataset.id;
-        document.getElementById('editHistoryLocationModal').value = btn.dataset.location;
-        document.getElementById('editHistoryStatusModal').value = btn.dataset.status;
-        document.getElementById('editHistoryDescriptionModal').value = btn.dataset.description;
-        document.getElementById('editHistoryDateModal').value = btn.dataset.date.substring(0, 10); // Date part
-        document.getElementById('editHistoryTimeModal').value = btn.dataset.date.substring(11, 16); // Time part
+    function renderTrackingHistory(history) {
+        trackingHistoryList.innerHTML = '';
+        if (history && history.length > 0) {
+            history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).forEach(entry => {
+                const li = document.createElement('li');
+                li.classList.add('collection-item');
+                li.innerHTML = `
+                    <div>
+                        <strong>${new Date(entry.timestamp).toLocaleString()}:</strong> ${entry.status} at ${entry.location}
+                        <p>${entry.description || ''}</p>
+                        <a href="#!" class="secondary-content delete-history-trigger" data-history-id="${entry._id}">
+                            <i class="material-icons red-text">delete</i>
+                        </a>
+                    </div>
+                `;
+                trackingHistoryList.appendChild(li);
+            });
 
-        M.updateTextFields();
-        M.FormSelect.init(document.getElementById('editHistoryStatusModal')); // Re-init select
+            document.querySelectorAll('.delete-history-trigger').forEach(trigger => {
+                trigger.addEventListener('click', function() {
+                    const historyId = this.dataset.historyId;
+                    historyIdToDeleteInput.value = historyId;
+                    M.Modal.getInstance(deleteHistoryModalTrigger).open();
+                });
+            });
 
-        editHistoryModalInstance.open();
+        } else {
+            trackingHistoryList.innerHTML = '<li class="collection-item">No tracking history available.</li>';
+        }
     }
 
-    document.getElementById('editHistoryForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const trackingMongoId = document.getElementById('singleTrackingIdSelect').value;
-        const historyId = document.getElementById('editHistoryId').value;
+    // Delete Tracking History
+    deleteTrackingHistoryBtn.addEventListener('click', function() {
+        const trackingMongoId = document.getElementById('trackingMongoId').value;
+        const historyId = historyIdToDeleteInput.value;
 
         if (!trackingMongoId || !historyId) {
             M.toast({
-                html: 'Missing tracking or history ID for update.',
+                html: 'Error: Missing tracking ID or history ID for deletion.',
                 classes: 'red darken-2'
             });
             return;
         }
 
-        const updatedHistoryEvent = {
-            date: document.getElementById('editHistoryDateModal').value + 'T' + document.getElementById('editHistoryTimeModal').value,
-            location: document.getElementById('editHistoryLocationModal').value,
-            status: document.getElementById('editHistoryStatusModal').value,
-            description: document.getElementById('editHistoryDescriptionModal').value,
-        };
-
-        fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, { // <--- CORRECTED URL: Added '/admin'
-                method: 'PUT',
+        fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
+                method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-                },
-                body: JSON.stringify(updatedHistoryEvent),
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
             })
             .then(response => {
-                if (!response.ok) { // Improved error handling
+                if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
                         M.toast({
                             html: 'Session expired or unauthorized. Please log in again.',
@@ -527,29 +524,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         setTimeout(() => window.location.href = 'admin_login.html', 2000);
                     }
                     return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error updating history event');
+                        throw new Error(errorData.message || 'Server error deleting tracking history');
                     });
                 }
                 return response.json();
             })
             .then(data => {
-                if (data.tracking) { // Assuming a successful response returns the updated tracking object
+                if (data.success) {
                     M.toast({
-                        html: 'History event updated!',
-                        classes: 'blue'
+                        html: 'History entry deleted successfully!',
+                        classes: 'red darken-2'
                     });
-                    // Refresh current tracking's history
-                    loadTrackingDetails(trackingMongoId); // Use the new function to refresh the details
-                    editHistoryModalInstance.close(); // Close modal on success
+                    M.Modal.getInstance(deleteHistoryModalTrigger).close();
+                    fetchTrackingDetails(trackingMongoId); // Refresh history list
                 } else {
                     M.toast({
-                        html: `Error: ${data.message || 'Could not update history event.'}`,
+                        html: `Error: ${data.message || 'Could not delete history entry.'}`,
                         classes: 'red darken-2'
                     });
                 }
             })
             .catch(error => {
-                console.error('Error updating history event:', error);
+                console.error('Error deleting tracking history:', error);
                 M.toast({
                     html: `Network error or server issue: ${error.message}`,
                     classes: 'red darken-2'
@@ -557,70 +553,98 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    // Delete History Event
-    function deleteHistoryEvent(e) {
-        const btn = e.currentTarget;
-        const trackingMongoId = document.getElementById('singleTrackingIdSelect').value;
-        const historyId = btn.dataset.id; // Use history event's MongoDB _id
-        const historyIndex = btn.dataset.index; // Fallback to index if no _id (less reliable)
+    // Render Package Files
+    function renderPackageFiles(files) {
+        packageFilesList.innerHTML = '';
+        if (files && files.length > 0) {
+            files.forEach(file => {
+                const li = document.createElement('li');
+                li.classList.add('collection-item');
+                li.innerHTML = `
+                    <div>
+                        <a href="${file.url}" target="_blank" class="blue-text text-darken-2">
+                            <i class="material-icons left">insert_drive_file</i>${file.fileName}
+                        </a>
+                        <a href="#!" class="secondary-content delete-file-trigger" data-file-id="${file._id}">
+                            <i class="material-icons red-text">delete</i>
+                        </a>
+                    </div>
+                `;
+                packageFilesList.appendChild(li);
+            });
 
-        if (!trackingMongoId) {
+            document.querySelectorAll('.delete-file-trigger').forEach(trigger => {
+                trigger.addEventListener('click', function() {
+                    const fileId = this.dataset.fileId;
+                    fileIdToDeleteInput.value = fileId;
+                    M.Modal.getInstance(deleteFileModalTrigger).open();
+                });
+            });
+        } else {
+            packageFilesList.innerHTML = '<li class="collection-item">No package files attached.</li>';
+        }
+    }
+
+    // Delete Package File
+    deletePackageFileBtn.addEventListener('click', function() {
+        const trackingMongoId = document.getElementById('trackingMongoId').value;
+        const fileId = fileIdToDeleteInput.value;
+
+        if (!trackingMongoId || !fileId) {
             M.toast({
-                html: 'Please select a tracking ID first.',
+                html: 'Error: Missing tracking ID or file ID for deletion.',
                 classes: 'red darken-2'
             });
             return;
         }
 
-        if (confirm('Are you sure you want to delete this history event?')) {
-            fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId || historyIndex}`, { // <--- CORRECTED URL: Added '/admin'
-                    method: 'DELETE',
-                    headers: { // <--- ADD THIS LINE!
-                        'Authorization': `Bearer ${localStorage.getItem('token')}` // <--- ADD THIS LINE!
-                    } // <--- ADD THIS LINE!
-                })
-                .then(response => {
-                    if (!response.ok) { // Improved error handling
-                        if (response.status === 401 || response.status === 403) {
-                            M.toast({
-                                html: 'Session expired or unauthorized. Please log in again.',
-                                classes: 'red darken-2'
-                            });
-                            setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                        }
-                        return response.json().then(errorData => {
-                            throw new Error(errorData.message || 'Server error deleting history event');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.tracking) { // Assuming success returns the updated tracking object
+        fetch(`/api/admin/trackings/${trackingMongoId}/files/${fileId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
                         M.toast({
-                            html: 'History event deleted!',
+                            html: 'Session expired or unauthorized. Please log in again.',
                             classes: 'red darken-2'
                         });
-                        // Refresh current tracking's history
-                        loadTrackingDetails(trackingMongoId); // Use the new function to refresh the details
-                    } else {
-                        M.toast({
-                            html: `Error: ${data.message || 'Could not delete history event.'}`,
-                            classes: 'red darken-2'
-                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
                     }
-                })
-                .catch(error => {
-                    console.error('Error deleting history event:', error);
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error deleting package file');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
                     M.toast({
-                        html: `Network error or server issue: ${error.message}`,
+                        html: 'File deleted successfully!',
                         classes: 'red darken-2'
                     });
+                    M.Modal.getInstance(deleteFileModalTrigger).close();
+                    fetchTrackingDetails(trackingMongoId); // Refresh files list
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not delete file.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting package file:', error);
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
                 });
-        }
-    }
+            });
+    });
 
 
-    // 3. Manage All Trackings Table
+    // --- 3. Manage All Trackings Table --- (Your provided code starts here)
     const trackingTableBody = document.getElementById('all-trackings-table-body');
 
     function fetchAllTrackings() {
@@ -772,7 +796,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // Communication Center Logic
+    // --- Communication Center Logic ---
     const emailTrackingIdSelect = document.getElementById('emailTrackingIdSelect');
     const notificationEmailInput = document.getElementById('notificationEmail');
     const emailSubjectInput = document.getElementById('emailSubject');
@@ -934,7 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="footer">
                         &copy; ${new Date().getFullYear()} Your Company Name. All rights reserved.<br>
-                        <a href="mailto:support@yourcompany.com" style="color: #ffffff;">support@yourcompany.com">support@yourcompany.com</a>
+                        <a href="mailto:support@yourcompany.com" style="color: #ffffff;">support@yourcompany.com</a>
                     </div>
                 </div>
             </body>
@@ -1000,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-    // Package File Upload Logic
+    // --- Package File Upload Logic ---
     const attachFileTrackingIdSelect = document.getElementById('attachFileTrackingIdSelect');
     const packageFileInput = document.getElementById('packageFileInput');
 
@@ -1122,8 +1146,313 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
+    // --- 4. Manage Users Table ---
+    const usersTableBody = document.getElementById('users-table-body');
+    const createUserModal = document.getElementById('createUserModal');
+    const createUserForm = document.getElementById('createUserForm');
+    const editUserModal = document.getElementById('editUserModal');
+    const editUserForm = document.getElementById('editUserForm');
+    const deleteUserModalTrigger = document.getElementById('deleteUserModalTrigger');
+    const deleteUserBtn = document.getElementById('deleteUserBtn');
+    const userIdToDeleteInput = document.getElementById('userIdToDelete');
 
-    // Dashboard Quick Stats Update
+    function fetchAllUsers() {
+        usersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;"><div class="preloader-wrapper active"><div class="spinner-layer spinner-blue-only"><div class="circle-clipper left"><div class="circle"></div></div><div class="gap-patch"><div class="circle"></div></div><div class="circle-clipper right"><div class="circle"></div></div></div></div><p>Loading user data...</p></td></tr>';
+
+        fetch('/api/admin/users', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching users');
+                    });
+                }
+                return response.json();
+            })
+            .then(users => {
+                renderUsersTable(users);
+            })
+            .catch(error => {
+                console.error('Error fetching users:', error);
+                usersTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 20px; color: red;">Failed to load user data: ${error.message}.</td></tr>`;
+                M.toast({
+                    html: `Failed to load users: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+    }
+
+    function renderUsersTable(users) {
+        usersTableBody.innerHTML = '';
+        if (users.length === 0) {
+            usersTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No user data available.</td></tr>';
+            return;
+        }
+
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.username}</td>
+                <td>${user.email}</td>
+                <td>${user.role}</td>
+                <td>${new Date(user.createdAt).toLocaleString()}</td>
+                <td>
+                    <button class="btn-small waves-effect waves-light green darken-2 edit-user-btn" data-id="${user._id}">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn-small waves-effect waves-light red darken-2 delete-user-btn" data-id="${user._id}">
+                        <i class="fas fa-user-times"></i> Delete
+                    </button>
+                </td>
+            `;
+            usersTableBody.appendChild(row);
+        });
+
+        document.querySelectorAll('.edit-user-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.dataset.id;
+                fetchUserDetails(userId);
+            });
+        });
+
+        document.querySelectorAll('.delete-user-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.dataset.id;
+                userIdToDeleteInput.value = userId;
+                M.Modal.getInstance(deleteUserModalTrigger).open();
+            });
+        });
+    }
+
+    // Create User
+    createUserForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const userData = {
+            username: document.getElementById('newUsername').value,
+            email: document.getElementById('newEmail').value,
+            password: document.getElementById('newPassword').value,
+            role: document.getElementById('newUserRole').value
+        };
+
+        fetch('/api/admin/users/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(userData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error creating user');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({
+                        html: 'User created successfully!',
+                        classes: 'green darken-2'
+                    });
+                    M.Modal.getInstance(createUserModal).close();
+                    createUserForm.reset();
+                    M.updateTextFields();
+                    M.FormSelect.init(document.querySelectorAll('#createUserModal select')); // Re-init selects
+                    fetchAllUsers();
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not create user.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error creating user:', error);
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+    });
+
+    // Fetch User Details for Edit
+    function fetchUserDetails(userId) {
+        fetch(`/api/admin/users/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching user details');
+                    });
+                }
+                return response.json();
+            })
+            .then(user => {
+                document.getElementById('editUserId').value = user._id;
+                document.getElementById('editUsername').value = user.username;
+                document.getElementById('editEmail').value = user.email;
+                document.getElementById('editUserRole').value = user.role;
+                M.updateTextFields();
+                M.FormSelect.init(document.querySelectorAll('#editUserModal select')); // Re-init select
+                M.Modal.getInstance(editUserModal).open();
+            })
+            .catch(error => {
+                console.error('Error fetching user details:', error);
+                M.toast({
+                    html: `Failed to load user details: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+    }
+
+    // Update User
+    editUserForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const userId = document.getElementById('editUserId').value;
+        const updatedUserData = {
+            username: document.getElementById('editUsername').value,
+            email: document.getElementById('editEmail').value,
+            role: document.getElementById('editUserRole').value
+        };
+
+        const newPassword = document.getElementById('editPassword').value;
+        if (newPassword) {
+            updatedUserData.password = newPassword;
+        }
+
+        fetch(`/api/admin/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(updatedUserData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error updating user');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({
+                        html: 'User updated successfully!',
+                        classes: 'green darken-2'
+                    });
+                    M.Modal.getInstance(editUserModal).close();
+                    editUserForm.reset();
+                    M.updateTextFields();
+                    fetchAllUsers();
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not update user.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error updating user:', error);
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+    });
+
+    // Delete User
+    deleteUserBtn.addEventListener('click', function() {
+        const userId = userIdToDeleteInput.value;
+
+        fetch(`/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error deleting user');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({
+                        html: 'User deleted successfully!',
+                        classes: 'red darken-2'
+                    });
+                    M.Modal.getInstance(deleteUserModalTrigger).close();
+                    fetchAllUsers();
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not delete user.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting user:', error);
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+    });
+
+
+    // Dashboard Quick Stats Update (Your provided code continues here)
     function updateDashboardStats(trackings) {
         const total = trackings.length;
         const delivered = trackings.filter(t => t.status.toLowerCase().includes('delivered')).length;
