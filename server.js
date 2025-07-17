@@ -881,33 +881,38 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
         originalname: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size
-    } : 'No file attached');
+    } : 'No file attached'); // This log already shows if a file is attached or not.
 
     try {
         const { to, subject, message, trackingId } = req.body;
-        const attachment = req.file; // This will contain the file data (as a Buffer if using memoryStorage)
+        const attachment = req.file; // This will be undefined if no file was uploaded, which is desired for optional.
 
-        if (!to || !subject || !message || !trackingId) {
-            console.log('Validation failed: Missing required email fields.');
-            return res.status(400).json({ message: 'Recipient, Subject, Message, and Tracking ID are required.' });
+        // --- UPDATED VALIDATION HERE ---
+        // 'to', 'subject', and 'message' are the core required fields for sending an email.
+        // 'trackingId' is optional for the email sending process itself, used for convenience.
+        if (!to || !subject || !message) {
+            console.log('Validation failed: Recipient, Subject, and Message are required.');
+            return res.status(400).json({ message: 'Recipient, Subject, and Message are required.' });
         }
 
         // Fetch tracking details to get recipient's email if 'to' is not provided directly
         let recipientEmailAddress = to;
-        if (trackingId && !recipientEmailAddress) { // If 'to' is empty but trackingId is there, try to get email from DB
+        // Only attempt to fetch from DB if 'to' is empty AND a trackingId was provided
+        if (trackingId && !recipientEmailAddress) {
             const tracking = await Tracking.findOne({ trackingId: trackingId });
             if (tracking && tracking.recipientEmail) {
                 recipientEmailAddress = tracking.recipientEmail;
                 console.log(`Found recipient email from tracking ID: ${recipientEmailAddress}`);
             } else {
                 console.warn(`Recipient email not provided and not found for tracking ID: ${trackingId}`);
-                // Decide if this should be an error or just proceed without a 'to' address
+                // If trackingId was provided but no email found, or 'to' was also empty, this is an error
                 return res.status(400).json({ message: 'Recipient email address missing or not found for provided tracking ID.' });
             }
         }
         
+        // Final check to ensure we have a recipient email address before trying to send
         if (!recipientEmailAddress) {
-             return res.status(400).json({ message: 'Recipient email address is required.' });
+            return res.status(400).json({ message: 'Recipient email address is required.' });
         }
 
         // Nodemailer setup
@@ -927,7 +932,8 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
             html: message, // Use 'html' if your message contains HTML, otherwise use 'text'
         };
 
-        if (attachment) {
+        // --- ATTACHMENT HANDLING (ALREADY OPTIONAL AND CORRECT) ---
+        if (attachment) { // This condition correctly makes the attachment optional
             mailOptions.attachments = [{
                 filename: attachment.originalname,
                 content: attachment.buffer, // Use the buffer directly from multer's memory storage
@@ -953,7 +959,6 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
         res.status(500).json({ success: false, message: error.message || 'Failed to send email.' });
     }
 });
-
 
 // --- Serve Static Files (IMPORTANT for Netlify Functions) ---
 app.use(express.static(path.join(__dirname, 'public')));
