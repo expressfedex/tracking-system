@@ -84,7 +84,7 @@ body {
 }
 
 .sidebar ul li a:hover,
-.sidebar ul li a.active {
+.sidebar ul li.active a { /* Changed to target <a> within active LI */
     background-color: var(--sidebar-hover);
     color: var(--primary-color);
 }

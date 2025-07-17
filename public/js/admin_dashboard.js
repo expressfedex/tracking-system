@@ -10,26 +10,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Utility Functions ---
     function showSection(sectionId) {
-        document.querySelectorAll('.content-section').forEach(section => {
-            section.classList.add('hidden');
-        });
-        document.getElementById(sectionId).classList.remove('hidden');
+    // 1. Remove 'active-display' from all sections
+    document.querySelectorAll('.dashboard-section').forEach(section => {
+        section.classList.remove('active-display'); // Assuming you use .dashboard-section.active-display
+        // Or if you only want to hide others:
+        section.style.display = 'none'; // Directly hide them
+    });
 
-        // Update active class in sidebar
-        document.querySelectorAll('.sidenav li').forEach(item => {
-            item.classList.remove('active');
-        });
-        const activeLink = document.querySelector(`.sidenav a[href="#${sectionId}"]`);
-        if (activeLink) {
-            activeLink.parentElement.classList.add('active');
-        }
-
-        // Re-initialize Materialize components for the shown section if necessary
-        M.FormSelect.init(document.querySelectorAll(`#${sectionId} select`));
-        M.Datepicker.init(document.querySelectorAll(`#${sectionId} .datepicker`));
-        M.Timepicker.init(document.querySelectorAll(`#${sectionId} .timepicker`));
-        M.updateTextFields(); // Important for correctly displaying pre-filled form fields
+    // 2. Show the target section
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active-display'); // Add the class to show it
+        // Or directly show it:
+        targetSection.style.display = 'block'; // Directly show it
+    } else {
+        console.error(`Section with ID '${sectionId}' not found.`);
     }
+
+  // Update active class in sidebar (this part needs this minor fix)
+document.querySelectorAll('.sidenav li').forEach(item => {
+    item.classList.remove('active');
+});
+// CRITICAL FIX: Query by 'data-section' attribute, not 'href'
+const activeLink = document.querySelector(`.sidenav a[data-section="${sectionId}"]`);
+if (activeLink) {
+    activeLink.parentElement.classList.add('active');
+}
+
+// Close the Materialize Sidenav if it's open (for mobile/tablet)
+const sidenavInstance = M.Sidenav.getInstance(document.querySelector('.sidebar')); // '.sidebar' is correct based on your HTML
+if (sidenavInstance && sidenavInstance.isOpen) {
+    sidenavInstance.close();
+}
 
     // Attach click listeners for sidebar navigation
     document.querySelectorAll('.sidenav a').forEach(link => {
@@ -58,13 +70,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- Logout Logic ---
-        document.getElementById('logoutBtn').addEventListener('click', function() {
+        const logoutButton = document.getElementById('logoutBtn'); // Assigns the found element (or null) to a variable
+    if (logoutButton) { // <<< This is the key change: It checks if 'logoutButton' is NOT null
+    logoutButton.addEventListener('click', function() {
         localStorage.removeItem('token');
         M.toast({
             html: 'Logged out successfully!',
             classes: 'blue darken-1'
         });
         setTimeout(() => window.location.href = 'admin_login.html', 1000);
+    });
+    } else {
+    // This part runs ONLY if the button is not found, preventing the TypeError
+    console.error("Logout button with ID 'logoutBtn' not found.");
+    }
     });
 
     // --- 1. Create New Tracking Form ---
