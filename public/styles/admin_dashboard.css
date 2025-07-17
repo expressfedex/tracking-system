@@ -220,7 +220,7 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
     margin-bottom: 25px;
-    display: none; /* Hidden by default - handled by .content-section */ */
+    display: none; /* Hidden by default - handled by .content-section */
 }
 
 .dashboard-section.active-section { /* This class seems redundant with .content-section.active */

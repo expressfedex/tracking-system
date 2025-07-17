@@ -835,9 +835,6 @@ M.AutoInit();
 
 // Get references to the specific elements needed for the file upload form
 const uploadPackageFileForm = document.getElementById('uploadPackageFileForm');
-// attachFileTrackingIdSelect and packageFileInput are already defined above
-
-// --- File Upload Form Logic (around original line 171) ---
 if (uploadPackageFileForm) {
     uploadPackageFileForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -921,7 +918,7 @@ if (uploadPackageFileForm) {
         });
     });
 } else {
-    console.error("Error: The form with ID 'uploadPackageFileForm' was not found in the DOM. Cannot attach event listener.");
+    console.error("Error: The form with ID 'uploadPackageFileForm' was not found in the DOM.");
 }
 
 // --- Other Materialize Initializations (add these if they're not elsewhere) ---
