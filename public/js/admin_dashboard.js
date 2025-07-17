@@ -830,127 +830,113 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Materialize components first
-    // This will initialize all select, datepicker, timepicker, etc. elements
-    M.AutoInit();
+// Initialize Materialize components first
+M.AutoInit();
 
-    // Get references to the specific elements needed for the file upload form
-    // Define these constants here, within the DOMContentLoaded scope,
-    // so they are guaranteed to exist when the event listener is attached.
-    const uploadPackageFileForm = document.getElementById('uploadPackageFileForm');
-    const attachFileTrackingIdSelect = document.getElementById('attachFileTrackingIdSelect');
-    const packageFileInput = document.getElementById('packageFileInput');
+// Get references to the specific elements needed for the file upload form
+const uploadPackageFileForm = document.getElementById('uploadPackageFileForm');
+// attachFileTrackingIdSelect and packageFileInput are already defined above
 
-    // --- File Upload Form Logic (around original line 171) ---
-    // Now, add a null check for the form itself before trying to attach the listener
-    if (uploadPackageFileForm) {
-        uploadPackageFileForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+// --- File Upload Form Logic (around original line 171) ---
+if (uploadPackageFileForm) {
+    uploadPackageFileForm.addEventListener('submit', function(e) {
+        e.preventDefault();
 
-            // Perform checks for other elements needed within this handler
-            // If any of these are null, it indicates a structural HTML issue
-            // or an ID mismatch that needs to be resolved in the HTML.
-            if (!attachFileTrackingIdSelect || !packageFileInput) {
-                console.error("Critical error: 'attachFileTrackingIdSelect' or 'packageFileInput' not found.");
-                M.toast({
-                    html: 'Internal form error. Please contact support.',
-                    classes: 'red darken-2'
-                });
-                return;
-            }
+        if (!attachFileTrackingIdSelect || !packageFileInput) {
+            console.error("Critical error: 'attachFileTrackingIdSelect' or 'packageFileInput' not found.");
+            M.toast({
+                html: 'Internal form error. Please contact support.',
+                classes: 'red darken-2'
+            });
+            return;
+        }
 
-            const selectedTrackingMongoId = attachFileTrackingIdSelect.value;
-            if (!selectedTrackingMongoId) {
-                M.toast({
-                    html: 'Please select a tracking ID to link the file to.',
-                    classes: 'red darken-2'
-                });
-                return;
-            }
+        const selectedTrackingMongoId = attachFileTrackingIdSelect.value;
+        if (!selectedTrackingMongoId) {
+            M.toast({
+                html: 'Please select a tracking ID to link the file to.',
+                classes: 'red darken-2'
+            });
+            return;
+        }
 
-            if (packageFileInput.files.length === 0) {
-                M.toast({
-                    html: 'Please select a file to upload.',
-                    classes: 'red darken-2'
-                });
-                return;
-            }
+        if (packageFileInput.files.length === 0) {
+            M.toast({
+                html: 'Please select a file to upload.',
+                classes: 'red darken-2'
+            });
+            return;
+        }
 
-            const file = packageFileInput.files[0];
-            const formData = new FormData();
-            formData.append('packageFile', file);
-            formData.append('trackingId', selectedTrackingMongoId); // Send MongoDB _id
+        const file = packageFileInput.files[0];
+        const formData = new FormData();
+        formData.append('packageFile', file);
+        formData.append('trackingId', selectedTrackingMongoId);
 
-            fetch('/api/admin/upload-package-file', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: formData,
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        if (response.status === 401 || response.status === 403) {
-                            M.toast({
-                                html: 'Session expired or unauthorized. Please log in again.',
-                                classes: 'red darken-2'
-                            });
-                            setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                        }
-                        return response.json().then(errorData => {
-                            throw new Error(errorData.message || 'Server error uploading file');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        M.toast({
-                            html: 'Package file uploaded and linked successfully!',
-                            classes: 'green'
-                        });
-                        uploadPackageFileForm.reset();
-                        // Clear file input path visually
-                        const filePathInput = document.querySelector('#packageFileInput + .file-path-wrapper .file-path');
-                        if (filePathInput) filePathInput.value = '';
-                        // Re-initialize the Materialize select after reset, if necessary for state change
-                        M.FormSelect.init(attachFileTrackingIdSelect);
-                    } else {
-                        M.toast({
-                            html: `Error uploading file: ${data.message || 'Unknown error.'}`,
-                            classes: 'red darken-2'
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error uploading package file:', error);
+        fetch('/api/admin/upload-package-file', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData,
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
                     M.toast({
-                        html: `Network error or server issue during file upload: ${error.message}`,
+                        html: 'Session expired or unauthorized. Please log in again.',
                         classes: 'red darken-2'
                     });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error uploading file');
                 });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                M.toast({
+                    html: 'Package file uploaded and linked successfully!',
+                    classes: 'green'
+                });
+                uploadPackageFileForm.reset();
+                const filePathInput = document.querySelector('#packageFileInput + .file-path-wrapper .file-path');
+                if (filePathInput) filePathInput.value = '';
+                M.FormSelect.init(attachFileTrackingIdSelect);
+            } else {
+                M.toast({
+                    html: `Error uploading file: ${data.message || 'Unknown error.'}`,
+                    classes: 'red darken-2'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error uploading package file:', error);
+            M.toast({
+                html: `Network error or server issue during file upload: ${error.message}`,
+                classes: 'red darken-2'
+            });
         });
-    } else {
-        // This log will appear if the form itself is not found on page load.
-        console.error("Error: The form with ID 'uploadPackageFileForm' was not found in the DOM. Cannot attach event listener.");
-    }
-
-    // --- Other Materialize Initializations (add these if they're not elsewhere) ---
-    // Make sure other Materialize components are initialized if you use them.
-    // E.g., for date pickers and time pickers:
-    const datepickers = document.querySelectorAll('.datepicker');
-    M.Datepicker.init(datepickers, {
-        format: 'yyyy-mm-dd' // Example format
     });
+} else {
+    console.error("Error: The form with ID 'uploadPackageFileForm' was not found in the DOM. Cannot attach event listener.");
+}
 
-    const timepickers = document.querySelectorAll('.timepicker');
-    M.Timepicker.init(timepickers, {
-        twelveHour: false // Example: Use 24-hour format
-    });
+// --- Other Materialize Initializations (add these if they're not elsewhere) ---
+const datepickers = document.querySelectorAll('.datepicker');
+M.Datepicker.init(datepickers, {
+    format: 'yyyy-mm-dd'
+});
 
-    
-    // --- 4. Manage Users Table ---
+const timepickers = document.querySelectorAll('.timepicker');
+M.Timepicker.init(timepickers, {
+    twelveHour: false
+});
+
+
+// --- 4. Manage Users Table ---
     const usersTableBody = document.getElementById('users-table-body');
     const createUserModal = document.getElementById('createUserModal');
     const createUserForm = document.getElementById('createUserForm');
