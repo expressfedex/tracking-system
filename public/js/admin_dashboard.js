@@ -69,9 +69,9 @@ if (sidenavInstance && sidenavInstance.isOpen) {
         });
     });
 
-    // --- Logout Logic ---
-        const logoutButton = document.getElementById('logoutBtn'); // Assigns the found element (or null) to a variable
-    if (logoutButton) { // <<< This is the key change: It checks if 'logoutButton' is NOT null
+   // --- Logout Logic ---
+const logoutButton = document.getElementById('logoutBtn'); // Assigns the found element (or null) to a variable
+if (logoutButton) { // <<< This is the key change: It checks if 'logoutButton' is NOT null
     logoutButton.addEventListener('click', function() {
         localStorage.removeItem('token');
         M.toast({
@@ -80,11 +80,10 @@ if (sidenavInstance && sidenavInstance.isOpen) {
         });
         setTimeout(() => window.location.href = 'admin_login.html', 1000);
     });
-    } else {
+} else {
     // This part runs ONLY if the button is not found, preventing the TypeError
     console.error("Logout button with ID 'logoutBtn' not found.");
-    }
-    });
+}
 
     // --- 1. Create New Tracking Form ---
     const createTrackingForm = document.getElementById('createTrackingForm');
