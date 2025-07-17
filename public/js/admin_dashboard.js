@@ -1273,4 +1273,16 @@ M.Timepicker.init(timepickers, {
     // Initial load: show dashboard and fetch all trackings to populate stats
     showSection('dashboard-section');
     fetchAllTrackings(); // This will also call updateDashboardStats
+
+    // --- Sidebar Toggle Logic ---
+    const sidebar = document.querySelector('.sidebar');
+    const menuToggle = document.querySelector('.menu-toggle');
+
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active'); // Toggle the 'active' class to show/hide the sidebar
+        });
+    } else {
+        console.error("Sidebar or menu toggle button not found in the DOM.");
+    }
 });
