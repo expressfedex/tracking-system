@@ -847,59 +847,76 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    // --- Send Email Notification ---
-    if (sendEmailForm) {
-        sendEmailForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+   // --- Send Email Notification ---
+if (sendEmailForm) {
+    sendEmailForm.addEventListener('submit', function(e) {
+        e.preventDefault();
 
-            const formData = new FormData();
-            formData.append('recipientEmail', notificationEmail.value);
-            formData.append('subject', emailSubject.value);
-            formData.append('message', notificationMessage.value);
-            formData.append('trackingId', emailTrackingIdSelect.value); // Add selected tracking ID
+        // 1. Get and trim the values from the input fields
+        const recipient = notificationEmail.value.trim();
+        const subject = emailSubject.value.trim();
+        const message = notificationMessage.value.trim();
+        const trackingId = emailTrackingIdSelect.value; // Get tracking ID value
 
-            const attachment = emailAttachmentFileUpload.files[0];
-            if (attachment) {
-                formData.append('attachment', attachment);
+        // 2. Perform client-side validation
+        if (!recipient || !subject || !message) {
+            M.toast({ html: 'Recipient, Subject, and Message fields are required.', classes: 'red darken-2' });
+            return; // Stop the form submission if validation fails
+        }
+        
+        // Optional: Validate trackingId if it's always required for sending emails
+        if (!trackingId) {
+            M.toast({ html: 'Please select a Tracking ID.', classes: 'red darken-2' });
+            return;
+        }
+
+        // 3. If validation passes, proceed with creating FormData
+        const formData = new FormData();
+        formData.append('recipientEmail', recipient);
+        formData.append('subject', subject);
+        formData.append('message', message);
+        formData.append('trackingId', trackingId); // Use the validated trackingId
+
+        const attachment = emailAttachmentFileUpload.files[0];
+        if (attachment) {
+            formData.append('attachment', attachment);
+        }
+
+        fetch('/api/admin/send-email', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error sending email');
+                });
             }
-
-            fetch('/api/admin/send-email', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    // 'Content-Type': 'multipart/form-data' is NOT set here; browser sets it automatically with FormData
-                },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error sending email');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    M.toast({ html: 'Email sent successfully!', classes: 'green darken-2' });
-                    sendEmailForm.reset();
-                    M.updateTextFields();
-                    M.FormSelect.init(emailTrackingIdSelect); // Re-init select
-                } else {
-                    M.toast({ html: `Error: ${data.message || 'Could not send email.'}`, classes: 'red darken-2' });
-                }
-            })
-            .catch(error => {
-                console.error('Error sending email:', error);
-                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
-            });
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                M.toast({ html: 'Email sent successfully!', classes: 'green darken-2' });
+                sendEmailForm.reset();
+                M.updateTextFields();
+                M.FormSelect.init(emailTrackingIdSelect); // Re-init select
+            } else {
+                M.toast({ html: `Error: ${data.message || 'Could not send email.'}`, classes: 'red darken-2' });
+            }
+        })
+        .catch(error => {
+            console.error('Error sending email:', error);
+            M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
         });
-    }
-
+    });
+}
     // --- Pre-fill email on tracking ID selection ---
     if (emailTrackingIdSelect) {
         emailTrackingIdSelect.addEventListener('change', function() {
