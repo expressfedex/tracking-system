@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- 1. Manage Tracking Section ---
-    const trackingTableBody = document.getElementById('tracking-table-body');
+    const trackingTableBody = document.getElementById('all-trackings-table-body');
     if (!trackingTableBody) {
         console.error("Tracking table body element not found.");
         return;
