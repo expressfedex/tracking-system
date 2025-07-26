@@ -327,7 +327,8 @@
                 <select id="singleTrackingIdSelect" name="selectedTrackingId">
                     <option value="" disabled selected>Select Tracking ID</option>
                 </select>
-                <label for="singleTrackingIdSelect">Select Tracking to Edit</label> </div>
+                <label for="singleTrackingIdSelect">Select Tracking to Edit</label>
+            </div>
 
             <form id="updateTrackingForm" style="display: none;">
                 <h4>Update Tracking Details</h4>
@@ -489,7 +490,8 @@
                             <select id="emailTrackingIdSelect" name="emailTrackingId">
                                 <option value="" disabled selected>Select Tracking ID (Optional, for pre-filling email)</option>
                                 </select>
-                            <label for="emailTrackingIdSelect">Link to Tracking (Optional)</label> </div>
+                            <label for="emailTrackingIdSelect">Link to Tracking (Optional)</label>
+                        </div>
                         <div class="input-field">
                             <input type="email" id="notificationEmail" name="notificationEmail" required> <label for="notificationEmail">Recipient Email:</label>
                         </div>
@@ -524,7 +526,8 @@
                         <div class="file-field input-field">
                             <div class="btn">
                                 <span>Choose File</span>
-                                <input type="file" id="packageFileInput" name="packageFile" required> </div>
+                                <input type="file" id="packageFileInput" name="packageFile" required>
+                            </div>
                             <div class="file-path-wrapper">
                                 <input class="file-path validate" type="text" name="packageFileName" placeholder="Upload package document">
                             </div>
@@ -543,7 +546,25 @@
 
         <section id="user-management-section" class="dashboard-section">
             <h3><i class="fas fa-users-cog"></i> User Management</h3>
-            <p>Coming Soon: Manage user accounts (add, edit, delete users and roles).</p>
+            <p>Manage user accounts (add, edit, delete users and roles).</p>
+
+            <a class="waves-effect waves-light btn modal-trigger blue darken-2" href="#createUserModal"><i class="material-icons left">person_add</i>Add New User</a>
+
+            <div class="table-responsive" style="margin-top: 20px;">
+                <table class="striped responsive-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr><td colspan="4" style="text-align: center; padding: 20px;">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <section id="settings-section" class="dashboard-section">
@@ -555,17 +576,23 @@
     <div id="editHistoryModal" class="modal">
         <div class="modal-content">
             <h4>Edit History Event</h4>
-            <input type="hidden" id="editHistoryModalTrackingMongoId" name="editHistoryModalTrackingMongoId"> <input type="hidden" id="editHistoryModalHistoryId" name="editHistoryModalHistoryId"> <div class="input-field">
-                <input type="text" id="editHistoryDate" name="editHistoryDate" class="datepicker"> <label for="editHistoryDate">Date:</label>
+            <input type="hidden" id="editHistoryModalTrackingMongoId" name="editHistoryModalTrackingMongoId">
+            <input type="hidden" id="editHistoryModalHistoryId" name="editHistoryModalHistoryId">
+            <div class="input-field">
+                <input type="text" id="editHistoryDate" name="editHistoryDate" class="datepicker">
+                <label for="editHistoryDate">Date:</label>
             </div>
             <div class="input-field">
-                <input type="text" id="editHistoryTime" name="editHistoryTime" class="timepicker"> <label for="editHistoryTime">Time:</label>
+                <input type="text" id="editHistoryTime" name="editHistoryTime" class="timepicker">
+                <label for="editHistoryTime">Time:</label>
             </div>
             <div class="input-field">
-                <input type="text" id="editHistoryLocation" name="editHistoryLocation"> <label for="editHistoryLocation">Location:</label>
+                <input type="text" id="editHistoryLocation" name="editHistoryLocation">
+                <label for="editHistoryLocation">Location:</label>
             </div>
             <div class="input-field">
-                <textarea id="editHistoryDescription" name="editHistoryDescription" class="materialize-textarea"></textarea> <label for="editHistoryDescription">Description:</label>
+                <textarea id="editHistoryDescription" name="editHistoryDescription" class="materialize-textarea"></textarea>
+                <label for="editHistoryDescription">Description:</label>
             </div>
         </div>
         <div class="modal-footer">
@@ -573,6 +600,86 @@
             <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
         </div>
     </div>
+
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <h4>Create New User</h4>
+            <form id="createUserForm">
+                <div class="input-field">
+                    <input type="text" id="newUsername" required>
+                    <label for="newUsername">Username</label>
+                </div>
+                <div class="input-field">
+                    <input type="email" id="newEmail" required>
+                    <label for="newEmail">Email</label>
+                </div>
+                <div class="input-field">
+                    <input type="password" id="newPassword" required>
+                    <label for="newPassword">Password</label>
+                </div>
+                <div class="input-field">
+                    <select id="newUserRole" required>
+                        <option value="" disabled selected>Choose user role</option>
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                    <label for="newUserRole">User Role</label>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn waves-effect waves-light green darken-2">Create User</button>
+                    <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <h4>Edit User</h4>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="input-field">
+                    <input type="text" id="editUsername" required>
+                    <label for="editUsername">Username</label>
+                </div>
+                <div class="input-field">
+                    <input type="email" id="editEmail" required>
+                    <label for="editEmail">Email</label>
+                </div>
+                <div class="input-field">
+                    <input type="password" id="editPassword">
+                    <label for="editPassword">New Password (leave blank to keep current)</label>
+                </div>
+                <div class="input-field">
+                    <select id="editUserRole" required>
+                        <option value="" disabled selected>Choose user role</option>
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                    <label for="editUserRole">User Role</label>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn waves-effect waves-light blue darken-2">Update User</button>
+                    <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="deleteUserModal" class="modal">
+        <div class="modal-content">
+            <h4>Confirm Delete User</h4>
+            <p>Are you sure you want to delete user <strong id="usernameToDelete"></strong>? This action cannot be undone.</p>
+            <input type="hidden" id="userIdToDeleteInput">
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="deleteUserBtn" class="waves-effect waves-light btn red darken-2">Delete</button>
+            <button type="button" class="modal-close waves-effect waves-green btn-flat">Cancel</button>
+        </div>
+    </div>
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="/js/admin_dashboard.js"></script>
