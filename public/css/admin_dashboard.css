@@ -1,5 +1,6 @@
-/* --- Custom Sidebar CSS (from admin_dashboard.css) --- */
+/* --- Root Variables (Consolidated and Organized) --- */
 :root {
+    /* --- Main Dashboard Theme (FedEx Orange) --- */
     --primary-color: #FF6200; /* FedEx Orange */
     --primary-dark-color: #b04300;
     --secondary-color: #4CAF50; /* Example green */
@@ -10,11 +11,20 @@
     --sidebar-text: #eceff1;
     --sidebar-hover: #37474F;
     --header-height: 64px;
-    --success-green: #28a745;
-    --warning-orange: #ffc107;
-    --danger-red: #dc3545;
 
-    /* --- New variables for the Communication Center's Purple/Orange theme --- */
+    /* --- General Status/Alert Colors --- */
+    --success-green: #28a745; /* Used in dashboard stats and general success */
+    --warning-orange: #ffc107; /* Used in dashboard stats and general warning */
+    --danger-red: #dc3545; /* Used in dashboard stats, general danger, logout */
+    --info-blue: #2196F3; /* Materialize Blue - for general info/links */
+
+    /* --- Tracking Status Specific Colors (for status-circle) --- */
+    --in-transit-blue: #007bff; /* Specific blue for in-transit icon */
+    --pending-orange: #FF9800; /* Specific orange for pending status circle */
+    --exception-red: #F44336; /* Specific red for exception status circle */
+
+
+    /* --- Communication Center's Purple/Orange Theme --- */
     --comm-purple-dark: #4A148C; /* Deep Purple */
     --comm-purple-medium: #7B1FA2; /* Amethyst */
     --comm-purple-light: #BA68C8; /* Lavender */
@@ -23,6 +33,7 @@
     --comm-light-bg: #F3E5F5; /* Very light purple for subtle backgrounds */
 }
 
+/* --- Global Body & Layout --- */
 body {
     font-family: 'Roboto', sans-serif;
     margin: 0;
@@ -33,6 +44,7 @@ body {
     min-height: 100vh;
 }
 
+/* --- Sidebar --- */
 .sidebar {
     width: var(--sidebar-width);
     background-color: var(--sidebar-bg);
@@ -101,7 +113,7 @@ body {
 }
 
 .logout-section button {
-    background-color: #dc3545; /* Red for logout */
+    background-color: var(--danger-red); /* Red for logout */
     color: white;
     padding: 10px 15px;
     border: none;
@@ -124,7 +136,7 @@ body {
     font-size: 1.1em;
 }
 
-/* Main Content Styling */
+/* --- Main Content Styling --- */
 .main-content {
     margin-left: var(--sidebar-width); /* Space for fixed sidebar */
     flex-grow: 1;
@@ -157,6 +169,7 @@ body {
     font-size: 1em;
     color: #555;
 }
+
 .main-content section {
     background-color: #ffffff;
     padding: 25px;
@@ -181,7 +194,7 @@ body {
     color: #555;
 }
 
-/* Quick Stats Styling */
+/* --- Quick Stats Styling --- */
 .quick-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -222,7 +235,7 @@ body {
     text-transform: uppercase;
 }
 
-/* Form Row for two-column layouts */
+/* --- Form Layouts --- */
 .form-row {
     display: grid;
     grid-template-columns: 1fr;
@@ -235,7 +248,71 @@ body {
     }
 }
 
-/* Mobile Adjustments */
+/* Generic form group styling, overridden by Materialize .input-field where applicable */
+.form-group {
+    margin-bottom: 20px; /* Increased margin for better spacing */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input[type="email"],
+.form-group textarea,
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="time"],
+.form-group input[type="number"],
+.form-group select,
+.form-group input[type="color"] {
+    width: calc(100% - 20px); /* Adjust for padding */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box;
+    color: var(--text-color); /* Ensure text is readable */
+}
+
+.form-group textarea {
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 100px;
+}
+
+.form-group .form-control-file {
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 5px;
+    background-color: #fff;
+    width: calc(100% - 16px);
+}
+
+.form-group .form-text {
+    font-size: 0.85em;
+    color: #777;
+    margin-top: 5px;
+}
+
+/* Checkbox styling */
+.form-group.mb-3 {
+    margin-bottom: 1rem !important; /* Ensuring Bootstrap-like spacing */
+}
+
+.form-check-input {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.form-check-label {
+    display: inline-block;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+/* --- Mobile Adjustments --- */
 .menu-toggle {
     display: none; /* Hidden by default on desktop */
     font-size: 1.8em;
@@ -278,7 +355,7 @@ body {
     }
 }
 
-/* --- Communication Center Specific Styling (Modified) --- */
+/* --- Communication Center Specific Styling (Modified and Overriding) --- */
 .communication-content {
     background-color: var(--comm-white); /* White base for the card */
     padding: 25px;
@@ -309,7 +386,7 @@ body {
     margin-top: 0;
     margin-bottom: 15px;
     font-size: 1.6em; /* Slightly larger heading */
-    border-bottom: none; /* Remove existing border-bottom */
+    border-bottom: none; /* Remove existing border-bottom from main-content section h3 */
     padding-bottom: 10px;
     display: flex;
     align-items: center;
@@ -337,7 +414,7 @@ body {
     box-shadow: 0 0 8px rgba(255, 167, 38, 0.5); /* Orange glow */
 }
 
-/* Form Group Labels, Inputs, and Textareas */
+/* Form Group Labels, Inputs, and Textareas specific to Communication Center */
 .form-group label {
     color: var(--comm-purple-medium); /* Medium purple for labels */
     font-weight: 600; /* Slightly bolder labels */
@@ -370,7 +447,7 @@ body {
     outline: none; /* Remove default outline */
 }
 
-/* Materialize label and input focus overrides */
+/* Materialize label and input focus overrides to match Communication Center theme */
 .input-field input:not(.browser-default):focus:not([readonly]) + label {
     color: var(--comm-orange-glow) !important; /* Orange label on focus */
 }
@@ -383,8 +460,7 @@ body {
     box-shadow: 0 1px 0 0 var(--comm-orange-glow) !important;
 }
 
-
-/* File input button (Materialize) */
+/* File input button (Materialize) specific to Communication Center */
 .file-field .btn {
     background: linear-gradient(45deg, var(--comm-purple-medium) 0%, var(--comm-purple-light) 100%); /* Purple gradient for file button */
     color: white;
@@ -404,8 +480,7 @@ body {
     transform: translateY(-1px);
 }
 
-
-/* Submit Button */
+/* Submit Button specific to Communication Center */
 .communication-content .btn-primary {
     background: linear-gradient(45deg, var(--comm-purple-medium) 0%, var(--comm-purple-light) 100%); /* Purple gradient for submit */
     color: var(--comm-white);
@@ -429,7 +504,6 @@ body {
 }
 
 /* Toast messages (Materialize specific, adjusting colors) */
-/* The toasts are generated dynamically, so override their default classes directly */
 .toast.light-blue.darken-1 { /* For email sent successfully messages */
     background-color: var(--comm-orange-glow) !important; /* Make success toast orange */
     color: white !important;
@@ -439,184 +513,7 @@ body {
     color: white !important;
 }
 
-/* Original styles from admin_dashboard.css for other sections */
-/* Basic styling for the communication center */
-/* NOTE: The above .communication-content overrides this initial block. */
-/* This block can be removed if the new .communication-content is used consistently. */
-/* Keeping it here for context, but the specific properties are overridden above. */
-/*
-.communication-content {
-    background-color: #ffffff;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    margin-top: 20px;
-    display: grid;
-    gap: 20px;
-    grid-template-columns: 1fr;
-}
-*/
-
-.communication-content .card {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    background-color: #f9f9f9;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* The .communication-content h3 rules are overridden by the new ones above */
-/*
-.communication-content h3 {
-    color: #333;
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.4em;
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 10px;
-    display: flex;
-    align-items: center;
-}
-
-.communication-content h3 i {
-    margin-right: 10px;
-    color: var(--primary-color);
-}
-*/
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-/* The form-group label, input, textarea, select styles are overridden by new ones above */
-/*
-.form-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #555;
-}
-
-.form-group input[type="email"],
-.form-group textarea,
-.form-group input[type="text"],
-.form-group input[type="date"],
-.form-group input[type="time"],
-.form-group input[type="number"],
-.form-group select,
-.form-group input[type="color"] {
-    width: calc(100% - 20px);
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1em;
-    box-sizing: border-box;
-}
-*/
-
-.form-group textarea {
-    resize: vertical; /* Allow vertical resizing */
-    min-height: 100px;
-}
-
-.form-group .form-control-file {
-    border: 1px solid #ccc;
-    padding: 8px;
-    border-radius: 5px;
-    background-color: #fff;
-    width: calc(100% - 16px);
-}
-
-.form-group .form-text {
-    font-size: 0.85em;
-    color: #777;
-    margin-top: 5px;
-}
-
-/* Checkbox styling */
-.form-group.mb-3 {
-    margin-bottom: 1rem !important; /* Ensuring Bootstrap-like spacing */
-}
-
-.form-check-input {
-    margin-right: 8px;
-    vertical-align: middle;
-}
-
-.form-check-label {
-    display: inline-block;
-    margin-bottom: 0;
-    vertical-align: middle;
-}
-
-/* The .btn-primary is overridden by the new communication-specific one */
-/*
-.btn-primary {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.3s ease;
-    margin-top: 10px;
-}
-
-.btn-primary:hover {
-    background-color: var(--primary-dark-color);
-}
-*/
-
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.3s ease;
-}
-
-.btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-.btn-danger { /* Added for consistency with delete button */
-    background-color: #dc3545;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1em;
-    transition: background-color 0.3s ease;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-/* New button style for info/edit */
-.btn-info {
-    background-color: #17a2b8;
-    color: white;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-    transition: background-color 0.2s ease;
-}
-.btn-info:hover {
-    background-color: #138496;
-}
-
-.mt-4 {
-    margin-top: 20px; /* Equivalent to 1rem * 4 in Bootstrap */
-}
-
+/* Responsive adjustment for communication-content grid */
 @media (min-width: 768px) {
     .communication-content {
         grid-template-columns: 1fr; /* Now only one card, so keep it single column */
@@ -637,7 +534,7 @@ body {
     display: block; /* Or flex, grid, etc. based on your layout needs */
 }
 
-/* Status Indicator Colors and Blinking */
+/* --- Status Indicator Colors and Blinking --- */
 .status-circle {
     width: 15px;
     height: 15px;
@@ -649,20 +546,23 @@ body {
 }
 
 .status-circle.delivered {
-    background-color: #28a745; /* Green */
+    background-color: var(--success-green); /* Green */
 }
 
 .status-circle.in-transit {
-    background-color: #007bff; /* Blue */
+    background-color: var(--in-transit-blue); /* Blue */
 }
 
 .status-circle.pending {
-    background-color: #ffc107; /* Yellow/Orange */
+    background-color: var(--pending-orange); /* Yellow/Orange */
 }
 
 .status-circle.exception {
-    background-color: #dc3545; /* Red */
+    background-color: var(--exception-red); /* Red */
 }
+
+.status-circle.unknown { background-color: #9e9e9e; } /* Grey */
+
 
 /* Blinking animation */
 @keyframes blink {
@@ -671,20 +571,27 @@ body {
     100% { opacity: 1; }
 }
 
+@keyframes blink-animation { /* Kept both for now, can consolidate if desired */
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+}
+
 .status-circle.blinking {
-    animation: blink 1s infinite;
+    animation: blink 1s infinite; /* Using the shorter blink for now */
+    /* animation: blink-animation 1s infinite alternate; */
 }
 
 .status-indicator {
     display: flex;
     align-items: center;
-    margin-top: 5px;
-    margin-bottom: 15px;
+    margin-top: 10px; /* Adjusted to 10px */
+    margin-bottom: 10px; /* Adjusted to 10px */
     font-size: 0.9em;
     color: #666;
 }
 
-/* Styles for Tracking History List */
+
+/* --- Styles for Tracking History List --- */
 .history-list {
     border: 1px solid #e0e0e0;
     border-radius: 5px;
@@ -706,6 +613,7 @@ body {
     justify-content: space-between; /* Space out content and buttons */
     align-items: center;
     font-size: 0.95em;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
 .history-list li:last-child {
     border-bottom: none;
@@ -717,6 +625,7 @@ body {
 .history-list li .history-actions {
     display: flex; /* Arrange buttons side-by-side */
     gap: 5px; /* Space between buttons */
+    margin-top: 5px; /* Add some top margin for wrapped buttons */
 }
 .history-list li .history-actions button {
     /* Inherit common button styles, override as needed */
@@ -724,9 +633,38 @@ body {
     font-size: 0.8em;
     border-radius: 4px;
 }
+/* Specific styles for #trackingHistoryList ul and li (duplicate but fine as they are more specific) */
+#trackingHistoryList ul {
+    list-style: none;
+    padding: 0;
+}
+#trackingHistoryList li {
+    background-color: #f8f8f8;
+    border: 1px solid #eee;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+#trackingHistoryList .history-content {
+    flex: 1;
+    padding-right: 10px;
+}
+#trackingHistoryList .history-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+#trackingHistoryList .btn-small {
+    padding: 5px 10px;
+    font-size: 0.8em;
+}
 
 
-/* Modal CSS */
+/* --- Modal CSS --- */
 .modal {
     display: none; /* Hidden by default */
     position: fixed; /* Stay in place */
@@ -764,7 +702,7 @@ body {
     cursor: pointer;
 }
 
-/* Table styles for "Manage All Trackings" */
+/* --- Table styles for "Manage All Trackings" --- */
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -800,9 +738,96 @@ body {
     overflow-x: auto; /* Makes table scrollable on small screens */
     width: 100%;
 }
-/* Additional styling for Materialize file input to blend with existing forms */
-/* NOTE: The .file-field .btn and .file-path-wrapper input.file-path are overridden above */
-/*
+
+/* --- General Button Styles (Overridden by specific ones if present) --- */
+.btn, .btn-primary { /* Materialize will handle much of .btn, but can still set defaults */
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+    margin-top: 10px; /* Spacing for buttons below form fields */
+    margin-right: 10px; /* Spacing between buttons */
+}
+
+.btn:hover, .btn-primary:hover {
+    background-color: var(--primary-dark-color);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: background-color 0.2s ease;
+}
+.btn-info:hover {
+    background-color: #138496;
+}
+
+/* --- Materialize Specific Overrides & Integrations --- */
+/* Ensure Materialize select dropdowns take full width */
+.select-wrapper input.select-dropdown {
+    width: 100%;
+}
+
+/* Materialize input field focus colors to match primary theme where not overridden by comm-center */
+.input-field input:not(.browser-default):focus:not([readonly]) + label {
+    color: var(--primary-color) !important;
+}
+.input-field input:not(.browser-default):focus:not([readonly]) {
+    border-bottom: 1px solid var(--primary-color) !important;
+    box-shadow: 0 1px 0 0 var(--primary-color) !important;
+}
+
+/* File Input field to match general form styling if not overridden by comm-center */
+.file-path-wrapper input.file-path {
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 1em;
+    width: 100%;
+    height: auto;
+}
+
+/* General Materialize button style for file input button if not overridden by comm-center */
 .file-field .btn {
     background-color: var(--primary-color);
     color: white;
@@ -813,25 +838,13 @@ body {
     cursor: pointer;
     font-size: 1em;
     transition: background-color 0.3s ease;
-    margin-top: 10px;
+    margin-top: 10px; /* Adjust as needed */
 }
 .file-field .btn:hover {
     background-color: var(--primary-dark-color);
 }
-.file-path-wrapper input.file-path {
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 10px;
-    font-size: 1em;
-    width: 100%;
-    height: auto;
+
+/* --- Utility Classes --- */
+.mt-4 {
+    margin-top: 20px; /* Equivalent to 1rem * 4 in Bootstrap */
 }
-.input-field input[type=text]:not(.browser-default):focus:not([readonly]) + label {
-    color: var(--primary-color) !important;
-}
-.input-field input[type=text]:not(.browser-default):focus:not([readonly]) {
-    border-bottom: 1px solid var(--primary-color) !important;
-    box-shadow: 0 1px 0 0 var(--primary-color) !important;
-}
-*/
