@@ -644,7 +644,6 @@ function fetchTrackingHistory(trackingId) {
     })
     .then(data => {
         const historyEvents = data.history;
-
         const ul = trackingHistoryList.querySelector('ul');
         ul.innerHTML = ''; // Clear previous
 
@@ -681,15 +680,8 @@ function fetchTrackingHistory(trackingId) {
             `;
             ul.appendChild(li);
         });
-    })
-    .catch(error => {
-        console.error('Error fetching tracking history:', error);
-        M.toast({ html: `Error: ${error.message}`, classes: 'red darken-2' });
-    });
-}
 
-
-        // Attach listeners to newly created history buttons
+        // ✅ Properly placed listener attachment
         attachHistoryButtonListeners();
     })
     .catch(error => {
