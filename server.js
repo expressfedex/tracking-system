@@ -726,7 +726,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         currentTracking.lastUpdated = new Date();
         await currentTracking.save();
 
-        res.json({ message: 'Tracking updated successfully!', tracking: currentTracking });
+    res.json({ success: true, message: 'Tracking updated successfully!', tracking: currentTracking });
     } catch (error) {
         console.error('Error updating tracking details:', error);
         if (error.name === 'CastError') {
