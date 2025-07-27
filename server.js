@@ -907,62 +907,63 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
         originalname: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size
-    } : 'No file attached'); // This log already shows if a file is attached or not.
+    } : 'No file attached');
 
     try {
-        const { to, subject, message, trackingId } = req.body;
-        const attachment = req.file; // This will be undefined if no file was uploaded, which is desired for optional.
+        // *** CHANGE 'to' to 'recipientEmail' here to match frontend formData.append ***
+        const { recipientEmail, subject, message, trackingId } = req.body;
+        const attachment = req.file;
 
         // --- UPDATED VALIDATION HERE ---
-        // 'to', 'subject', and 'message' are the core required fields for sending an email.
-        // 'trackingId' is optional for the email sending process itself, used for convenience.
-        if (!to || !subject || !message) {
+        // 'recipientEmail', 'subject', and 'message' are the core required fields for sending an email.
+        if (!recipientEmail || !subject || !message) { // *** Validation now uses 'recipientEmail' ***
             console.log('Validation failed: Recipient, Subject, and Message are required.');
             return res.status(400).json({ message: 'Recipient, Subject, and Message are required.' });
         }
 
-        // Fetch tracking details to get recipient's email if 'to' is not provided directly
-        let recipientEmailAddress = to;
-        // Only attempt to fetch from DB if 'to' is empty AND a trackingId was provided
-        if (trackingId && !recipientEmailAddress) {
+        // Fetch tracking details to get recipient's email if 'recipientEmail' (originally 'to') is not provided directly
+        let finalRecipientEmailAddress = recipientEmail; // *** Use the correctly destructured variable here ***
+
+        // Only attempt to fetch from DB if 'recipientEmail' is empty AND a trackingId was provided
+        if (trackingId && !finalRecipientEmailAddress) {
             const tracking = await Tracking.findOne({ trackingId: trackingId });
             if (tracking && tracking.recipientEmail) {
-                recipientEmailAddress = tracking.recipientEmail;
-                console.log(`Found recipient email from tracking ID: ${recipientEmailAddress}`);
+                finalRecipientEmailAddress = tracking.recipientEmail;
+                console.log(`Found recipient email from tracking ID: ${finalRecipientEmailAddress}`);
             } else {
                 console.warn(`Recipient email not provided and not found for tracking ID: ${trackingId}`);
-                // If trackingId was provided but no email found, or 'to' was also empty, this is an error
+                // If trackingId was provided but no email found, or 'recipientEmail' was also empty, this is an error
                 return res.status(400).json({ message: 'Recipient email address missing or not found for provided tracking ID.' });
             }
         }
         
         // Final check to ensure we have a recipient email address before trying to send
-        if (!recipientEmailAddress) {
+        if (!finalRecipientEmailAddress) {
             return res.status(400).json({ message: 'Recipient email address is required.' });
         }
 
         // Nodemailer setup
         const transporter = nodemailer.createTransport({
-            service: 'gmail', // Or 'smtp', etc., based on your email provider
+            service: 'gmail',
             auth: {
-                user: process.env.EMAIL_USER, // Your Gmail email address
-                pass: process.env.EMAIL_PASS, // Your App Password for Gmail
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
             },
         });
 
         // Email options
         const mailOptions = {
-            from: process.env.EMAIL_FROM, // Your sender email address (e.g., 'Your App <youremail@gmail.com>')
-            to: recipientEmailAddress,
+            from: process.env.EMAIL_FROM,
+            to: finalRecipientEmailAddress, // *** Use the final determined email address here ***
             subject: subject,
-            html: message, // Use 'html' if your message contains HTML, otherwise use 'text'
+            html: message,
         };
 
         // --- ATTACHMENT HANDLING (ALREADY OPTIONAL AND CORRECT) ---
-        if (attachment) { // This condition correctly makes the attachment optional
+        if (attachment) {
             mailOptions.attachments = [{
                 filename: attachment.originalname,
-                content: attachment.buffer, // Use the buffer directly from multer's memory storage
+                content: attachment.buffer,
                 contentType: attachment.mimetype,
             }];
             console.log(`Attached file: ${attachment.originalname}, type: ${attachment.mimetype}, size: ${attachment.size} bytes`);
@@ -978,7 +979,6 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
 
     } catch (error) {
         console.error('Error sending email:', error);
-        // Specifically check for Multer errors
         if (error instanceof multer.MulterError) {
             return res.status(400).json({ success: false, message: `File upload error: ${error.message}` });
         }
