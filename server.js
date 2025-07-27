@@ -755,7 +755,8 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
         }
 
         const before = tracking.history.length;
-        tracking.history.pull({ _id: mongoose.Types.ObjectId(historyId) });
+        // Corrected line: Use 'new' keyword for ObjectId
+        tracking.history.pull({ _id: new mongoose.Types.ObjectId(historyId) }); // <-- Fix is here!
 
         if (tracking.history.length === before) {
             return res.status(404).json({ message: 'History event not found with the provided ID.' });
@@ -770,7 +771,7 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
         });
 
     } catch (error) {
-        console.error('Error deleting history event:', error);
+        console.error('Error deleting history event:', error); // Check your server logs for the exact error here!
         res.status(500).json({ message: 'Server error while deleting history event.', error: error.message });
     }
 });
