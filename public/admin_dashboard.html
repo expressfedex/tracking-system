@@ -11,28 +11,28 @@
     <link rel="stylesheet" href="/css/admin_dashboard.css">
 </head>
 <body>
-    <i class="fas fa-bars menu-toggle" aria-label="Toggle Navigation Menu"></i>
-
-    <aside class="sidebar">
-        <div>
-            <h2>FedEx Admin</h2>
-            <nav>
-                <ul>
-                    <li class="active"><a href="#" data-section="dashboard-section"><i class="fas fa-tachometer-alt"></i> Dashboard Overview</a></li>
-                    <li><a href="#" data-section="add-tracking-section"><i class="fas fa-plus-circle"></i> Add New Tracking</a></li>
-                    <li><a href="#" data-section="manage-tracking-section"><i class="fas fa-edit"></i> Manage Single Tracking</a></li>
-                    <li><a href="#" data-section="all-trackings-section"><i class="fas fa-list"></i> Manage All Trackings</a></li>
-                    <li><a href="#" data-section="communication-center-section"><i class="fas fa-paper-plane"></i> Communication Center</a></li>
-                    <li><a href="#" data-section="user-management-section"><i class="fas fa-users-cog"></i> User Management</a></li>
-                    <li><a href="#" data-section="settings-section"><i class="fas fa-cogs"></i> Settings</a></li>
-                </ul>
-            </nav>
-        </div>
-        <div class="logout-section">
-            <p>Logged in as: <strong id="adminUsername">Admin</strong></p>
-            <button id="logout-btn" class="btn waves-effect waves-light red darken-2">Logout <i class="fas fa-sign-out-alt"></i></button>
-        </div>
-    </aside>
+   <i id="menu-toggle" class="fas fa-bars menu-toggle" aria-label="Toggle Navigation Menu"></i>
+<aside class="sidebar" id="sidebar">
+<div>
+        <h2>FedEx Admin</h2>
+        <nav>
+            <ul>
+                <li class="active"><a href="#" data-section="dashboard-section"><i class="fas fa-tachometer-alt"></i> Dashboard Overview</a></li>
+                <li><a href="#" data-section="add-tracking-section"><i class="fas fa-plus-circle"></i> Add New Tracking</a></li>
+                <li><a href="#" data-section="manage-tracking-section"><i class="fas fa-edit"></i> Manage Single Tracking</a></li>
+                <li><a href="#" data-section="all-trackings-section"><i class="fas fa-list"></i> Manage All Trackings</a></li>
+                <li><a href="#" data-section="communication-center-section"><i class="fas fa-paper-plane"></i> Communication Center</a></li>
+                <li><a href="#" data-section="user-management-section"><i class="fas fa-users-cog"></i> User Management</a></li>
+                <li><a href="#" data-section="settings-section"><i class="fas fa-cogs"></i> Settings</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="logout-section">
+        <p>Logged in as: <strong id="adminUsername">Admin</strong></p>
+        <button id="logout-btn" class="btn waves-effect waves-light red darken-2">Logout <i class="fas fa-sign-out-alt"></i></button>
+    </div>
+</aside>
+    
     <main class="main-content">
         <header>
             <h1>Admin Dashboard</h1>
