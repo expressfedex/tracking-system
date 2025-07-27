@@ -885,6 +885,21 @@ if (sendEmailForm) {
         const message = notificationMessage.value.trim();
         const trackingId = emailTrackingIdSelect.value; // Get tracking ID value
 
+
+        // --- ADDED DEBUGGING LOGS ---
+        console.log('--- Email Form Submission Debug ---');
+        console.log('Recipient Element:', notificationEmail);
+        console.log('Subject Element:', emailSubject);
+        console.log('Message Element:', notificationMessage);
+        console.log('Tracking ID Select Element:', emailTrackingIdSelect);
+
+        console.log('Recipient Value (trimmed):', recipient);
+        console.log('Subject Value (trimmed):', subject);
+        console.log('Message Value (trimmed):', message);
+        console.log('Tracking ID Value:', trackingId);
+        console.log('---------------------------------');
+        // --- END DEBUGGING LOGS ---
+
         // 2. Perform client-side validation
         if (!recipient || !subject || !message) {
             M.toast({ html: 'Recipient, Subject, and Message fields are required.', classes: 'red darken-2' });
