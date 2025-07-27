@@ -898,7 +898,6 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-// --- NEW: Email Sending Route (POST /api/admin/send-email) ---
 // This route requires multipart/form-data parsing via Multer.
 app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment'), async (req, res) => {
     console.log('\n--- Backend: Send Email Request Received ---');
@@ -910,56 +909,133 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
     } : 'No file attached');
 
     try {
-        // *** CHANGE 'to' to 'recipientEmail' here to match frontend formData.append ***
+        // 1. Destructure values from req.body (matching frontend keys)
         const { recipientEmail, subject, message, trackingId } = req.body;
         const attachment = req.file;
 
-        // --- UPDATED VALIDATION HERE ---
-        // 'recipientEmail', 'subject', and 'message' are the core required fields for sending an email.
-        if (!recipientEmail || !subject || !message) { // *** Validation now uses 'recipientEmail' ***
-            console.log('Validation failed: Recipient, Subject, and Message are required.');
-            return res.status(400).json({ message: 'Recipient, Subject, and Message are required.' });
+        // 2. Initial Validation (already fixed based on previous discussion)
+        if (!recipientEmail || !subject || !message) {
+            console.log('Validation failed: Recipient, Subject, and Message fields are required.');
+            return res.status(400).json({ message: 'Recipient, Subject, and Message fields are required.' });
         }
 
-        // Fetch tracking details to get recipient's email if 'recipientEmail' (originally 'to') is not provided directly
-        let finalRecipientEmailAddress = recipientEmail; // *** Use the correctly destructured variable here ***
+        // 3. Determine the final recipient email address
+        let finalRecipientEmailAddress = recipientEmail;
+        let tracking = null; // Initialize tracking object
 
-        // Only attempt to fetch from DB if 'recipientEmail' is empty AND a trackingId was provided
-        if (trackingId && !finalRecipientEmailAddress) {
-            const tracking = await Tracking.findOne({ trackingId: trackingId });
-            if (tracking && tracking.recipientEmail) {
+        // Only attempt to fetch from DB if a trackingId was provided
+        if (trackingId) {
+            tracking = await Tracking.findOne({ trackingId: trackingId });
+            // If recipientEmail was empty from the form but trackingId exists and has an email, use it
+            if (!finalRecipientEmailAddress && tracking && tracking.recipientEmail) {
                 finalRecipientEmailAddress = tracking.recipientEmail;
                 console.log(`Found recipient email from tracking ID: ${finalRecipientEmailAddress}`);
-            } else {
-                console.warn(`Recipient email not provided and not found for tracking ID: ${trackingId}`);
-                // If trackingId was provided but no email found, or 'recipientEmail' was also empty, this is an error
-                return res.status(400).json({ message: 'Recipient email address missing or not found for provided tracking ID.' });
             }
         }
         
         // Final check to ensure we have a recipient email address before trying to send
         if (!finalRecipientEmailAddress) {
-            return res.status(400).json({ message: 'Recipient email address is required.' });
+            return res.status(400).json({ message: 'Recipient email address is required (either directly provided or linked to a tracking ID).' });
         }
 
-        // Nodemailer setup
+        // --- NODEMAILER SETUP (Your existing code) ---
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            service: 'gmail', // Or 'smtp', etc., based on your email provider
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
+                user: process.env.EMAIL_USER, // Your Gmail email address
+                pass: process.env.EMAIL_PASS, // Your App Password for Gmail
             },
         });
 
-        // Email options
+        // --- CONSTRUCTING THE HTML EMAIL CONTENT ---
+        // Ensure 'tracking' object is available and populated before this block.
+        // If no trackingId was selected or found, 'tracking' will be null, so provide fallbacks.
+        const dynamicTrackingId = tracking ? tracking.trackingId || 'N/A' : 'N/A';
+        const dynamicRecipientName = tracking ? tracking.recipientName || 'Customer' : 'Customer';
+        const dynamicStatus = tracking ? tracking.status || 'N/A' : 'N/A';
+        const dynamicLocation = tracking ? tracking.location || 'N/A' : 'N/A';
+        const dynamicExpectedDelivery = tracking && tracking.expectedDeliveryDate
+            ? new Date(tracking.expectedDeliveryDate).toLocaleDateString()
+            : 'N/A';
+        const yourWebsiteBaseUrl = process.env.FRONTEND_URL || 'https://fedeix.netlify.app/'; // Use an environment variable for flexibility
+
+        const emailHtmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Shipment Update</title>
+                <style type="text/css">
+                    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+                    .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                    .header { background-color: #700696ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+                    .logo { max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto; }
+                    .content { padding: 20px; line-height: 1.6; color: #333; }
+                    .footer { text-align: center; font-size: 12px; color: #777; padding: 20px; }
+                    .status-box { background-color: #e0f2f7; padding: 15px; border-left: 5px solid #770489ff; margin-bottom: 20px; }
+                    .status-box p { margin: 0; }
+                    a { color: #0056b3; text-decoration: none; }
+                    a:hover { text-decoration: underline; }
+                </style>
+            </head>
+            <body>
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+                    <tr>
+                        <td align="center" style="padding: 20px 0;">
+                            <table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <td class="header" style="background-color: #003366; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                                        <img src="${yourWebsiteBaseUrl}https://i.imgur.com/EW6KGT2.png" alt="FedEx Logo" class="logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto;">
+                                        <h2 style="color: white; margin: 0;">Shipment Update Notification</h2>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="content" style="padding: 20px; line-height: 1.6; color: #333;">
+                                        <p style="margin-bottom: 10px;">Dear ${dynamicRecipientName},</p>
+                                        <p style="margin-bottom: 10px;">This is an important update regarding your FedEx shipment.</p>
+                                        
+                                        <div class="status-box" style="background-color: #e0f2f7; padding: 15px; border-left: 5px solid #440279ff; margin-bottom: 20px;">
+                                            <p style="margin: 0; font-weight: bold;">Tracking ID: <span style="font-weight: normal;">${dynamicTrackingId}</span></p>
+                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Current Status: <span style="font-weight: normal;">${dynamicStatus}</span></p>
+                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Latest Update: <span style="font-weight: normal;">${new Date().toLocaleString()} at ${dynamicLocation}</span></p>
+                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Expected Delivery: <span style="font-weight: normal;">${dynamicExpectedDelivery}</span></p>
+                                        </div>
+
+                                        <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" style="color: #0056b3; text-decoration: none;">Track My Package</a></p>
+
+                                        ${message ? `<p style="margin-top: 20px;">The original message from the admin was: <br><i style="display: block; padding: 10px; border-left: 3px solid #ccc; background-color: #f9f9f9;">"${message}"</i></p>` : ''}
+
+                                        <p style="margin-top: 20px;">Thank you for choosing FedEx for your shipping needs.</p>
+                                        <p style="margin-bottom: 0;">Sincerely,</p>
+                                        <p style="margin-top: 5px;">The FedEx Team</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="footer" style="text-align: center; font-size: 12px; color: #777; padding: 20px;">
+                                        <p style="margin: 0;">&copy; ${new Date().getFullYear()} FedEx. All rights reserved.</p>
+                                        <p style="margin: 5px 0 0 0;">This is an automated email, please do not reply.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+        `;
+
+        // --- EMAIL OPTIONS (Nodemailer) ---
         const mailOptions = {
-            from: process.env.EMAIL_FROM,
-            to: finalRecipientEmailAddress, // *** Use the final determined email address here ***
+            from: process.env.EMAIL_FROM, // Your sender email address (e.g., 'Your App <youremail@gmail.com>')
+            to: finalRecipientEmailAddress,
             subject: subject,
-            html: message,
+            html: emailHtmlContent, // <-- Use the generated HTML here
+            // Plain text version - crucial for email clients that don't render HTML, or for accessibility
+            text: `Dear ${dynamicRecipientName},\n\nYour shipment with tracking ID ${dynamicTrackingId} is currently "${dynamicStatus}".\n\nLatest update: ${new Date().toLocaleString()} at ${dynamicLocation}.\n\nExpected delivery: ${dynamicExpectedDelivery}.\n\n${message ? `Admin's message: ${message}\n\n` : ''}Thank you for choosing FedEx.\n\nTrack your package: ${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}`,
         };
 
-        // --- ATTACHMENT HANDLING (ALREADY OPTIONAL AND CORRECT) ---
+        // --- ATTACHMENT HANDLING (Your existing code) ---
         if (attachment) {
             mailOptions.attachments = [{
                 filename: attachment.originalname,
@@ -971,7 +1047,7 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
             console.log('No attachment for this email.');
         }
 
-        // Send the email
+        // --- SEND THE EMAIL (Your existing code) ---
         await transporter.sendMail(mailOptions);
         console.log('Email sent successfully!');
 
