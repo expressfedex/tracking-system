@@ -277,26 +277,23 @@ app.get('/api/admin/trackings/:trackingIdValue/history', authenticateToken, asyn
 // Admin Route: Get a single tracking record by ID (Corrected to find by custom 'trackingId')
 app.get('/api/admin/trackings/:trackingIdValue', authenticateAdmin, async (req, res) => {
     try {
-        // Renamed 'id' to 'trackingIdValue' to clearly indicate it's your custom ID
         const { trackingIdValue } = req.params;
-        console.log(`Received GET /api/admin/trackings/${trackingIdValue} request.`);
+        console.log(`Backend: Received GET /api/admin/trackings/${trackingIdValue} request.`); // This will log the ID received by backend
 
-        // --- CORRECTED LINE: Use findOne with the 'trackingId' field ---
         const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
 
         if (!tracking) {
-            console.log(`Tracking record not found for custom ID: ${trackingIdValue}`);
-            return res.status(404).json({ message: 'Tracking record not found.' });
+            console.log(`Backend: Tracking record not found for custom ID: ${trackingIdValue}`); // This log means the ID wasn't found in DB
+            return res.status(404).json({ message: 'Tracking record not found.' }); // This is the exact message you're seeing
         }
 
-        res.json(tracking); // Return the full tracking object for admin
+        res.json(tracking); // Returns the full tracking object
     } catch (error) {
         console.error(`Error fetching single tracking ${req.params.trackingIdValue} for admin:`, error);
-        // The 'CastError' should now be gone for valid custom tracking IDs.
-        // This catch block will now primarily handle true server/database errors.
         res.status(500).json({ message: 'Server error while fetching single tracking details.', error: error.message });
     }
 });
+
 
 // Admin Route: Get dashboard statistics
 app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
