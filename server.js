@@ -787,26 +787,29 @@ app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     }
 
     try {
-        const trackingToDelete = await Tracking.findById(id);
-        if (!trackingToDelete) {
+        // Use findByIdAndDelete directly.
+        // It returns the deleted document if found, null if not found.
+        const deletedTracking = await Tracking.findByIdAndDelete(id); // *** THIS IS THE KEY CHANGE ***
+
+        if (!deletedTracking) {
+            // If deletedTracking is null, it means no document with that _id was found and deleted.
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
         // Optional: Delete attached file if using cloud storage
-        if (trackingToDelete.attachedFileName) {
-            console.log(`Placeholder: Would delete file: ${trackingToDelete.attachedFileName}`);
+        // This logic now correctly runs only if the tracking record was found AND deleted.
+        if (deletedTracking.attachedFileName) {
+            console.log(`Placeholder: Would delete file: ${deletedTracking.attachedFileName}`);
+            // Implement your file deletion logic here (e.g., from AWS S3, Cloudinary, etc.)
+            // Example (pseudo-code): await deleteFileFromCloud(deletedTracking.attachedFileName);
         }
 
-        const result = await Tracking.deleteOne({ _id: id });
-        if (result.deletedCount === 0) {
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
-
-        res.json({ message: 'Tracking deleted successfully!' });
+        // If we reach here, the tracking was found and successfully deleted.
+        res.json({ success: true, message: 'Tracking deleted successfully!' }); // Added success: true for consistency with frontend
 
     } catch (error) {
         console.error('Error deleting tracking:', error);
-        res.status(500).json({ message: 'Error deleting tracking data.', error: error.message });
+        res.status(500).json({ success: false, message: 'Error deleting tracking data.', error: error.message });
     }
 });
 
