@@ -1,23 +1,30 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // --- Global Variables and Element References ---
-   const sidebar = document.getElementById('sidebar');
-const menuToggle = document.getElementById('menu-toggle');
-const mainContent = document.querySelector('.main-content'); // <-- Get reference to main content
-const sections = document.querySelectorAll('.content-section'); // Assuming this is correct
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Materialize Component Initializations ---
+    M.Modal.init(document.querySelectorAll('.modal'));
+    M.FormSelect.init(document.querySelectorAll('select'));
+    M.Datepicker.init(document.querySelectorAll('.datepicker'));
+    M.Timepicker.init(document.querySelectorAll('.timepicker'));
 
-    // Tracking Management Elements
+    // --- DOM Element References ---
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    const navLinks = document.querySelectorAll('.sidebar nav ul li a');
+    const sections = document.querySelectorAll('.content-section');
+    const sidebarListItems = document.querySelectorAll('.sidebar nav ul li');
+
+    // Tracking Management
     const addTrackingForm = document.getElementById('addTrackingForm');
     const trackingsTableBody = document.getElementById('trackingsTableBody');
-    const searchTrackingId = document.getElementById('searchTrackingId');
-    const trackingDetailsContainer = document.getElementById('trackingDetailsContainer');
-    const trackingDetailsCard = document.getElementById('trackingDetailsCard'); // For showing specific tracking details
-    const clearTrackingDetailsBtn = document.getElementById('clearTrackingDetailsBtn');
     const updateTrackingForm = document.getElementById('updateTrackingForm');
-    const updateTrackingMongoId = document.getElementById('updateTrackingMongoId'); // Hidden input for MongoDB _id
-    const updateTrackingId = document.getElementById('updateTrackingId'); // The human-readable tracking ID input
-    const trackingIdSelect = document.getElementById('trackingIdSelect'); // Dropdown for update form
+    const updateTrackingMongoId = document.getElementById('updateTrackingMongoId'); // Hidden input for mongoId
+    const trackingIdSelect = document.getElementById('trackingIdSelect'); // For update/delete forms
+    const deleteTrackingModalTrigger = document.getElementById('deleteTrackingModal'); // Modal for delete confirmation
+    const confirmDeleteTrackingBtn = document.getElementById('confirmDeleteTrackingBtn');
+    const trackingIdToDeleteInput = document.getElementById('trackingIdToDelete');
+    const trackingIdPlaceholder = document.getElementById('trackingIdPlaceholder');
 
-    // History Management Elements
+    // History Management
     const trackingHistoryList = document.getElementById('trackingHistoryList');
     const addHistoryForm = document.getElementById('addHistoryForm');
     const editHistoryModal = document.getElementById('editHistoryModal');
@@ -29,29 +36,30 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
     const editHistoryDescription = document.getElementById('editHistoryDescription');
     const saveHistoryEditBtn = document.getElementById('saveHistoryEditBtn');
 
-    // Email Notification Elements
+
+    // Email Notification
     const sendEmailForm = document.getElementById('sendEmailForm');
+    const emailTrackingIdSelect = document.getElementById('emailTrackingIdSelect');
     const notificationEmail = document.getElementById('notificationEmail');
     const emailSubject = document.getElementById('emailSubject');
     const notificationMessage = document.getElementById('notificationMessage');
     const emailAttachmentFileUpload = document.getElementById('emailAttachmentFileUpload');
-    const emailTrackingIdSelect = document.getElementById('emailTrackingIdSelect');
 
-    // File Upload Elements
+    // File Upload
     const uploadPackageFileForm = document.getElementById('uploadPackageFileForm');
-    const packageFileInput = document.getElementById('packageFileInput');
     const attachFileTrackingIdSelect = document.getElementById('attachFileTrackingIdSelect');
+    const packageFileInput = document.getElementById('packageFileInput');
 
-    // User Management Elements
+    // User Management
     const usersTableBody = document.getElementById('usersTableBody');
     const createUserForm = document.getElementById('createUserForm');
     const createUserModal = document.getElementById('createUserModal');
     const editUserModal = document.getElementById('editUserModal');
     const editUserForm = document.getElementById('editUserForm');
-    const deleteUserModalTrigger = document.getElementById('deleteUserModal'); // The modal itself
+    const deleteUserModalTrigger = document.getElementById('deleteUserModal');
+    const deleteUserBtn = document.getElementById('deleteUserBtn');
     const userIdToDeleteInput = document.getElementById('userIdToDelete');
     const usernameToDelete = document.getElementById('usernameToDelete');
-    const deleteUserBtn = document.getElementById('confirmDeleteUserBtn'); // The button inside the delete modal
 
     // Dashboard Stats
     const totalPackages = document.getElementById('totalPackages');
@@ -62,67 +70,54 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
 
 
     // --- Helper Functions ---
-
-    // Function to show a specific content section and hide others
     function showSection(sectionId) {
         sections.forEach(section => {
-            if (section.id === sectionId) {
-                section.classList.add('active');
-            } else {
-                section.classList.remove('active');
-            }
+            section.classList.remove('active-section');
         });
-        // Close sidebar on mobile after selection
-        if (sidebar && sidebar.classList.contains('active') && window.innerWidth <= 992) {
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.classList.add('active-section');
+        } else {
+            console.error(`Target section with ID '${sectionId}' not found.`);
+        }
+
+        // Update active state in sidebar navigation
+        sidebarListItems.forEach(item => {
+            item.classList.remove('active');
+        });
+        const activeLink = document.querySelector(`.sidebar nav ul li a[data-section="${sectionId}"]`);
+        if (activeLink) {
+            activeLink.closest('li').classList.add('active');
+        }
+
+        // Close sidebar on small screens after navigating
+        if (window.innerWidth <= 768) {
             sidebar.classList.remove('active');
+            mainContent.classList.remove('pushed');
+            menuToggle.classList.remove('active');
         }
     }
 
-    // Attach click listeners to sidebar navigation items
-    document.querySelectorAll('.sidebar-list-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetSection = this.dataset.target;
-            showSection(targetSection);
-
-            // Fetch data relevant to the section
-            if (targetSection === 'trackings-section') {
-                fetchAllTrackings();
-                fetchTrackingIdsForSelect(); // For the update dropdown
-                // Clear any previously displayed single tracking details
-                if (trackingDetailsCard) trackingDetailsCard.style.display = 'none';
-            } else if (targetSection === 'send-email-section') {
-                fetchTrackingIdsForEmailSelect();
-            } else if (targetSection === 'upload-file-section') {
-                fetchTrackingIdsForAttachFileSelect();
-            } else if (targetSection === 'users-section') {
-                fetchAllUsers();
-            } else if (targetSection === 'dashboard-section') {
-                fetchAllTrackings(); // Re-fetch to update stats
-            }
-        });
-    });
-
-    // --- Logout Functionality ---
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
-            localStorage.removeItem('token');
-            M.toast({ html: 'Logged out successfully!', classes: 'green darken-2' });
-            setTimeout(() => window.location.href = 'admin_login.html', 1000);
-        });
+    // --- Authentication Check ---
+    // Redirect to login if no token is found
+    const token = localStorage.getItem('token');
+    if (!token) {
+        M.toast({ html: 'No session found. Please log in.', classes: 'red darken-2' });
+        setTimeout(() => window.location.href = 'admin_login.html', 1500);
+        return; // Stop execution if not authenticated
     }
+
 
     // --- Tracking Management Functions ---
 
-    // Fetch all trackings and populate the table
+    // Fetch All Trackings
     function fetchAllTrackings() {
         fetch('/api/admin/trackings', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
@@ -144,30 +139,54 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                     }
                     trackings.forEach(tracking => {
                         const row = document.createElement('tr');
-                        const statusClass = getStatusColorClass(tracking.status);
+                        const statusClass = getStatusColorClass(tracking.status || '');
                         row.innerHTML = `
                             <td>${tracking.trackingId}</td>
-                            <td>${tracking.senderName}</td>
+                            <td>${tracking.shipperName}</td>
                             <td>${tracking.recipientName}</td>
                             <td>${tracking.origin}</td>
                             <td>${tracking.destination}</td>
                             <td>${new Date(tracking.shipmentDate).toLocaleDateString()}</td>
-                            <td>${new Date(tracking.expectedDeliveryDate).toLocaleDateString()}</td>
-                            <td class="status-cell ${statusClass}">${tracking.status}</td>
-                            <td>${tracking.currentLocation}</td>
+                            <td>${tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toLocaleDateString() : 'N/A'}</td>
+                            <td><span class="status-badge ${statusClass}">${tracking.status}</span></td>
+                            <td>${tracking.currentLocation || 'N/A'}</td>
                             <td>
-                                <button class="btn btn-small waves-effect waves-light blue darken-1 view-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">visibility</i></button>
-                                <button class="btn btn-small waves-effect waves-light green darken-1 edit-tracking-btn" data-mongo-id="${tracking._id}"><i class="material-icons">edit</i></button>
-                                <button class="btn btn-small waves-effect waves-light red darken-2 delete-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">delete</i></button>
+                                <button class="btn btn-small waves-effect waves-light green darken-1 view-history-btn" data-id="${tracking._id}"><i class="material-icons">history</i></button>
+                                <button class="btn btn-small waves-effect waves-light blue darken-1 edit-tracking-btn" data-id="${tracking._id}"><i class="material-icons">edit</i></button>
+                                <button class="btn btn-small waves-effect waves-light red darken-2 delete-tracking-modal-trigger" data-id="${tracking.trackingId}" data-mongo-id="${tracking._id}"><i class="material-icons">delete</i></button>
                             </td>
                         `;
                         trackingsTableBody.appendChild(row);
                     });
 
-                    // Attach event listeners for the newly created buttons
-                    attachTrackingButtonListeners();
+                    // Attach event listeners for dynamically created buttons
+                    document.querySelectorAll('.view-history-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const mongoId = this.dataset.id;
+                            fetchTrackingHistory(mongoId);
+                            M.Modal.getInstance(document.getElementById('historyModal')).open();
+                        });
+                    });
+
+                    document.querySelectorAll('.edit-tracking-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const mongoId = this.dataset.id;
+                            fetchTrackingDetails(mongoId); // Fetch details using mongoId
+                            showSection('update-tracking-section'); // Show the update form
+                        });
+                    });
+
+                    document.querySelectorAll('.delete-tracking-modal-trigger').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const trackingId = this.dataset.id;
+                            const mongoId = this.dataset.mongoId;
+                            trackingIdToDeleteInput.value = mongoId; // Set the MongoDB ID to the hidden input
+                            if (trackingIdPlaceholder) trackingIdPlaceholder.textContent = trackingId; // Display human-readable ID
+                            M.Modal.getInstance(deleteTrackingModalTrigger).open();
+                        });
+                    });
                 }
-                updateDashboardStats(trackings); // Update dashboard stats with fetched data
+                updateDashboardStats(trackings); // Update dashboard stats after fetching
             })
             .catch(error => {
                 console.error('Error fetching trackings:', error);
@@ -178,277 +197,124 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             });
     }
 
-    // Attach listeners to tracking-related buttons (view, edit, delete)
-    function attachTrackingButtonListeners() {
-        document.querySelectorAll('.view-tracking-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const trackingId = this.dataset.trackingId;
-                fetchTrackingDetails(trackingId); // Assuming this fetches by human-readable ID
-            });
-        });
-
-        document.querySelectorAll('.edit-tracking-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const mongoId = this.dataset.mongoId;
-                fetchTrackingDetailsForEdit(mongoId);
-            });
-        });
-
-        document.querySelectorAll('.delete-tracking-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const trackingId = this.dataset.trackingId;
-                if (confirm('Are you sure you want to delete this tracking? This action cannot be undone.')) {
-                    deleteTracking(trackingId);
-                }
-            });
-        });
-    }
-
-    // Populate tracking ID dropdowns for forms that need it
+    // Populate Tracking ID dropdowns
     function fetchTrackingIdsForSelect() {
         fetch('/api/admin/trackings', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => response.json())
             .then(trackings => {
-                // For Update Tracking dropdown
+                // For Update/Delete Tracking section
                 if (trackingIdSelect) {
-                    trackingIdSelect.innerHTML = '<option value="" disabled selected>Choose your tracking ID</option>';
+                    trackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
                     trackings.forEach(tracking => {
                         const option = document.createElement('option');
-                        option.value = tracking._id; // Use MongoDB _id for internal operations
-                        option.textContent = tracking.trackingId; // Show human-readable ID
+                        option.value = tracking._id; // Use MongoDB ID as value
+                        option.textContent = tracking.trackingId; // Display human-readable ID
                         trackingIdSelect.appendChild(option);
                     });
-                    M.FormSelect.init(trackingIdSelect); // Re-initialize Materialize select
+                    M.FormSelect.init(trackingIdSelect); // Re-initialize Materialize Select
                 }
             })
-            .catch(error => console.error('Error fetching tracking IDs for select:', error));
+            .catch(error => {
+                console.error('Error fetching tracking IDs for select:', error);
+                M.toast({ html: `Error populating tracking IDs: ${error.message}`, classes: 'red darken-2' });
+            });
     }
 
-    // Populate tracking ID dropdown for Email tab
+    // Populate Tracking IDs for Email Notification
     function fetchTrackingIdsForEmailSelect() {
         fetch('/api/admin/trackings', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => response.json())
             .then(trackings => {
                 if (emailTrackingIdSelect) {
-                    emailTrackingIdSelect.innerHTML = '<option value="" disabled selected>Choose a Tracking ID</option>';
+                    emailTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
                     trackings.forEach(tracking => {
                         const option = document.createElement('option');
-                        option.value = tracking.trackingId; // Use human-readable ID for email pre-fill lookup
+                        option.value = tracking.trackingId; // Use human-readable tracking ID for email pre-fill
                         option.textContent = tracking.trackingId;
                         emailTrackingIdSelect.appendChild(option);
                     });
-                    M.FormSelect.init(emailTrackingIdSelect); // Re-initialize Materialize select
+                    M.FormSelect.init(emailTrackingIdSelect);
                 }
             })
-            .catch(error => console.error('Error fetching tracking IDs for email select:', error));
+            .catch(error => {
+                console.error('Error fetching tracking IDs for email select:', error);
+                M.toast({ html: `Error populating email tracking IDs: ${error.message}`, classes: 'red darken-2' });
+            });
     }
 
-    // Populate tracking ID dropdown for Attach File tab
+    // Populate Tracking IDs for Attach File
     function fetchTrackingIdsForAttachFileSelect() {
         fetch('/api/admin/trackings', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => response.json())
             .then(trackings => {
                 if (attachFileTrackingIdSelect) {
-                    attachFileTrackingIdSelect.innerHTML = '<option value="" disabled selected>Choose a Tracking ID</option>';
+                    attachFileTrackingIdSelect.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
                     trackings.forEach(tracking => {
                         const option = document.createElement('option');
-                        option.value = tracking.trackingId; // Use human-readable ID for file upload
+                        option.value = tracking.trackingId; // Use human-readable tracking ID for file attachment
                         option.textContent = tracking.trackingId;
                         attachFileTrackingIdSelect.appendChild(option);
                     });
-                    M.FormSelect.init(attachFileTrackingIdSelect); // Re-initialize Materialize select
+                    M.FormSelect.init(attachFileTrackingIdSelect);
                 }
-            })
-            .catch(error => console.error('Error fetching tracking IDs for attach file select:', error));
-    }
-
-    // Fetch and display details of a single tracking (for 'view' button)
-    function fetchTrackingDetails(trackingIdValue) { // Changed parameter name for clarity
-        console.log('Fetching details for tracking ID:', trackingIdValue); // Debug log
-        fetch(`/api/trackings/${trackingIdValue}`) // Public endpoint for details
-            .then(response => {
-                if (!response.ok) {
-                    // Check for 404 specifically for a more helpful message
-                    if (response.status === 404) {
-                        throw new Error('Tracking ID not found.');
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error fetching tracking details');
-                    });
-                }
-                return response.json();
-            })
-            .then(tracking => {
-                if (trackingDetailsContainer && trackingDetailsCard) {
-                    // Pre-fill general details
-                    document.getElementById('detailTrackingId').textContent = tracking.trackingId || 'N/A';
-                    document.getElementById('detailSenderName').textContent = tracking.senderName || 'N/A';
-                    document.getElementById('detailSenderAddress').textContent = tracking.senderAddress || 'N/A';
-                    document.getElementById('detailRecipientName').textContent = tracking.recipientName || 'N/A';
-                    document.getElementById('detailRecipientAddress').textContent = tracking.recipientAddress || 'N/A';
-                    document.getElementById('detailRecipientEmail').textContent = tracking.recipientEmail || 'N/A';
-                    document.getElementById('detailOrigin').textContent = tracking.origin || 'N/A';
-                    document.getElementById('detailDestination').textContent = tracking.destination || 'N/A';
-                    document.getElementById('detailShipmentDate').textContent = tracking.shipmentDate ? new Date(tracking.shipmentDate).toLocaleDateString() : 'N/A';
-                    document.getElementById('detailExpectedDeliveryDate').textContent = tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toLocaleDateString() : 'N/A';
-                    document.getElementById('detailPackageDescription').textContent = tracking.packageDescription || 'N/A';
-                    document.getElementById('detailWeight').textContent = (tracking.weight ? tracking.weight + ' kg' : 'N/A');
-                    document.getElementById('detailDimensions').textContent = (tracking.dimensions ? tracking.dimensions : 'N/A');
-                    document.getElementById('detailShippingCost').textContent = (tracking.shippingCost ? '$' + tracking.shippingCost.toFixed(2) : 'N/A');
-                    document.getElementById('detailStatus').textContent = tracking.status || 'N/A';
-                    document.getElementById('detailCurrentLocation').textContent = tracking.currentLocation || 'N/A';
-                    document.getElementById('detailCarrier').textContent = tracking.carrier || 'N/A';
-                    document.getElementById('detailServiceType').textContent = tracking.serviceType || 'N/A';
-
-                    // Display attached files
-                    const attachedFilesList = document.getElementById('attachedFilesList');
-                    attachedFilesList.innerHTML = '';
-                    if (tracking.attachedFiles && tracking.attachedFiles.length > 0) {
-                        tracking.attachedFiles.forEach(file => {
-                            const li = document.createElement('li');
-                            li.innerHTML = `<a href="/uploads/${file.filename}" target="_blank">${file.originalname}</a>`;
-                            attachedFilesList.appendChild(li);
-                        });
-                    } else {
-                        attachedFilesList.innerHTML = '<li>No files attached.</li>';
-                    }
-
-                    // Show the card
-                    trackingDetailsCard.style.display = 'block';
-                    // Scroll to the card
-                    trackingDetailsCard.scrollIntoView({ behavior: 'smooth' });
-                }
-                // Also fetch and display history for this specific tracking
-                fetchTrackingHistory(tracking._id); // Pass MongoDB _id for history operations
             })
             .catch(error => {
-                console.error('Error fetching tracking details:', error);
-                M.toast({ html: `Error: ${error.message}`, classes: 'red darken-2' });
-                if (trackingDetailsCard) trackingDetailsCard.style.display = 'none'; // Hide card on error
+                console.error('Error fetching tracking IDs for file attach select:', error);
+                M.toast({ html: `Error populating file attach tracking IDs: ${error.message}`, classes: 'red darken-2' });
             });
     }
 
-    // Clear tracking details card
-    if (clearTrackingDetailsBtn) {
-        clearTrackingDetailsBtn.addEventListener('click', function() {
-            if (trackingDetailsCard) trackingDetailsCard.style.display = 'none';
-            if (trackingHistoryList.querySelector('ul')) {
-                trackingHistoryList.querySelector('ul').innerHTML = ''; // Clear history list
-            }
-        });
-    }
-
-    // Fetch tracking details and populate the update form
-    function fetchTrackingDetailsForEdit(mongoId) {
-        fetch(`/api/admin/trackings/mongo/${mongoId}`, { // Fetch by MongoDB _id
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error fetching tracking for edit');
-                    });
-                }
-                return response.json();
-            })
-            .then(tracking => {
-                // Populate the form fields
-                updateTrackingMongoId.value = tracking._id; // Set the hidden Mongo ID
-                updateTrackingId.value = tracking.trackingId || '';
-                document.getElementById('updateSenderName').value = tracking.senderName || '';
-                document.getElementById('updateSenderAddress').value = tracking.senderAddress || '';
-                document.getElementById('updateRecipientName').value = tracking.recipientName || '';
-                document.getElementById('updateRecipientAddress').value = tracking.recipientAddress || '';
-                document.getElementById('updateRecipientEmail').value = tracking.recipientEmail || '';
-                document.getElementById('updateOrigin').value = tracking.origin || '';
-                document.getElementById('updateDestination').value = tracking.destination || '';
-                document.getElementById('updateShipmentDate').value = tracking.shipmentDate ? new Date(tracking.shipmentDate).toISOString().split('T')[0] : '';
-                document.getElementById('updateExpectedDeliveryDate').value = tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toISOString().split('T')[0] : '';
-                document.getElementById('updatePackageDescription').value = tracking.packageDescription || '';
-                document.getElementById('updateWeight').value = tracking.weight || '';
-                document.getElementById('updateDimensions').value = tracking.dimensions || '';
-                document.getElementById('updateShippingCost').value = tracking.shippingCost || '';
-                document.getElementById('updateStatus').value = tracking.status || '';
-                document.getElementById('updateCurrentLocation').value = tracking.currentLocation || '';
-                document.getElementById('updateCarrier').value = tracking.carrier || '';
-                document.getElementById('updateServiceType').value = tracking.serviceType || '';
-
-                // Update Materialize labels to float
-                M.updateTextFields();
-                // Re-initialize datepickers and selects
-                M.Datepicker.init(document.getElementById('updateShipmentDate'));
-                M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
-                M.FormSelect.init(document.getElementById('updateStatus'));
-
-                // Show the update tracking section
-                showSection('update-tracking-section');
-
-                // Also fetch and display history for this specific tracking
-                fetchTrackingHistory(tracking._id); // Pass MongoDB _id for history operations
-            })
-            .catch(error => {
-                console.error('Error fetching tracking for edit:', error);
-                M.toast({ html: `Failed to load tracking for edit: ${error.message}`, classes: 'red darken-2' });
-            });
-    }
-
-    // --- Add New Tracking ---
+    // Add Tracking Form Submission
     if (addTrackingForm) {
         addTrackingForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const newTracking = {
                 trackingId: document.getElementById('newTrackingId').value,
-                senderName: document.getElementById('newSenderName').value,
-                senderAddress: document.getElementById('newSenderAddress').value,
+                shipperName: document.getElementById('newShipperName').value,
+                shipperAddress: document.getElementById('newShipperAddress').value,
                 recipientName: document.getElementById('newRecipientName').value,
                 recipientAddress: document.getElementById('newRecipientAddress').value,
                 recipientEmail: document.getElementById('newRecipientEmail').value,
+                recipientPhone: document.getElementById('newRecipientPhone').value,
                 origin: document.getElementById('newOrigin').value,
                 destination: document.getElementById('newDestination').value,
                 shipmentDate: document.getElementById('newShipmentDate').value,
                 expectedDeliveryDate: document.getElementById('newExpectedDeliveryDate').value,
-                packageDescription: document.getElementById('newPackageDescription').value,
-                weight: parseFloat(document.getElementById('newWeight').value) || 0,
-                dimensions: document.getElementById('newDimensions').value,
-                shippingCost: parseFloat(document.getElementById('newShippingCost').value) || 0,
                 status: document.getElementById('newStatus').value,
                 currentLocation: document.getElementById('newCurrentLocation').value,
+                packageDescription: document.getElementById('newPackageDescription').value,
+                weight: document.getElementById('newWeight').value,
+                dimensions: document.getElementById('newDimensions').value,
                 carrier: document.getElementById('newCarrier').value,
                 serviceType: document.getElementById('newServiceType').value,
-                // history is an empty array initially, added by the backend
+                // Do not include 'history' here, it's added separately
+                // Do not include 'files' here, they are uploaded separately
             };
 
             fetch('/api/admin/trackings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(newTracking)
-                })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(newTracking)
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
@@ -465,10 +331,10 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                     if (data.success) {
                         M.toast({ html: 'Tracking added successfully!', classes: 'green darken-2' });
                         addTrackingForm.reset();
-                        M.updateTextFields(); // Reset Materialize labels
+                        M.updateTextFields();
                         M.Datepicker.init(document.getElementById('newShipmentDate'));
                         M.Datepicker.init(document.getElementById('newExpectedDeliveryDate'));
-                        M.FormSelect.init(document.getElementById('newStatus')); // Re-init select
+                        M.FormSelect.init(document.getElementById('newStatus'));
                         fetchAllTrackings(); // Refresh the table and stats
                         fetchTrackingIdsForSelect(); // Refresh dropdowns
                         fetchTrackingIdsForEmailSelect();
@@ -484,63 +350,137 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
         });
     }
 
-    // --- Update Existing Tracking ---
-    // Handle change on the tracking ID select dropdown
+    // Fetch Tracking Details for Editing
     if (trackingIdSelect) {
         trackingIdSelect.addEventListener('change', function() {
-            const mongoId = this.value; // Get the selected MongoDB _id
+            const mongoId = this.value;
             if (mongoId) {
-                fetchTrackingDetailsForEdit(mongoId);
+                fetchTrackingDetails(mongoId);
             } else {
-                // Clear the form if no tracking is selected
+                // Clear the form if no tracking ID is selected
                 updateTrackingForm.reset();
                 M.updateTextFields();
-                if (trackingHistoryList.querySelector('ul')) {
-                    trackingHistoryList.querySelector('ul').innerHTML = ''; // Clear history list
+                M.Datepicker.init(document.getElementById('updateShipmentDate'));
+                M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+                M.FormSelect.init(document.getElementById('updateStatus'));
+                updateTrackingMongoId.value = '';
+                if (trackingHistoryList) {
+                    const ul = trackingHistoryList.querySelector('ul');
+                    if (ul) ul.innerHTML = '<li class="collection-item">Select a tracking to view history.</li>';
                 }
             }
         });
     }
 
+    function fetchTrackingDetails(mongoId) {
+        fetch(`/api/admin/trackings/mongo/${mongoId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching tracking details');
+                    });
+                }
+                return response.json();
+            })
+            .then(tracking => {
+                // Populate the update form fields
+                updateTrackingMongoId.value = tracking._id; // Store MongoDB ID
+                document.getElementById('updateTrackingId').value = tracking.trackingId || '';
+                document.getElementById('updateShipperName').value = tracking.shipperName || '';
+                document.getElementById('updateShipperAddress').value = tracking.shipperAddress || '';
+                document.getElementById('updateRecipientName').value = tracking.recipientName || '';
+                document.getElementById('updateRecipientAddress').value = tracking.recipientAddress || '';
+                document.getElementById('updateRecipientEmail').value = tracking.recipientEmail || '';
+                document.getElementById('updateRecipientPhone').value = tracking.recipientPhone || '';
+                document.getElementById('updateOrigin').value = tracking.origin || '';
+                document.getElementById('updateDestination').value = tracking.destination || '';
+                document.getElementById('updateShipmentDate').value = tracking.shipmentDate ? new Date(tracking.shipmentDate).toISOString().split('T')[0] : '';
+                document.getElementById('updateExpectedDeliveryDate').value = tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toISOString().split('T')[0] : '';
+                document.getElementById('updateStatus').value = tracking.status || '';
+                document.getElementById('updateCurrentLocation').value = tracking.currentLocation || '';
+                document.getElementById('updatePackageDescription').value = tracking.packageDescription || '';
+                document.getElementById('updateWeight').value = tracking.weight || '';
+                document.getElementById('updateDimensions').value = tracking.dimensions || '';
+                document.getElementById('updateCarrier').value = tracking.carrier || '';
+                document.getElementById('updateServiceType').value = tracking.serviceType || '';
+
+                // Update Materialize labels and re-initialize select/datepickers
+                M.updateTextFields();
+                M.Datepicker.init(document.getElementById('updateShipmentDate'));
+                M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+                M.FormSelect.init(document.getElementById('updateStatus'));
+                M.FormSelect.init(trackingIdSelect); // Ensure the select dropdown itself is re-initialized for visual update
+
+                // Fetch and display history for this tracking
+                fetchTrackingHistory(tracking._id);
+            })
+            .catch(error => {
+                console.error('Error fetching tracking details:', error);
+                M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
+                // Clear form in case of error
+                updateTrackingForm.reset();
+                M.updateTextFields();
+                M.Datepicker.init(document.getElementById('updateShipmentDate'));
+                M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+                M.FormSelect.init(document.getElementById('updateStatus'));
+                updateTrackingMongoId.value = '';
+                if (trackingHistoryList) {
+                    const ul = trackingHistoryList.querySelector('ul');
+                    if (ul) ul.innerHTML = `<li class="collection-item red-text">Error loading history: ${error.message}</li>`;
+                }
+            });
+    }
+
+    // Update Tracking Form Submission
     if (updateTrackingForm) {
         updateTrackingForm.addEventListener('submit', function(e) {
             e.preventDefault();
 
-            const mongoId = updateTrackingMongoId.value; // Get the hidden MongoDB _id
+            const mongoId = updateTrackingMongoId.value; // Get the MongoDB ID from the hidden input
+
             if (!mongoId) {
                 M.toast({ html: 'Please select a tracking to update.', classes: 'red darken-2' });
                 return;
             }
 
             const updatedTracking = {
-                trackingId: updateTrackingId.value,
-                senderName: document.getElementById('updateSenderName').value,
-                senderAddress: document.getElementById('updateSenderAddress').value,
+                trackingId: document.getElementById('updateTrackingId').value,
+                shipperName: document.getElementById('updateShipperName').value,
+                shipperAddress: document.getElementById('updateShipperAddress').value,
                 recipientName: document.getElementById('updateRecipientName').value,
                 recipientAddress: document.getElementById('updateRecipientAddress').value,
                 recipientEmail: document.getElementById('updateRecipientEmail').value,
+                recipientPhone: document.getElementById('updateRecipientPhone').value,
                 origin: document.getElementById('updateOrigin').value,
                 destination: document.getElementById('updateDestination').value,
                 shipmentDate: document.getElementById('updateShipmentDate').value,
                 expectedDeliveryDate: document.getElementById('updateExpectedDeliveryDate').value,
-                packageDescription: document.getElementById('updatePackageDescription').value,
-                weight: parseFloat(document.getElementById('updateWeight').value) || 0,
-                dimensions: document.getElementById('updateDimensions').value,
-                shippingCost: parseFloat(document.getElementById('updateShippingCost').value) || 0,
                 status: document.getElementById('updateStatus').value,
                 currentLocation: document.getElementById('updateCurrentLocation').value,
+                packageDescription: document.getElementById('updatePackageDescription').value,
+                weight: document.getElementById('updateWeight').value,
+                dimensions: document.getElementById('updateDimensions').value,
                 carrier: document.getElementById('updateCarrier').value,
                 serviceType: document.getElementById('updateServiceType').value,
             };
 
             fetch(`/api/admin/trackings/${mongoId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(updatedTracking)
-                })
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updatedTracking)
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
@@ -577,65 +517,78 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
     }
 
     // --- Delete Tracking ---
-    function deleteTracking(trackingId) {
-        // Add console logs for debugging
-        console.log('Attempting to delete tracking with ID:', trackingId);
-        console.log('Type of tracking ID:', typeof trackingId);
+    if (confirmDeleteTrackingBtn) {
+        confirmDeleteTrackingBtn.addEventListener('click', function() {
+            const mongoId = trackingIdToDeleteInput.value; // Get the MongoDB ID
 
-        // Client-side validation: Ensure trackingId is a non-empty string
-        if (!trackingId || typeof trackingId !== 'string' || trackingId.trim().length === 0) {
-            M.toast({ html: 'Error: Cannot delete. Tracking ID is missing or invalid.', classes: 'red darken-2' });
-            console.error('Client-side validation failed: trackingId is', trackingId);
-            return; // Stop the function execution
-        }
+            // Client-side validation: Ensure mongoId is a non-empty string
+            if (!mongoId || typeof mongoId !== 'string' || mongoId.trim().length === 0) {
+                M.toast({ html: 'Error: Cannot delete. Tracking ID is missing or invalid.', classes: 'red darken-2' });
+                console.error('Client-side validation failed: mongoId is', mongoId);
+                M.Modal.getInstance(deleteTrackingModalTrigger).close();
+                return; // Stop the function execution
+            }
 
-        fetch(`/api/admin/trackings/${trackingId}`, {
+            fetch(`/api/admin/trackings/${mongoId}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 }
             })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 401 || response.status === 403) {
+                            M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                            setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                        }
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.message || 'Server error deleting tracking');
+                        });
                     }
-                    // Important: Always parse the error response if available
-                    return response.json().then(errorData => {
-                        // This is where your backend's "Invalid tracking ID format" message comes through
-                        throw new Error(errorData.message || 'Server error deleting tracking');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    M.toast({ html: 'Tracking deleted successfully!', classes: 'green darken-2' }); // Changed to green for success
-                    fetchAllTrackings(); // Refresh the table and stats
-                    fetchTrackingIdsForSelect(); // Refresh dropdowns
-                    fetchTrackingIdsForEmailSelect();
-                    fetchTrackingIdsForAttachFileSelect();
-                } else {
-                    M.toast({ html: `Error: ${data.message || 'Could not delete tracking.'}`, classes: 'red darken-2' });
-                }
-            })
-            .catch(error => {
-                console.error('Error deleting tracking:', error);
-                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
-            });
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        M.toast({ html: 'Tracking deleted successfully!', classes: 'green darken-2' });
+                        M.Modal.getInstance(deleteTrackingModalTrigger).close(); // Close the modal
+                        fetchAllTrackings(); // Refresh the table and stats
+                        fetchTrackingIdsForSelect(); // Refresh dropdowns
+                        fetchTrackingIdsForEmailSelect();
+                        fetchTrackingIdsForAttachFileSelect();
+                        // Clear the update form if the deleted tracking was currently displayed
+                        if (updateTrackingMongoId.value === mongoId) {
+                            updateTrackingForm.reset();
+                            M.updateTextFields();
+                            M.Datepicker.init(document.getElementById('updateShipmentDate'));
+                            M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+                            M.FormSelect.init(document.getElementById('updateStatus'));
+                            updateTrackingMongoId.value = '';
+                            if (trackingHistoryList) {
+                                const ul = trackingHistoryList.querySelector('ul');
+                                if (ul) ul.innerHTML = '<li class="collection-item">Select a tracking to view history.</li>';
+                            }
+                        }
+                    } else {
+                        M.toast({ html: `Error: ${data.message || 'Could not delete tracking.'}`, classes: 'red darken-2' });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting tracking:', error);
+                    M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+                    M.Modal.getInstance(deleteTrackingModalTrigger).close(); // Ensure modal closes on error
+                });
+        });
     }
 
 
-    // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
-    function fetchTrackingHistory(mongoId) { // Renamed parameter from trackingId to mongoId for clarity
-        console.log(`Attempting to fetch history for MongoDB ID: ${mongoId}`); // Add a log for debugging
+    // --- History Management ---
+    function fetchTrackingHistory(mongoId) {
         fetch(`/api/admin/trackings/mongo/${mongoId}`, { // <-- Corrected to use /mongo/:id endpoint
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
@@ -652,10 +605,10 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                 const historyEvents = trackingData.history; // <--- Correctly extract the history array here!
 
                 const ul = trackingHistoryList.querySelector('ul');
-                ul.innerHTML = ''; // Clear previous history
+                if (ul) ul.innerHTML = ''; // Clear previous history
 
                 if (!historyEvents || historyEvents.length === 0) {
-                    ul.innerHTML = '<li class="collection-item">No history events yet.</li>';
+                    if (ul) ul.innerHTML = '<li class="collection-item">No history events yet.</li>';
                     return;
                 }
 
@@ -671,24 +624,24 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                         </div>
                         <div class="history-actions">
                             <button class="btn-small waves-effect waves-light blue edit-history-btn"
-                                    data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}"
-                                    data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
-                                    data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
-                                    data-location="${event.location || ''}"
-                                    data-description="${event.description}">
+                                data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}"
+                                data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
+                                data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
+                                data-location="${event.location || ''}"
+                                data-description="${event.description}">
                                 <i class="material-icons">edit</i>
                             </button>
                             <button class="btn-small waves-effect waves-light red delete-history-btn"
-                                    data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}">
+                                data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}">
                                 <i class="material-icons">delete</i>
                             </button>
                         </div>
                     `;
-                    ul.appendChild(li);
+                    if (ul) ul.appendChild(li);
                 });
                 attachHistoryButtonListeners(); // Attach listeners after new history items are added
             })
-            .catch(error => { // Add a .catch block to handle errors from the fetch and .then chains
+            .catch(error => {
                 console.error('Error fetching tracking history:', error);
                 M.toast({ html: error.message || 'Failed to load tracking history.', classes: 'red darken-2' });
                 const ul = trackingHistoryList.querySelector('ul');
@@ -707,12 +660,12 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                 const location = this.dataset.location;
                 const description = this.dataset.description;
 
-                editHistoryModalTrackingMongoId.value = trackingMongoId;
-                editHistoryModalHistoryId.value = historyId;
-                editHistoryDate.value = date;
-                editHistoryTime.value = time;
-                editHistoryLocation.value = location;
-                editHistoryDescription.value = description;
+                if (editHistoryModalTrackingMongoId) editHistoryModalTrackingMongoId.value = trackingMongoId;
+                if (editHistoryModalHistoryId) editHistoryModalHistoryId.value = historyId;
+                if (editHistoryDate) editHistoryDate.value = date;
+                if (editHistoryTime) editHistoryTime.value = time;
+                if (editHistoryLocation) editHistoryLocation.value = location;
+                if (editHistoryDescription) editHistoryDescription.value = description;
 
                 M.updateTextFields(); // Update labels for pre-filled fields
                 // Re-init date/time pickers for the modal
@@ -751,13 +704,13 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             };
 
             fetch(`/api/admin/trackings/${trackingMongoId}/history`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(newHistoryEvent)
-                })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(newHistoryEvent)
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
@@ -806,13 +759,13 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             };
 
             fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(updatedHistoryEvent)
-                })
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updatedHistoryEvent)
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
@@ -843,11 +796,11 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
 
     function deleteHistoryEvent(trackingMongoId, historyId) {
         fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
@@ -862,7 +815,7 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             })
             .then(data => {
                 if (data.success) {
-                    M.toast({ html: 'History event deleted successfully!', classes: 'red darken-2' });
+                    M.toast({ html: 'History event deleted successfully!', classes: 'green darken-2' }); // Changed to green for success
                     fetchTrackingHistory(trackingMongoId); // Refresh history list
                 } else {
                     M.toast({ html: `Error: ${data.message || 'Could not delete history event.'}`, classes: 'red darken-2' });
@@ -911,12 +864,13 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             }
 
             fetch('/api/admin/send-email', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: formData
-                })
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                    // Do NOT set Content-Type header when sending FormData, browser sets it correctly
+                },
+                body: formData
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
@@ -951,11 +905,11 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             const trackingId = this.value;
             if (trackingId) {
                 fetch(`/api/admin/trackings/${trackingId}`, { // Fetch by human-readable trackingId
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                    })
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                })
                     .then(response => {
                         if (!response.ok) {
                             if (response.status === 401 || response.status === 403) {
@@ -1013,13 +967,13 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             formData.append('packageFile', file); // 'packageFile' must match your backend's expected field name
 
             fetch(`/api/admin/trackings/${trackingId}/upload-file`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        // Do NOT set Content-Type header when sending FormData, browser sets it correctly
-                    },
-                    body: formData
-                })
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                    // Do NOT set Content-Type header when sending FormData, browser sets it correctly
+                },
+                body: formData
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
@@ -1054,11 +1008,11 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
     // Fetch All Users
     function fetchAllUsers() {
         fetch('/api/admin/users', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
@@ -1104,7 +1058,7 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                         button.addEventListener('click', function() {
                             const userId = this.dataset.userId;
                             const userNm = this.dataset.username;
-                            userIdToDeleteInput.value = userId;
+                            if (userIdToDeleteInput) userIdToDeleteInput.value = userId;
                             if (usernameToDelete) usernameToDelete.textContent = userNm;
                             M.Modal.getInstance(deleteUserModalTrigger).open(); // Open the delete confirmation modal
                         });
@@ -1133,20 +1087,17 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             };
 
             fetch('/api/admin/users/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(userData)
-                })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(userData)
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
-                            M.toast({
-                                html: 'Session expired or unauthorized. Please log in again.',
-                                classes: 'red darken-2'
-                            });
+                            M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
                             setTimeout(() => window.location.href = 'admin_login.html', 2000);
                         }
                         return response.json().then(errorData => {
@@ -1157,28 +1108,19 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                 })
                 .then(data => {
                     if (data.success) {
-                        M.toast({
-                            html: 'User created successfully!',
-                            classes: 'green darken-2'
-                        });
+                        M.toast({ html: 'User created successfully!', classes: 'green darken-2' });
                         M.Modal.getInstance(createUserModal).close();
                         createUserForm.reset();
                         M.updateTextFields();
                         M.FormSelect.init(document.querySelectorAll('#createUserModal select')); // Re-init selects
                         fetchAllUsers();
                     } else {
-                        M.toast({
-                            html: `Error: ${data.message || 'Could not create user.'}`,
-                            classes: 'red darken-2'
-                        });
+                        M.toast({ html: `Error: ${data.message || 'Could not create user.'}`, classes: 'red darken-2' });
                     }
                 })
                 .catch(error => {
                     console.error('Error creating user:', error);
-                    M.toast({
-                        html: `Network error or server issue: ${error.message}`,
-                        classes: 'red darken-2'
-                    });
+                    M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
                 });
         });
     }
@@ -1186,18 +1128,15 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
     // Fetch User Details for Edit
     function fetchUserDetails(userId) {
         fetch(`/api/admin/users/${userId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
-                        M.toast({
-                            html: 'Session expired or unauthorized. Please log in again.',
-                            classes: 'red darken-2'
-                        });
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
                         setTimeout(() => window.location.href = 'admin_login.html', 2000);
                     }
                     return response.json().then(errorData => {
@@ -1217,10 +1156,7 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             })
             .catch(error => {
                 console.error('Error fetching user details:', error);
-                M.toast({
-                    html: `Failed to load user details: ${error.message}`,
-                    classes: 'red darken-2'
-                });
+                M.toast({ html: `Failed to load user details: ${error.message}`, classes: 'red darken-2' });
             });
     }
 
@@ -1242,20 +1178,17 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
             }
 
             fetch(`/api/admin/users/${userId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    },
-                    body: JSON.stringify(updatedUserData)
-                })
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updatedUserData)
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
-                            M.toast({
-                                html: 'Session expired or unauthorized. Please log in again.',
-                                classes: 'red darken-2'
-                            });
+                            M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
                             setTimeout(() => window.location.href = 'admin_login.html', 2000);
                         }
                         return response.json().then(errorData => {
@@ -1266,27 +1199,18 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                 })
                 .then(data => {
                     if (data.success) {
-                        M.toast({
-                            html: 'User updated successfully!',
-                            classes: 'green darken-2'
-                        });
+                        M.toast({ html: 'User updated successfully!', classes: 'green darken-2' });
                         M.Modal.getInstance(editUserModal).close();
                         editUserForm.reset();
                         M.updateTextFields();
                         fetchAllUsers();
                     } else {
-                        M.toast({
-                            html: `Error: ${data.message || 'Could not update user.'}`,
-                            classes: 'red darken-2'
-                        });
+                        M.toast({ html: `Error: ${data.message || 'Could not update user.'}`, classes: 'red darken-2' });
                     }
                 })
                 .catch(error => {
                     console.error('Error updating user:', error);
-                    M.toast({
-                        html: `Network error or server issue: ${error.message}`,
-                        classes: 'red darken-2'
-                    });
+                    M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
                 });
         });
     }
@@ -1298,28 +1222,22 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
 
             // Add client-side validation for userId
             if (!userId || userId.length === 0) {
-                M.toast({
-                    html: 'Error: User ID is missing or invalid. Cannot delete.',
-                    classes: 'red darken-2'
-                });
+                M.toast({ html: 'Error: User ID is missing or invalid. Cannot delete.', classes: 'red darken-2' });
                 console.error('Client-side validation failed: User ID is', userId);
                 M.Modal.getInstance(deleteUserModalTrigger).close(); // Close modal if validation fails
                 return; // Stop the function
             }
 
             fetch(`/api/admin/users/${userId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                })
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
                 .then(response => {
                     if (!response.ok) {
                         if (response.status === 401 || response.status === 403) {
-                            M.toast({
-                                html: 'Session expired or unauthorized. Please log in again.',
-                                classes: 'red darken-2'
-                            });
+                            M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
                             setTimeout(() => window.location.href = 'admin_login.html', 2000);
                         }
                         return response.json().then(errorData => {
@@ -1331,25 +1249,16 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
                 })
                 .then(data => {
                     if (data.success) {
-                        M.toast({
-                            html: 'User deleted successfully!',
-                            classes: 'green darken-2' // Changed to green for success messages
-                        });
+                        M.toast({ html: 'User deleted successfully!', classes: 'green darken-2' }); // Changed to green for success messages
                         M.Modal.getInstance(deleteUserModalTrigger).close(); // Correctly close the modal
                         fetchAllUsers(); // Refresh the user list
                     } else {
-                        M.toast({
-                            html: `Error: ${data.message || 'Could not delete user.'}`,
-                            classes: 'red darken-2'
-                        });
+                        M.toast({ html: `Error: ${data.message || 'Could not delete user.'}`, classes: 'red darken-2' });
                     }
                 })
                 .catch(error => {
                     console.error('Error deleting user:', error);
-                    M.toast({
-                        html: `Network error or server issue: ${error.message}`,
-                        classes: 'red darken-2'
-                    });
+                    M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
                 });
         });
     }
@@ -1386,31 +1295,72 @@ const sections = document.querySelectorAll('.content-section'); // Assuming this
     }
 
 
+    // --- Initial Load Logic ---
+    // This code ensures the dashboard is shown and the link is active when the page first loads.
+    // It should run only once when the DOM is fully loaded.
     // Initial load: show dashboard and fetch all trackings to populate stats
     showSection('dashboard-section');
     fetchAllTrackings(); // This will also call updateDashboardStats
     fetchTrackingIdsForSelect(); // Populate initial dropdowns
     fetchTrackingIdsForEmailSelect();
     fetchTrackingIdsForAttachFileSelect();
+    fetchAllUsers(); // Fetch users on initial load for user management section
 
 
     // --- Sidebar Toggle Logic ---
-if (menuToggle && sidebar && mainContent) { // Ensure all elements are found
-    menuToggle.addEventListener('click', function() {
-        sidebar.classList.toggle('active'); // Toggle the 'active' class on the sidebar
-        mainContent.classList.toggle('pushed'); // Toggle the 'pushed' class on the main content
-        menuToggle.classList.toggle('active'); // Optional: Toggle active class on menu toggle itself if it moves
-    });
-} else {
-    console.error("Sidebar, menu toggle button, or main content not found in the DOM.");
-}
+    if (menuToggle && sidebar && mainContent) { // Ensure all elements are found
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active'); // Toggle the 'active' class on the sidebar
+            mainContent.classList.toggle('pushed'); // Toggle the 'pushed' class on the main content
+            menuToggle.classList.toggle('active'); // Optional: Toggle active class on menu toggle itself if it moves
+        });
+    } else {
+        console.error("Sidebar, menu toggle button, or main content not found in the DOM.");
+    }
 
-    // Initialize Materialize Modals
-    M.Modal.init(document.querySelectorAll('.modal'));
-    // Initialize Materialize Selects (for dropdowns that are not dynamically populated later)
-    M.FormSelect.init(document.querySelectorAll('select'));
-    // Initialize Materialize Datepickers
-    M.Datepicker.init(document.querySelectorAll('.datepicker'));
-    // Initialize Materialize Timepickers
-    M.Timepicker.init(document.querySelectorAll('.timepicker'));
-});
+
+    // --- Content Section Switching Logic ---
+    // This block handles clicking on the links *inside* the sidebar to switch content.
+    // It is separate from the sidebar toggle logic.
+    if (navLinks.length > 0 && sections.length > 0) {
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault(); // Prevent the default anchor link behavior
+
+                const targetSectionId = this.dataset.section;
+                showSection(targetSectionId); // Use the centralized showSection function
+
+                // Specific actions for each section load
+                if (targetSectionId === 'trackings-section') {
+                    fetchAllTrackings();
+                } else if (targetSectionId === 'add-tracking-section') {
+                    // No specific fetch needed, form is ready
+                } else if (targetSectionId === 'update-delete-tracking-section') {
+                    fetchTrackingIdsForSelect(); // Re-populate dropdown on section entry
+                    // Clear the update form and history when navigating to this section
+                    if (updateTrackingForm) {
+                        updateTrackingForm.reset();
+                        M.updateTextFields();
+                        M.Datepicker.init(document.getElementById('updateShipmentDate'));
+                        M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+                        M.FormSelect.init(document.getElementById('updateStatus'));
+                        updateTrackingMongoId.value = '';
+                    }
+                    if (trackingHistoryList) {
+                        const ul = trackingHistoryList.querySelector('ul');
+                        if (ul) ul.innerHTML = '<li class="collection-item">Select a tracking to view history.</li>';
+                    }
+                } else if (targetSectionId === 'email-notification-section') {
+                    fetchTrackingIdsForEmailSelect();
+                } else if (targetSectionId === 'upload-file-section') {
+                    fetchTrackingIdsForAttachFileSelect();
+                } else if (targetSectionId === 'user-management-section') {
+                    fetchAllUsers(); // Refresh user list when entering this section
+                }
+            });
+        });
+    } else {
+        console.warn("No navigation links or content sections found for dynamic switching.");
+    }
+
+}); // End of DOMContentLoaded
