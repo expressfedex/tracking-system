@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     // --- Global Variables and Element References ---
-    const sidebar = document.getElementById('sidebar');
-    const menuToggle = document.getElementById('menu-toggle');
-    const sections = document.querySelectorAll('.content-section');
+   const sidebar = document.getElementById('sidebar');
+const menuToggle = document.getElementById('menu-toggle');
+const mainContent = document.querySelector('.main-content'); // <-- Get reference to main content
+const sections = document.querySelectorAll('.content-section'); // Assuming this is correct
 
     // Tracking Management Elements
     const addTrackingForm = document.getElementById('addTrackingForm');
@@ -1394,13 +1395,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     // --- Sidebar Toggle Logic ---
-    if (menuToggle && sidebar) {
-        menuToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('active'); // Toggle the 'active' class to show/hide the sidebar
-        });
-    } else {
-        console.error("Sidebar or menu toggle button not found in the DOM.");
-    }
+if (menuToggle && sidebar && mainContent) { // Ensure all elements are found
+    menuToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('active'); // Toggle the 'active' class on the sidebar
+        mainContent.classList.toggle('pushed'); // Toggle the 'pushed' class on the main content
+        menuToggle.classList.toggle('active'); // Optional: Toggle active class on menu toggle itself if it moves
+    });
+} else {
+    console.error("Sidebar, menu toggle button, or main content not found in the DOM.");
+}
 
     // Initialize Materialize Modals
     M.Modal.init(document.querySelectorAll('.modal'));
