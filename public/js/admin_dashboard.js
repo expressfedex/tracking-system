@@ -628,40 +628,32 @@ function deleteTracking(trackingId) {
 }
     
 
-
-  // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
-function fetchTrackingHistory(trackingId) { // Renamed parameter from mongoId to trackingId for clarity
-    console.log(`Attempting to fetch history for tracking ID: ${trackingId}`); // Add a log for debugging
-    fetch(`/api/admin/trackings/${trackingId}`, { // <-- Call the main GET route for tracking details
-        method: 'GET',
+function fetchTrackingHistory(trackingId) {
+    fetch(`/api/admin/trackings/${trackingId}/history`, {
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
     })
     .then(response => {
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                setTimeout(() => window.location.href = 'admin_login.html', 2000);
-            }
             return response.json().then(errorData => {
-                throw new Error(errorData.message || 'Server error fetching tracking details');
+                throw new Error(errorData.message || 'Failed to fetch history');
             });
         }
         return response.json();
     })
-    .then(trackingData => { // The response is now the full tracking object, not just history
-        const historyEvents = trackingData.history; // <--- Extract the history array here!
+    .then(data => {
+        const historyEvents = data.history;
 
         const ul = trackingHistoryList.querySelector('ul');
-        ul.innerHTML = ''; // Clear previous history
+        ul.innerHTML = ''; // Clear previous
 
         if (!historyEvents || historyEvents.length === 0) {
             ul.innerHTML = '<li class="collection-item">No history events yet.</li>';
             return;
         }
 
-        // Sort history by timestamp (assuming it's not already sorted on backend)
+        // ✅ Sort by timestamp
         historyEvents.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         historyEvents.forEach(event => {
@@ -669,11 +661,12 @@ function fetchTrackingHistory(trackingId) { // Renamed parameter from mongoId to
             li.classList.add('collection-item');
             li.innerHTML = `
                 <div class="history-content">
-                    <strong>${new Date(event.timestamp).toLocaleString()}</strong> - ${event.location ? `${event.location}: ` : ''}${event.description}
+                    <strong>${new Date(event.timestamp).toLocaleString()}</strong> - 
+                    ${event.location ? `${event.location}: ` : ''}${event.description}
                 </div>
                 <div class="history-actions">
                     <button class="btn-small waves-effect waves-light blue edit-history-btn"
-                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}"
+                            data-tracking-mongo-id="${trackingId}" data-history-id="${event._id}"
                             data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
                             data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
                             data-location="${event.location || ''}"
@@ -681,13 +674,20 @@ function fetchTrackingHistory(trackingId) { // Renamed parameter from mongoId to
                         <i class="material-icons">edit</i>
                     </button>
                     <button class="btn-small waves-effect waves-light red delete-history-btn"
-                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}">
+                            data-tracking-mongo-id="${trackingId}" data-history-id="${event._id}">
                         <i class="material-icons">delete</i>
                     </button>
                 </div>
             `;
             ul.appendChild(li);
         });
+    })
+    .catch(error => {
+        console.error('Error fetching tracking history:', error);
+        M.toast({ html: `Error: ${error.message}`, classes: 'red darken-2' });
+    });
+}
+
 
         // Attach listeners to newly created history buttons
         attachHistoryButtonListeners();
