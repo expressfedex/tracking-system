@@ -957,7 +957,7 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
         const dynamicExpectedDelivery = tracking && tracking.expectedDeliveryDate
             ? new Date(tracking.expectedDeliveryDate).toLocaleDateString()
             : 'N/A';
-        const yourWebsiteBaseUrl = process.env.FRONTEND_URL || 'https://fedeix.netlify.app/'; // Use an environment variable for flexibility
+        const yourWebsiteBaseUrl = process.env.FRONTEND_URL || 'https://fedeix.netlify.app'; // Use an environment variable for flexibility
 
         const emailHtmlContent = `
             <!DOCTYPE html>
@@ -985,8 +985,8 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
                         <td align="center" style="padding: 20px 0;">
                             <table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
                                 <tr>
-                                    <td class="header" style="background-color: #003366; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                                        <img src="${yourWebsiteBaseUrl}https://i.imgur.com/EW6KGT2.png" alt="FedEx Logo" class="logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto;">
+                                    <td class="header" style="background-color: #350056ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                                        <img src="${yourWebsiteBaseUrl}https://i.imgur.com/j2Qgkor.png" alt="FedEx Logo" class="logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto;">
                                         <h2 style="color: white; margin: 0;">Shipment Update Notification</h2>
                                     </td>
                                 </tr>
@@ -1002,7 +1002,7 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
                                             <p style="margin: 5px 0 0 0; font-weight: bold;">Expected Delivery: <span style="font-weight: normal;">${dynamicExpectedDelivery}</span></p>
                                         </div>
 
-                                        <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" style="color: #0056b3; text-decoration: none;">Track My Package</a></p>
+                                        <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" style="color: #b300a7ff; text-decoration: none;">Track My Package</a></p>
 
                                         ${message ? `<p style="margin-top: 20px;">The original message from the admin was: <br><i style="display: block; padding: 10px; border-left: 3px solid #ccc; background-color: #f9f9f9;">"${message}"</i></p>` : ''}
 
