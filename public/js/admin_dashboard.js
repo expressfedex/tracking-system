@@ -873,8 +873,7 @@ function fetchTrackingHistory(trackingId) { // The 'trackingId' parameter is cri
         });
     }
 
-
-   // --- Send Email Notification ---
+// --- Send Email Notification ---
 if (sendEmailForm) {
     sendEmailForm.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -886,17 +885,17 @@ if (sendEmailForm) {
         const trackingId = emailTrackingIdSelect.value; // Get tracking ID value
 
 
-        // --- ADDED DEBUGGING LOGS ---
+        // --- ADDED DEBUGGING LOGS (as discussed) ---
         console.log('--- Email Form Submission Debug ---');
         console.log('Recipient Element:', notificationEmail);
         console.log('Subject Element:', emailSubject);
         console.log('Message Element:', notificationMessage);
         console.log('Tracking ID Select Element:', emailTrackingIdSelect);
 
-        console.log('Recipient Value (trimmed):', recipient);
-        console.log('Subject Value (trimmed):', subject);
-        console.log('Message Value (trimmed):', message);
-        console.log('Tracking ID Value:', trackingId);
+        console.log('Recipient Value (trimmed):', `'${recipient}'`); // Added quotes to clearly show empty strings
+        console.log('Subject Value (trimmed):', `'${subject}'`);       // Added quotes
+        console.log('Message Value (trimmed):', `'${message}'`);       // Added quotes
+        console.log('Tracking ID Value:', `'${trackingId}'`);         // Added quotes
         console.log('---------------------------------');
         // --- END DEBUGGING LOGS ---
 
@@ -975,9 +974,10 @@ if (sendEmailForm) {
                     return response.json();
                 })
                 .then(tracking => {
+                    // Added more robust checks for potentially missing data from backend
                     if (notificationEmail) notificationEmail.value = tracking.recipientEmail || '';
-                    if (emailSubject) emailSubject.value = `Update on your FedEx Shipment: ${tracking.trackingId}`;
-                    if (notificationMessage) notificationMessage.value = `Dear ${tracking.recipientName},\n\nYour shipment with tracking ID ${tracking.trackingId} is currently "${tracking.status}".\n\nLatest update: ${tracking.status} at ${new Date().toLocaleString()}.\n\nExpected delivery: ${new Date(tracking.expectedDeliveryDate).toLocaleDateString()}.\n\nThank you for choosing FedEx.`;
+                    if (emailSubject) emailSubject.value = `Update on your FedEx Shipment: ${tracking.trackingId || 'N/A'}`;
+                    if (notificationMessage) notificationMessage.value = `Dear ${tracking.recipientName || 'Customer'},\n\nYour shipment with tracking ID ${tracking.trackingId || 'N/A'} is currently "${tracking.status || 'N/A'}".\n\nLatest update: ${tracking.status || 'N/A'} at ${new Date().toLocaleString()}.\n\nExpected delivery: ${new Date(tracking.expectedDeliveryDate || '').toLocaleDateString() || 'N/A'}.\n\nThank you for choosing FedEx.`;
                     M.updateTextFields(); // Update Materialize labels
                 })
                 .catch(error => {
