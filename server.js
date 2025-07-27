@@ -640,10 +640,16 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+     // --- ADD LOGS HERE (Start of request processing) ---
+    console.log(`Backend: Received PUT request for MongoDB ID: ${id}`);
+    console.log('Backend: Data to update:', updateData);
+    // ---------------------------------------------------
+
     try {
         let currentTracking = await Tracking.findById(id);
 
         if (!currentTracking) {
+        console.log(`Backend: Tracking record not found for ID: ${id}`);
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
@@ -725,6 +731,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 
         currentTracking.lastUpdated = new Date();
         await currentTracking.save();
+        console.log('Backend: Successfully updated tracking. New data:', currentTracking);
 
     res.json({ success: true, message: 'Tracking updated successfully!', tracking: currentTracking });
     } catch (error) {
