@@ -11,7 +11,7 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const path = require('path');
 const nodemailer = require('nodemailer');
-const multer = require('multer'); // <--- NEW: Import multer
+const multer = require('multer');
 
 const app = express();
 
@@ -223,7 +223,7 @@ app.get('/api/track/:trackingId', async (req, res) => {
                 timestamp: item.timestamp,
                 location: item.location,
                 description: item.description,
-            })),
+            ])),
             attachedFileName: trackingDetails.attachedFileName,
             lastUpdated: trackingDetails.lastUpdated
         };
@@ -252,11 +252,9 @@ app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
 // Admin Route: Get a single tracking record by ID (Corrected to find by custom 'trackingId')
 app.get('/api/admin/trackings/:trackingIdValue', authenticateAdmin, async (req, res) => {
     try {
-        // Renamed 'id' to 'trackingIdValue' to clearly indicate it's your custom ID
         const { trackingIdValue } = req.params;
         console.log(`Received GET /api/admin/trackings/${trackingIdValue} request.`);
 
-        // --- CORRECTED LINE: Use findOne with the 'trackingId' field ---
         const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
 
         if (!tracking) {
@@ -267,8 +265,6 @@ app.get('/api/admin/trackings/:trackingIdValue', authenticateAdmin, async (req, 
         res.json(tracking); // Return the full tracking object for admin
     } catch (error) {
         console.error(`Error fetching single tracking ${req.params.trackingIdValue} for admin:`, error);
-        // The 'CastError' should now be gone for valid custom tracking IDs.
-        // This catch block will now primarily handle true server/database errors.
         res.status(500).json({ message: 'Server error while fetching single tracking details.', error: error.message });
     }
 });
@@ -297,8 +293,6 @@ app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
 });
 
 // POST /admin/trackings - Create a new tracking record (Admin only)
-// Note: This route still expects JSON data, not multipart/form-data.
-// If your 'create new tracking' form also sends files, you'll need multer here too.
 app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     try {
         console.log('Received POST /api/admin/trackings request. Initial req.body:', req.body);
@@ -307,8 +301,6 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
 
         let bodyData = req.body;
 
-        // This workaround is for JSON bodies that might arrive as Buffers in serverless.
-        // It's still relevant if this route consistently receives JSON.
         if (bodyData instanceof Buffer) {
             console.log('req.body is a Buffer, attempting to parse it as JSON...');
             try {
@@ -447,7 +439,6 @@ function parseTimeWithAmPm(timeString) {
 // POST /api/admin/trackings/:trackingIdValue/history - Add a new history event to a tracking (Admin only)
 app.post('/api/admin/trackings/:trackingIdValue/history', authenticateAdmin, async (req, res) => {
     console.log('\n--- Backend: Add History Event Request Received ---');
-    // Changed param name for clarity
     const { trackingIdValue } = req.params;
     console.log('Backend: req.params.trackingIdValue (Tracking ID from URL):', trackingIdValue);
     console.log('Backend: Full req.body received:', req.body);
@@ -482,7 +473,6 @@ app.post('/api/admin/trackings/:trackingIdValue/history', authenticateAdmin, asy
     }
 
     try {
-        // --- CORRECTED LINE: Use findOne with the 'trackingId' field ---
         const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
 
         if (!tracking) {
@@ -529,25 +519,25 @@ app.post('/api/admin/trackings/:trackingIdValue/history', authenticateAdmin, asy
         await tracking.save();
 
         console.log('Backend: History event successfully added to tracking ID:', trackingIdValue);
-        res.status(201).json({ success: true, message: 'History event added successfully!', tracking: tracking.toObject(), newEvent: newHistoryEvent }); // Added success: true
+        res.status(201).json({ success: true, message: 'History event added successfully!', tracking: tracking.toObject(), newEvent: newHistoryEvent });
     } catch (error) {
         console.error('Backend: Uncaught error adding history event:', error);
-        // CastError should no longer occur here for valid trackingIdValue
-        res.status(500).json({ success: false, message: 'Server error while adding history event.', error: error.message }); // Added success: false
+        res.status(500).json({ success: false, message: 'Server error while adding history event.', error: error.message });
     }
 });
 
 // Edit a specific history event
-app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
-    const { id, historyId } = req.params;
-    const { date, time, location, description } = req.body; // This assumes JSON body, which is usually the case for PUT updates
+app.put('/api/admin/trackings/:trackingIdValue/history/:historyId', authenticateAdmin, async (req, res) => { // Renamed param for clarity
+    const { trackingIdValue, historyId } = req.params; // Renamed param for clarity
+    const { date, time, location, description } = req.body;
 
     if (date === undefined && time === undefined && location === undefined && description === undefined) {
         return res.status(400).json({ message: 'At least one field (date, time, location, or description) is required to update a history event.' });
     }
 
     try {
-        const tracking = await Tracking.findById(id);
+        // --- MODIFIED LINE ---
+        const tracking = await Tracking.findOne({ trackingId: trackingIdValue }); // Find by custom trackingId
 
         if (!tracking) {
             return res.status(404).json({ message: 'Tracking record not found.' });
@@ -597,6 +587,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
             historyEvent.timestamp = newTimestamp;
         }
 
+        // It's generally good to sort after modifications if the order matters for display
         tracking.history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         tracking.lastUpdated = new Date();
@@ -604,9 +595,9 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
         res.json({ message: 'History event updated successfully!', historyEvent: historyEvent.toObject() });
     } catch (error) {
-        console.error(`Error updating history event ${historyId} for tracking ID ${id}:`, error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid ID format for tracking or history event.' });
+        console.error(`Error updating history event ${historyId} for tracking ID ${trackingIdValue}:`, error); // Changed param name
+        if (error.name === 'CastError') { // This CastError would now only apply to historyId, not trackingIdValue
+            return res.status(400).json({ message: 'Invalid ID format for history event.' });
         }
         res.status(500).json({ message: 'Server error while updating history event.', error: error.message });
     }
@@ -614,12 +605,13 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
-app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
-    const { id } = req.params;
-    const updateData = req.body; // This route also assumes JSON body, not multipart/form-data.
+app.put('/api/admin/trackings/:trackingIdValue', authenticateAdmin, async (req, res) => { // Renamed param for clarity
+    const { trackingIdValue } = req.params; // Renamed param for clarity
+    const updateData = req.body;
 
     try {
-        let currentTracking = await Tracking.findById(id);
+        // --- MODIFIED LINE ---
+        let currentTracking = await Tracking.findOne({ trackingId: trackingIdValue }); // Find by custom trackingId
 
         if (!currentTracking) {
             return res.status(404).json({ message: 'Tracking record not found.' });
@@ -629,19 +621,20 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
             const newTrackingId = updateData.trackingId;
 
             const existingTrackingWithNewId = await Tracking.findOne({ trackingId: newTrackingId });
-            if (existingTrackingWithNewId && String(existingTrackingWithNewId._id) !== id) {
+            // Ensure the found document is not the one we're currently updating (by its _id)
+            if (existingTrackingWithNewId && String(existingTrackingWithNewId._id) !== String(currentTracking._id)) { // Compare ObjectIds as strings
                 return res.status(409).json({ message: 'New Tracking ID already exists. Please choose a different one.' });
             }
             currentTracking.trackingId = newTrackingId;
-            console.log(`Tracking ID changed from (old): ${currentTracking.trackingId} to (new): ${newTrackingId}`);
+            console.log(`Tracking ID changed from (old): ${trackingIdValue} to (new): ${newTrackingId}`);
         }
 
         Object.keys(updateData).forEach(key => {
             if (key === 'trackingId' || key === 'history' || key === '_id' || key === '__v' || updateData[key] === undefined) {
                 return;
             }
-            if (key === 'recipientEmail') {
-                console.warn('Attempt to update recipientEmail via PUT /api/admin/trackings/:id ignored.');
+            if (key === 'recipientEmail') { // If you want to allow recipientEmail updates, remove this block
+                console.warn('Attempt to update recipientEmail via PUT /api/admin/trackings/:trackingIdValue ignored. Use specific route if needed.');
                 return;
             }
 
@@ -676,7 +669,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                     }
                 }
             } else if (key === 'expectedDeliveryTime') {
-                if (updateData.expectedDeliveryDate === undefined) {
+                if (updateData.expectedDeliveryDate === undefined) { // Only update time if date is not also being updated in this same request
                     const effectiveDate = currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]);
                     const effectiveTimeInput = updateData.expectedDeliveryTime;
 
@@ -714,25 +707,26 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         res.json({ message: 'Tracking updated successfully!', tracking: currentTracking });
     } catch (error) {
         console.error('Error updating tracking details:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid tracking ID format.' });
+        if (error.name === 'CastError') { // This error should now be rare for trackingIdValue unless it's a completely malformed string.
+            return res.status(400).json({ message: 'Invalid tracking ID format provided.' });
         }
         res.status(500).json({ message: 'Server error when updating tracking details.', error: error.message });
     }
 });
 
 // Delete a specific history event by _id
-app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
-    const { id, historyId } = req.params;
+app.delete('/api/admin/trackings/:trackingIdValue/history/:historyId', authenticateAdmin, async (req, res) => { // Renamed param for clarity
+    const { trackingIdValue, historyId } = req.params; // Renamed param for clarity
 
     try {
-        const tracking = await Tracking.findById(id);
+        // --- MODIFIED LINE ---
+        const tracking = await Tracking.findOne({ trackingId: trackingIdValue }); // Find by custom trackingId
         if (!tracking) {
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
         const historyLengthBeforePull = tracking.history.length;
-        tracking.history.pull({ _id: historyId });
+        tracking.history.pull({ _id: historyId }); // historyId here is still the Mongoose _id, which is correct
 
         if (tracking.history.length === historyLengthBeforePull) {
             return res.status(404).json({ message: 'History event not found with the provided ID.' });
@@ -743,8 +737,8 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
         res.json({ message: 'History event deleted successfully!', tracking });
     } catch (error) {
         console.error('Error deleting history event:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid ID format for tracking or history event.' });
+        if (error.name === 'CastError') { // This CastError would now only apply to historyId, not trackingIdValue
+            return res.status(400).json({ message: 'Invalid ID format for history event.' });
         }
         res.status(500).json({ message: 'Server error while deleting history event.', error: error.message });
     }
@@ -752,10 +746,11 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
 
 
 // Delete an entire tracking record
-app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
-    const { id } = req.params;
+app.delete('/api/admin/trackings/:trackingIdValue', authenticateAdmin, async (req, res) => { // Renamed param for clarity
+    const { trackingIdValue } = req.params; // Renamed param for clarity
     try {
-        const trackingToDelete = await Tracking.findById(id);
+        // --- MODIFIED LINE ---
+        const trackingToDelete = await Tracking.findOne({ trackingId: trackingIdValue }); // Find by custom trackingId
         if (!trackingToDelete) {
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
@@ -771,15 +766,18 @@ app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         }
         */
 
-        const result = await Tracking.deleteOne({ _id: id });
+        // --- MODIFIED LINE ---
+        const result = await Tracking.deleteOne({ trackingId: trackingIdValue }); // Delete by custom trackingId
         if (result.deletedCount === 0) {
-            return res.status(404).json({ message: 'Tracking record not found.' });
+            // This case might be hit if for some reason findOne succeeded but deleteOne by custom ID failed.
+            // Less likely now that findOne is also by custom ID.
+            return res.status(404).json({ message: 'Tracking record not found (after initial check).' });
         }
         res.json({ message: 'Tracking deleted successfully!' });
     } catch (error) {
         console.error('Error deleting tracking:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid tracking ID format.' });
+        if (error.name === 'CastError') { // This error should now be rare for trackingIdValue
+            return res.status(400).json({ message: 'Invalid tracking ID format provided.' });
         }
         res.status(500).json({ message: 'Error deleting tracking data.', error: error.message });
     }
@@ -787,8 +785,13 @@ app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 
 
 // --- Initial User Creation (Admin only) ---
+// IMPORTANT: This route should ONLY be accessible for initial admin creation.
+// In a real application, you'd secure this heavily or remove it after first use.
 app.post('/api/admin/create-user', async (req, res) => {
     const { username, password, role } = req.body;
+    // Potentially add a check here to only allow this if no admins exist,
+    // or if a special setup key is present. Otherwise, any user can create
+    // an admin, which is a security flaw. For now, it's public.
     try {
         const existingUser = await User.findOne({ username });
         if (existingUser) {
@@ -817,6 +820,9 @@ app.post('/api/login', async (req, res) => {
 
     let requestBody;
 
+    // This block tries to handle cases where express.json() might not have parsed
+    // the body correctly, especially in serverless environments where rawBody might be a Buffer.
+    // It's a good defensive check.
     if (typeof req.body === 'object' && req.body !== null && !req.body.username && req.body instanceof Buffer) {
         try {
             requestBody = JSON.parse(req.body.toString('utf8'));
@@ -871,7 +877,6 @@ app.post('/api/login', async (req, res) => {
 });
 
 // --- NEW: Email Sending Route (POST /api/admin/send-email) ---
-// This route requires multipart/form-data parsing via Multer.
 app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment'), async (req, res) => {
     console.log('\n--- Backend: Send Email Request Received ---');
     console.log('Backend: req.body (parsed by multer, text fields):', req.body);
@@ -879,62 +884,59 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
         originalname: req.file.originalname,
         mimetype: req.file.mimetype,
         size: req.file.size
-    } : 'No file attached'); // This log already shows if a file is attached or not.
+    } : 'No file attached');
 
     try {
         const { to, subject, message, trackingId } = req.body;
-        const attachment = req.file; // This will be undefined if no file was uploaded, which is desired for optional.
+        const attachment = req.file;
 
-        // --- UPDATED VALIDATION HERE ---
-        // 'to', 'subject', and 'message' are the core required fields for sending an email.
-        // 'trackingId' is optional for the email sending process itself, used for convenience.
-        if (!to || !subject || !message) {
-            console.log('Validation failed: Recipient, Subject, and Message are required.');
-            return res.status(400).json({ message: 'Recipient, Subject, and Message are required.' });
+        if (!to && !trackingId) { // Changed this validation to reflect that 'to' or 'trackingId' is needed
+             console.log('Validation failed: Recipient email or Tracking ID required.');
+             return res.status(400).json({ message: 'Recipient email or Tracking ID is required.' });
+        }
+        if (!subject || !message) {
+            console.log('Validation failed: Subject and Message are required.');
+            return res.status(400).json({ message: 'Subject and Message are required.' });
         }
 
-        // Fetch tracking details to get recipient's email if 'to' is not provided directly
         let recipientEmailAddress = to;
-        // Only attempt to fetch from DB if 'to' is empty AND a trackingId was provided
-        if (trackingId && !recipientEmailAddress) {
+        // If 'to' is not provided but 'trackingId' is, attempt to fetch recipientEmail from DB
+        if (!recipientEmailAddress && trackingId) {
             const tracking = await Tracking.findOne({ trackingId: trackingId });
             if (tracking && tracking.recipientEmail) {
                 recipientEmailAddress = tracking.recipientEmail;
                 console.log(`Found recipient email from tracking ID: ${recipientEmailAddress}`);
             } else {
-                console.warn(`Recipient email not provided and not found for tracking ID: ${trackingId}`);
-                // If trackingId was provided but no email found, or 'to' was also empty, this is an error
-                return res.status(400).json({ message: 'Recipient email address missing or not found for provided tracking ID.' });
+                console.warn(`Recipient email not found for tracking ID: ${trackingId}.`);
+                return res.status(400).json({ message: 'Recipient email address not provided and not found for the given tracking ID.' });
             }
         }
         
-        // Final check to ensure we have a recipient email address before trying to send
-        if (!recipientEmailAddress) {
+        if (!recipientEmailAddress) { // Final check after attempting to resolve from trackingId
             return res.status(400).json({ message: 'Recipient email address is required.' });
         }
 
         // Nodemailer setup
         const transporter = nodemailer.createTransport({
-            service: 'gmail', // Or 'smtp', etc., based on your email provider
+            service: 'gmail',
             auth: {
-                user: process.env.EMAIL_USER, // Your Gmail email address
-                pass: process.env.EMAIL_PASS, // Your App Password for Gmail
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
             },
         });
 
         // Email options
         const mailOptions = {
-            from: process.env.EMAIL_FROM, // Your sender email address (e.g., 'Your App <youremail@gmail.com>')
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER, // Fallback to EMAIL_USER if FROM is not set
             to: recipientEmailAddress,
             subject: subject,
-            html: message, // Use 'html' if your message contains HTML, otherwise use 'text'
+            html: message,
         };
 
-        // --- ATTACHMENT HANDLING (ALREADY OPTIONAL AND CORRECT) ---
-        if (attachment) { // This condition correctly makes the attachment optional
+        if (attachment) {
             mailOptions.attachments = [{
                 filename: attachment.originalname,
-                content: attachment.buffer, // Use the buffer directly from multer's memory storage
+                content: attachment.buffer,
                 contentType: attachment.mimetype,
             }];
             console.log(`Attached file: ${attachment.originalname}, type: ${attachment.mimetype}, size: ${attachment.size} bytes`);
@@ -942,7 +944,6 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
             console.log('No attachment for this email.');
         }
 
-        // Send the email
         await transporter.sendMail(mailOptions);
         console.log('Email sent successfully!');
 
@@ -950,7 +951,6 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
 
     } catch (error) {
         console.error('Error sending email:', error);
-        // Specifically check for Multer errors
         if (error instanceof multer.MulterError) {
             return res.status(400).json({ success: false, message: `File upload error: ${error.message}` });
         }
@@ -959,16 +959,22 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
 });
 
 // --- Serve Static Files (IMPORTANT for Netlify Functions) ---
+// This part is crucial for Netlify. Make sure your 'public' directory
+// contains your frontend assets (HTML, CSS, JS, images).
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
+// The line below might be redundant if 'public' is serving everything.
+// If your index.html or other root files are directly in the project root,
+// then express.static(__dirname) helps, but generally, consolidate into 'public'.
+// app.use(express.static(__dirname)); // Consider removing if public is comprehensive
 
-
-// --- Universal 404 Handler ---
-app.use((req, res, next) => {
-    if (!req.path.startsWith('/api/') && !req.path.includes('.')) {
-        res.status(404).json({ message: 'The requested page or API endpoint was not found.' });
+// Universal fallback for SPA (Single Page Application) routing
+// This should serve your main index.html for any non-API route that isn't a static file
+app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api/')) { // Only for non-API routes
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
     } else {
-        res.status(404).json({ message: 'Endpoint not found.' });
+        // If it's an API route and wasn't caught by a specific handler
+        res.status(404).json({ message: 'API endpoint not found.' });
     }
 });
 
@@ -978,7 +984,7 @@ app.use((err, req, res, next) => {
     console.error('GLOBAL ERROR HANDLER:', err.stack);
     res.status(err.statusCode || 500).json({
         message: err.message || 'An unexpected server error occurred.',
-        error: process.env.NODE_ENV === 'production' ? {} : err.stack
+        error: process.env.NODE_ENV === 'production' ? {} : err.stack // Avoid sending stack trace in production
     });
 });
 
