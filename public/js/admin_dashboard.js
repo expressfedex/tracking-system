@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Get DOM elements for various forms and sections
     const sidebar = document.querySelector('.sidebar');
     const menuToggle = document.querySelector('.menu-toggle');
-    const mainContent = document.getElementById('main-content');
     const sections = document.querySelectorAll('.dashboard-section');
     const sidebarLinks = document.querySelectorAll('.sidebar nav ul li a');
 
@@ -226,49 +225,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 weight: parseFloat(document.getElementById('addWeight').value)
             };
 
-           fetch('/api/admin/trackings', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-    },
-    body: JSON.stringify(trackingData)
-})
-.then(response => {
-    if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-            M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-            setTimeout(() => window.location.href = 'admin_login.html', 2000);
-        }
-        return response.json().then(errorData => {
-            throw new Error(errorData.message || 'Server error adding tracking');
+            fetch('/api/admin/trackings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(trackingData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error adding tracking');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({ html: 'Tracking added successfully!', classes: 'green darken-2' });
+                    addTrackingForm.reset();
+                    M.updateTextFields(); // Update Materialize labels
+                    // Re-initialize date/time pickers if needed after reset
+                    M.Datepicker.init(document.querySelectorAll('.datepicker'));
+                    M.Timepicker.init(document.querySelectorAll('.timepicker'));
+                    addStatusCircle.className = 'status-circle'; // Reset indicator
+                    fetchAllTrackings(); // Refresh all trackings table and dashboard stats
+                    fetchTrackingIdsForSelect(); // Refresh dropdowns
+                    fetchTrackingIdsForEmailSelect();
+                    fetchTrackingIdsForAttachFileSelect();
+                } else {
+                    M.toast({ html: `Error: ${data.message || 'Could not add tracking.'}`, classes: 'red darken-2' });
+                }
+            })
+            .catch(error => {
+                console.error('Error adding tracking:', error);
+                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+            });
         });
     }
-    return response.json();
-})
-.then(data => {
-    if (data.success) {
-        M.toast({ html: 'Tracking added successfully!', classes: 'green darken-2' });
-        addTrackingForm.reset();
-        M.updateTextFields(); // Reset Materialize labels
-        M.Datepicker.init(document.querySelectorAll('.datepicker'));
-        M.Timepicker.init(document.querySelectorAll('.timepicker'));
-
-        addStatusCircle.classList.remove('red', 'yellow', 'green');
-        addStatusCircle.classList.add('status-circle'); // Reset circle indicator
-
-        fetchAllTrackings(); // Refresh table
-        fetchTrackingIdsForSelect(); // Refresh select dropdowns
-        fetchTrackingIdsForEmailSelect();
-        fetchTrackingIdsForAttachFileSelect();
-    } else {
-        M.toast({ html: `Error: ${data.message || 'Could not add tracking.'}`, classes: 'red darken-2' });
-    }
-})
-.catch(error => {
-    console.error('Error adding tracking:', error);
-    M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
-});
 
     // --- Fetch All Trackings (for table and dashboard stats) ---
     function fetchAllTrackings() {
@@ -577,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-// --- Delete Tracking ---
+ // --- Delete Tracking ---
 function deleteTracking(trackingId) {
     console.log('Attempting to delete tracking with ID:', trackingId);
     console.log('Type of tracking ID:', typeof trackingId);
@@ -593,7 +592,8 @@ function deleteTracking(trackingId) {
         return;
     }
 
-    fetch(`/api/admin/trackings/${trackingId}`, {
+
+     fetch(`/api/admin/trackings/${trackingId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -629,31 +629,40 @@ function deleteTracking(trackingId) {
 }
     
 
-function fetchTrackingHistory(trackingId) {
-    fetch(`/api/admin/trackings/${trackingId}/history`, {
+
+  // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
+function fetchTrackingHistory(trackingId) { // Renamed parameter from mongoId to trackingId for clarity
+    console.log(`Attempting to fetch history for tracking ID: ${trackingId}`); // Add a log for debugging
+    fetch(`/api/admin/trackings/${trackingId}`, { // <-- Call the main GET route for tracking details
+        method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
     })
     .then(response => {
         if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
             return response.json().then(errorData => {
-                throw new Error(errorData.message || 'Failed to fetch history');
+                throw new Error(errorData.message || 'Server error fetching tracking details');
             });
         }
         return response.json();
     })
-    .then(data => {
-        const historyEvents = data.history;
+    .then(trackingData => { // The response is now the full tracking object, not just history
+        const historyEvents = trackingData.history; // <--- Extract the history array here!
+
         const ul = trackingHistoryList.querySelector('ul');
-        ul.innerHTML = ''; // Clear previous
+        ul.innerHTML = ''; // Clear previous history
 
         if (!historyEvents || historyEvents.length === 0) {
             ul.innerHTML = '<li class="collection-item">No history events yet.</li>';
             return;
         }
 
-        // ✅ Sort by timestamp
+        // Sort history by timestamp (assuming it's not already sorted on backend)
         historyEvents.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         historyEvents.forEach(event => {
@@ -661,12 +670,11 @@ function fetchTrackingHistory(trackingId) {
             li.classList.add('collection-item');
             li.innerHTML = `
                 <div class="history-content">
-                    <strong>${new Date(event.timestamp).toLocaleString()}</strong> - 
-                    ${event.location ? `${event.location}: ` : ''}${event.description}
+                    <strong>${new Date(event.timestamp).toLocaleString()}</strong> - ${event.location ? `${event.location}: ` : ''}${event.description}
                 </div>
                 <div class="history-actions">
                     <button class="btn-small waves-effect waves-light blue edit-history-btn"
-                            data-tracking-mongo-id="${trackingId}" data-history-id="${event._id}"
+                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}"
                             data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
                             data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
                             data-location="${event.location || ''}"
@@ -674,7 +682,7 @@ function fetchTrackingHistory(trackingId) {
                         <i class="material-icons">edit</i>
                     </button>
                     <button class="btn-small waves-effect waves-light red delete-history-btn"
-                            data-tracking-mongo-id="${trackingId}" data-history-id="${event._id}">
+                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}">
                         <i class="material-icons">delete</i>
                     </button>
                 </div>
@@ -682,7 +690,7 @@ function fetchTrackingHistory(trackingId) {
             ul.appendChild(li);
         });
 
-        // ✅ Properly placed listener attachment
+        // Attach listeners to newly created history buttons
         attachHistoryButtonListeners();
     })
     .catch(error => {
