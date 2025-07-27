@@ -303,32 +303,34 @@ document.addEventListener('DOMContentLoaded', function() {
                         new Date(tracking.expectedDeliveryDate).toLocaleDateString() + (tracking.expectedDeliveryTime ? ' ' + tracking.expectedDeliveryTime : '') : 'N/A';
                     const lastUpdated = new Date(tracking.updatedAt || tracking.createdAt).toLocaleString();
 
-                    row.innerHTML = `
-                        <td>${tracking.trackingId}</td>
-                        <td>
-                            <div class="status-indicator">
-                                <div class="status-circle ${getStatusColorClass(tracking.status)} ${tracking.isBlinking ? 'blinking' : ''}"
-                                    style="background-color: ${tracking.isBlinking ? tracking.blinkingDotColor : getStatusColorClass(tracking.status)}; border-color: ${tracking.statusLineColor};"></div>
-                                ${tracking.status}
-                            </div>
-                        </td>
-                        <td>${tracking.statusLineColor || 'N/A'}</td>
-                        <td>${tracking.isBlinking ? 'Yes' : 'No'}</td>
-                        <td>${tracking.senderName}</td>
-                        <td>${tracking.recipientName}</td>
-                        <td>${tracking.recipientEmail}</td>
-                        <td>${tracking.packageContents}</td>
-                        <td>${tracking.serviceType}</td>
-                        <td>${tracking.recipientAddress}</td>
-                        <td>${tracking.specialHandling || 'N/A'}</td>
-                        <td>${expectedDelivery}</td>
-                        <td>${lastUpdated}</td>
-                        <td>
-                            <button class="btn btn-small waves-effect waves-light blue darken-1 view-edit-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">edit</i></button>
-                            <button class="btn btn-small waves-effect waves-light red darken-2 delete-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">delete</i></button>
-                        </td>
-                    `;
-                    allTrackingsTableBody.appendChild(row);
+                   row.innerHTML = `
+    <td>${tracking.trackingId}</td>
+    <td>
+        <div class="status-indicator">
+            <div class="status-circle ${getStatusColorClass(tracking.status)} ${tracking.isBlinking ? 'blinking' : ''}"
+                style="background-color: ${tracking.isBlinking ? tracking.blinkingDotColor : getStatusColorClass(tracking.status)}; border-color: ${tracking.statusLineColor};"></div>
+            ${tracking.status}
+        </div>
+    </td>
+    <td>${tracking.statusLineColor || 'N/A'}</td>
+    <td>${tracking.isBlinking ? 'Yes' : 'No'}</td>
+    <td>${tracking.senderName}</td>
+    <td>${tracking.recipientName}</td>
+    <td>${tracking.recipientEmail}</td>
+    <td>${tracking.packageContents}</td>
+    <td>${tracking.serviceType}</td>
+    <td>${tracking.recipientAddress}</td>
+    <td>${tracking.specialHandling || 'N/A'}</td>
+    <td>${expectedDelivery}</td>
+    <td>${lastUpdated}</td>
+    <td>
+        <button class="btn btn-small waves-effect waves-light blue darken-1 view-edit-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">edit</i></button>
+        <button class="btn btn-small waves-effect waves-light red darken-2 delete-tracking-btn"
+                data-mongo-id="${tracking._id}"             data-custom-id="${tracking.trackingId}">   <i class="material-icons">delete</i>
+        </button>
+    </td>
+`;
+allTrackingsTableBody.appendChild(row);
                 });
 
                 // Attach event listeners for edit/delete buttons in the table
@@ -348,12 +350,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 });
 
-                document.querySelectorAll('.delete-tracking-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        const trackingId = this.dataset.trackingId;
-                        if (confirm(`Are you sure you want to delete tracking ID: ${trackingId}?`)) {
-                            deleteTracking(trackingId);
-                        }
+               document.querySelectorAll('.delete-tracking-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const mongoIdToDelete = this.dataset.mongoId; // <--- CHANGE 2: Read the new data-mongo-id
+        const customTrackingIdForConfirm = this.dataset.customId; // Read the optional data-custom-id
+
+        if (confirm(`Are you sure you want to delete tracking ID: ${customTrackingIdForConfirm || mongoIdToDelete}? This action cannot be undone.`)) {
+            deleteTracking(mongoIdToDelete); // <--- Pass the mongoIdToDelete
+        }
                     });
                 });
             }
@@ -628,7 +632,6 @@ function deleteTracking(trackingId) {
     });
 }
     
-
 
   // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
 function fetchTrackingHistory(trackingId) { // The 'trackingId' parameter is critical
