@@ -226,49 +226,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 weight: parseFloat(document.getElementById('addWeight').value)
             };
 
-            fetch('/api/admin/trackings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(trackingData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error adding tracking');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    M.toast({ html: 'Tracking added successfully!', classes: 'green darken-2' });
-                    addTrackingForm.reset();
-                    M.updateTextFields(); // Update Materialize labels
-                    // Re-initialize date/time pickers if needed after reset
-                    M.Datepicker.init(document.querySelectorAll('.datepicker'));
-                    M.Timepicker.init(document.querySelectorAll('.timepicker'));
-                    addStatusCircle.className = 'status-circle'; // Reset indicator
-                    fetchAllTrackings(); // Refresh all trackings table and dashboard stats
-                    fetchTrackingIdsForSelect(); // Refresh dropdowns
-                    fetchTrackingIdsForEmailSelect();
-                    fetchTrackingIdsForAttachFileSelect();
-                } else {
-                    M.toast({ html: `Error: ${data.message || 'Could not add tracking.'}`, classes: 'red darken-2' });
-                }
-            })
-            .catch(error => {
-                console.error('Error adding tracking:', error);
-                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
-            });
+           fetch('/api/admin/trackings', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    body: JSON.stringify(trackingData)
+})
+.then(response => {
+    if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+            M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+            setTimeout(() => window.location.href = 'admin_login.html', 2000);
+        }
+        return response.json().then(errorData => {
+            throw new Error(errorData.message || 'Server error adding tracking');
         });
     }
+    return response.json();
+})
+.then(data => {
+    if (data.success) {
+        M.toast({ html: 'Tracking added successfully!', classes: 'green darken-2' });
+        addTrackingForm.reset();
+        M.updateTextFields(); // Reset Materialize labels
+        M.Datepicker.init(document.querySelectorAll('.datepicker'));
+        M.Timepicker.init(document.querySelectorAll('.timepicker'));
+
+        addStatusCircle.classList.remove('red', 'yellow', 'green');
+        addStatusCircle.classList.add('status-circle'); // Reset circle indicator
+
+        fetchAllTrackings(); // Refresh table
+        fetchTrackingIdsForSelect(); // Refresh select dropdowns
+        fetchTrackingIdsForEmailSelect();
+        fetchTrackingIdsForAttachFileSelect();
+    } else {
+        M.toast({ html: `Error: ${data.message || 'Could not add tracking.'}`, classes: 'red darken-2' });
+    }
+})
+.catch(error => {
+    console.error('Error adding tracking:', error);
+    M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+});
 
     // --- Fetch All Trackings (for table and dashboard stats) ---
     function fetchAllTrackings() {
@@ -577,17 +577,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
- // --- Delete Tracking ---
+// --- Delete Tracking ---
 function deleteTracking(trackingId) {
-    // Add console logs for debugging
     console.log('Attempting to delete tracking with ID:', trackingId);
     console.log('Type of tracking ID:', typeof trackingId);
 
-    // Client-side validation: Ensure trackingId is a non-empty string
-    if (!trackingId || typeof trackingId !== 'string' || trackingId.trim().length === 0) {
-        M.toast({ html: 'Error: Cannot delete. Tracking ID is missing or invalid.', classes: 'red darken-2' });
+    // Validate tracking ID format (24-character hex string)
+    if (
+        !trackingId ||
+        typeof trackingId !== 'string' ||
+        !trackingId.trim().match(/^[0-9a-fA-F]{24}$/)
+    ) {
+        M.toast({ html: 'Invalid tracking ID format on frontend.', classes: 'red darken-2' });
         console.error('Client-side validation failed: trackingId is', trackingId);
-        return; // Stop the function execution
+        return;
     }
 
     fetch(`/api/admin/trackings/${trackingId}`, {
@@ -602,9 +605,7 @@ function deleteTracking(trackingId) {
                 M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
                 setTimeout(() => window.location.href = 'admin_login.html', 2000);
             }
-            // Important: Always parse the error response if available
             return response.json().then(errorData => {
-                // This is where your backend's "Invalid tracking ID format" message comes through
                 throw new Error(errorData.message || 'Server error deleting tracking');
             });
         }
@@ -612,9 +613,9 @@ function deleteTracking(trackingId) {
     })
     .then(data => {
         if (data.success) {
-            M.toast({ html: 'Tracking deleted successfully!', classes: 'green darken-2' }); // Changed to green for success
-            fetchAllTrackings(); // Refresh the table and stats
-            fetchTrackingIdsForSelect(); // Refresh dropdowns
+            M.toast({ html: 'Tracking deleted successfully!', classes: 'green darken-2' });
+            fetchAllTrackings();
+            fetchTrackingIdsForSelect();
             fetchTrackingIdsForEmailSelect();
             fetchTrackingIdsForAttachFileSelect();
         } else {
