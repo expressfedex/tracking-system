@@ -638,18 +638,20 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
 app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = req.body; // updateData will be req.body
 
-     // --- ADD LOGS HERE (Start of request processing) ---
+    // --- IMPORTANT: THESE ARE THE NEW LOGS WE NEED! ---
     console.log(`Backend: Received PUT request for MongoDB ID: ${id}`);
-    console.log('Backend: Data to update:', updateData);
+    console.log('Backend: Data to update (raw):', req.body); // Still good to keep this
+    console.log('Backend: Type of updateData:', typeof updateData); // <--- NEW LINE
+    console.log('Backend: Keys of updateData:', Object.keys(updateData)); // <--- NEW LINE
     // ---------------------------------------------------
 
     try {
         let currentTracking = await Tracking.findById(id);
 
         if (!currentTracking) {
-        console.log(`Backend: Tracking record not found for ID: ${id}`);
+            console.log(`Backend: Tracking record not found for ID: ${id}`);
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
@@ -733,7 +735,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         await currentTracking.save();
         console.log('Backend: Successfully updated tracking. New data:', currentTracking);
 
-    res.json({ success: true, message: 'Tracking updated successfully!', tracking: currentTracking });
+        res.json({ success: true, message: 'Tracking updated successfully!', tracking: currentTracking });
     } catch (error) {
         console.error('Error updating tracking details:', error);
         if (error.name === 'CastError') {
@@ -742,6 +744,7 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
         res.status(500).json({ message: 'Server error when updating tracking details.', error: error.message });
     }
 });
+
 
 // Delete a specific history event by _id
 app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
@@ -1011,7 +1014,7 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
 
                                         <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" style="color: #b300a7ff; text-decoration: none;">Track My Package</a></p>
 
-                                        ${message ? `<p style="margin-top: 20px;">The original message from the admin was: <br><i style="display: block; padding: 10px; border-left: 3px solid #ccc; background-color: #f9f9f9;">"${message}"</i></p>` : ''}
+                                        ${message ? `<p style="margin-top: 20px;">From FedEx Management: <br><i style="display: block; padding: 10px; border-left: 3px solid #ccc; background-color: #f9f9f9;">"${message}"</i></p>` : ''}
 
                                         <p style="margin-top: 20px;">Thank you for choosing FedEx for your shipping needs.</p>
                                         <p style="margin-bottom: 0;">Sincerely,</p>
