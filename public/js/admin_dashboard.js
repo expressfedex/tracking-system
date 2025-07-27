@@ -576,42 +576,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- Delete Tracking ---
-    function deleteTracking(trackingId) {
-        fetch(`/api/admin/trackings/${trackingId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error deleting tracking');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                M.toast({ html: 'Tracking deleted successfully!', classes: 'red darken-2' });
-                fetchAllTrackings(); // Refresh the table and stats
-                fetchTrackingIdsForSelect(); // Refresh dropdowns
-                fetchTrackingIdsForEmailSelect();
-                fetchTrackingIdsForAttachFileSelect();
-            } else {
-                M.toast({ html: `Error: ${data.message || 'Could not delete tracking.'}`, classes: 'red darken-2' });
-            }
-        })
-        .catch(error => {
-            console.error('Error deleting tracking:', error);
-            M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
-        });
+ // --- Delete Tracking ---
+function deleteTracking(trackingId) {
+    // Add console logs for debugging
+    console.log('Attempting to delete tracking with ID:', trackingId);
+    console.log('Type of tracking ID:', typeof trackingId);
+
+    // Client-side validation: Ensure trackingId is a non-empty string
+    if (!trackingId || typeof trackingId !== 'string' || trackingId.trim().length === 0) {
+        M.toast({ html: 'Error: Cannot delete. Tracking ID is missing or invalid.', classes: 'red darken-2' });
+        console.error('Client-side validation failed: trackingId is', trackingId);
+        return; // Stop the function execution
     }
+
+    fetch(`/api/admin/trackings/${trackingId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
+            // Important: Always parse the error response if available
+            return response.json().then(errorData => {
+                // This is where your backend's "Invalid tracking ID format" message comes through
+                throw new Error(errorData.message || 'Server error deleting tracking');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            M.toast({ html: 'Tracking deleted successfully!', classes: 'green darken-2' }); // Changed to green for success
+            fetchAllTrackings(); // Refresh the table and stats
+            fetchTrackingIdsForSelect(); // Refresh dropdowns
+            fetchTrackingIdsForEmailSelect();
+            fetchTrackingIdsForAttachFileSelect();
+        } else {
+            M.toast({ html: `Error: ${data.message || 'Could not delete tracking.'}`, classes: 'red darken-2' });
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting tracking:', error);
+        M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+    });
+}
+    
 
 
     // --- Tracking History Management ---
@@ -1251,56 +1265,68 @@ if (sendEmailForm) {
         });
     }
 
-    // Delete User
-    if (deleteUserBtn) {
-        deleteUserBtn.addEventListener('click', function() {
-            const userId = userIdToDeleteInput.value;
+   // Delete User
+if (deleteUserBtn) {
+    deleteUserBtn.addEventListener('click', function() {
+        const userId = userIdToDeleteInput.value.trim(); // Trim whitespace from the ID
 
-            fetch(`/api/admin/users/${userId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({
-                            html: 'Session expired or unauthorized. Please log in again.',
-                            classes: 'red darken-2'
-                        });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error deleting user');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
+        // Add client-side validation for userId
+        if (!userId || userId.length === 0) {
+            M.toast({
+                html: 'Error: User ID is missing or invalid. Cannot delete.',
+                classes: 'red darken-2'
+            });
+            console.error('Client-side validation failed: User ID is', userId);
+            M.Modal.getInstance(deleteUserModalTrigger).close(); // Close modal if validation fails
+            return; // Stop the function
+        }
+
+        fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
                     M.toast({
-                        html: 'User deleted successfully!',
+                        html: 'Session expired or unauthorized. Please log in again.',
                         classes: 'red darken-2'
                     });
-                    M.Modal.getInstance(deleteUserModalTrigger).close(); // Correctly close the modal
-                    fetchAllUsers();
-                } else {
-                    M.toast({
-                        html: `Error: ${data.message || 'Could not delete user.'}`,
-                        classes: 'red darken-2'
-                    });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
                 }
-            })
-            .catch(error => {
-                console.error('Error deleting user:', error);
+                return response.json().then(errorData => {
+                    // Backend validation error would come through here
+                    throw new Error(errorData.message || 'Server error deleting user');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
                 M.toast({
-                    html: `Network error or server issue: ${error.message}`,
+                    html: 'User deleted successfully!',
+                    classes: 'green darken-2' // Changed to green for success messages
+                });
+                M.Modal.getInstance(deleteUserModalTrigger).close(); // Correctly close the modal
+                fetchAllUsers(); // Refresh the user list
+            } else {
+                M.toast({
+                    html: `Error: ${data.message || 'Could not delete user.'}`,
                     classes: 'red darken-2'
                 });
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting user:', error);
+            M.toast({
+                html: `Network error or server issue: ${error.message}`,
+                classes: 'red darken-2'
             });
         });
-    }
+    });
+}
 
 
     // --- Dashboard Quick Stats Update ---
