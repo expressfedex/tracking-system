@@ -628,70 +628,76 @@ function deleteTracking(trackingId) {
     
 
 
-    // --- Tracking History Management ---
-    function fetchTrackingHistory(mongoId) {
-        fetch(`/api/admin/trackings/${mongoId}/history`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+  // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
+function fetchTrackingHistory(trackingId) { // Renamed parameter from mongoId to trackingId for clarity
+    console.log(`Attempting to fetch history for tracking ID: ${trackingId}`); // Add a log for debugging
+    fetch(`/api/admin/trackings/${trackingId}`, { // <-- Call the main GET route for tracking details
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
             }
-        })
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                }
-                return response.json().then(errorData => {
-                    throw new Error(errorData.message || 'Server error fetching history');
-                });
-            }
-            return response.json();
-        })
-        .then(historyEvents => {
-            const ul = trackingHistoryList.querySelector('ul');
-            ul.innerHTML = ''; // Clear previous history
-            if (historyEvents.length === 0) {
-                ul.innerHTML = '<li class="collection-item">No history events yet.</li>';
-                return;
-            }
-            historyEvents.forEach(event => {
-                const li = document.createElement('li');
-                li.classList.add('collection-item');
-                li.innerHTML = `
-                    <div class="history-content">
-                        <strong>${new Date(event.timestamp).toLocaleString()}</strong> - ${event.location ? `${event.location}: ` : ''}${event.description}
-                    </div>
-                    <div class="history-actions">
-                        <button class="btn-small waves-effect waves-light blue edit-history-btn"
-                                data-tracking-mongo-id="${mongoId}"
-                                data-history-id="${event._id}"
-                                data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
-                                data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
-                                data-location="${event.location || ''}"
-                                data-description="${event.description}">
-                            <i class="material-icons">edit</i>
-                        </button>
-                        <button class="btn-small waves-effect waves-light red delete-history-btn"
-                                data-tracking-mongo-id="${mongoId}"
-                                data-history-id="${event._id}">
-                            <i class="material-icons">delete</i>
-                        </button>
-                    </div>
-                `;
-                ul.appendChild(li);
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error fetching tracking details');
             });
+        }
+        return response.json();
+    })
+    .then(trackingData => { // The response is now the full tracking object, not just history
+        const historyEvents = trackingData.history; // <--- Extract the history array here!
 
-            // Attach listeners to newly created history buttons
-            attachHistoryButtonListeners();
-        })
-        .catch(error => {
-            console.error('Error fetching tracking history:', error);
-            const ul = trackingHistoryList.querySelector('ul');
-            ul.innerHTML = `<li class="collection-item red-text">Failed to load history: ${error.message}</li>`;
-            M.toast({ html: `Failed to load tracking history: ${error.message}`, classes: 'red darken-2' });
+        const ul = trackingHistoryList.querySelector('ul');
+        ul.innerHTML = ''; // Clear previous history
+
+        if (!historyEvents || historyEvents.length === 0) {
+            ul.innerHTML = '<li class="collection-item">No history events yet.</li>';
+            return;
+        }
+
+        // Sort history by timestamp (assuming it's not already sorted on backend)
+        historyEvents.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        historyEvents.forEach(event => {
+            const li = document.createElement('li');
+            li.classList.add('collection-item');
+            li.innerHTML = `
+                <div class="history-content">
+                    <strong>${new Date(event.timestamp).toLocaleString()}</strong> - ${event.location ? `${event.location}: ` : ''}${event.description}
+                </div>
+                <div class="history-actions">
+                    <button class="btn-small waves-effect waves-light blue edit-history-btn"
+                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}"
+                            data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
+                            data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
+                            data-location="${event.location || ''}"
+                            data-description="${event.description}">
+                        <i class="material-icons">edit</i>
+                    </button>
+                    <button class="btn-small waves-effect waves-light red delete-history-btn"
+                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}">
+                        <i class="material-icons">delete</i>
+                    </button>
+                </div>
+            `;
+            ul.appendChild(li);
         });
-    }
+
+        // Attach listeners to newly created history buttons
+        attachHistoryButtonListeners();
+    })
+    .catch(error => {
+        console.error('Error fetching tracking history:', error);
+        const ul = trackingHistoryList.querySelector('ul');
+        ul.innerHTML = `<li class="collection-item red-text">Failed to load history: ${error.message}</li>`;
+        M.toast({ html: `Failed to load tracking history: ${error.message}`, classes: 'red darken-2' });
+    });
+}
 
     function attachHistoryButtonListeners() {
         document.querySelectorAll('.edit-history-btn').forEach(button => {
