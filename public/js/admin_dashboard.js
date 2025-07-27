@@ -1,1105 +1,1410 @@
-// server.js - Your core Express application logic
-// This file defines the Express app, its middleware, routes, and Mongoose models.
-// It DOES NOT start the server (no app.listen) and handles database connection lazily.
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Materialize components
+    M.AutoInit();
 
-require('dotenv').config(); // Good for local development/testing
+    // Get DOM elements for various forms and sections
+    const sidebar = document.querySelector('.sidebar');
+    const menuToggle = document.querySelector('.menu-toggle');
+    const sections = document.querySelectorAll('.dashboard-section');
+    const sidebarLinks = document.querySelectorAll('.sidebar nav ul li a');
 
-const express = require('express');
-const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const cors = require('cors');
-const path = require('path');
-const nodemailer = require('nodemailer');
-const multer = require('multer'); // <--- NEW: Import multer
+    // Dashboard Quick Stats Elements
+    const totalPackages = document.getElementById('totalPackages');
+    const deliveredPackages = document.getElementById('deliveredPackages');
+    const inTransitPackages = document.getElementById('inTransitPackages');
+    const pendingPackages = document.getElementById('pendingPackages');
+    const exceptionsPackages = document.getElementById('exceptionsPackages');
 
-const app = express();
+    // Add Tracking Form Elements
+    const addTrackingForm = document.getElementById('addTrackingForm');
+    const addStatusInput = document.getElementById('addStatus');
+    const addStatusCircle = document.getElementById('addStatusCircle');
+    const addIsBlinkingCheckbox = document.getElementById('addIsBlinking');
 
-// --- Middleware ---
-app.use(express.json());
-app.use(cors());
-app.use(express.urlencoded({ extended: true }));
+    // Update Tracking Form Elements
+    const singleTrackingIdSelect = document.getElementById('singleTrackingIdSelect');
+    const updateTrackingForm = document.getElementById('updateTrackingForm');
+    const updateTrackingMongoId = document.getElementById('updateTrackingMongoId');
+    const updateTrackingId = document.getElementById('updateTrackingId');
+    const updateStatusInput = document.getElementById('updateStatus');
+    const updateStatusCircle = document.getElementById('updateStatusCircle');
+    const updateIsBlinkingOriginal = document.getElementById('updateIsBlinkingOriginal'); // Corrected ID
 
-// --- Generic Request Logging Middleware ---
-app.use((req, res, next) => {
-    console.log(`[Express Debug] ${req.method} ${req.url}`);
-    next();
-});
+    // Tracking History Elements
+    const trackingHistoryList = document.getElementById('trackingHistoryList');
+    const addHistoryForm = document.getElementById('addHistoryForm');
+    const editHistoryModal = document.getElementById('editHistoryModal');
+    const editHistoryModalTrackingMongoId = document.getElementById('editHistoryModalTrackingMongoId');
+    const editHistoryModalHistoryId = document.getElementById('editHistoryModalHistoryId');
+    const editHistoryDate = document.getElementById('editHistoryDate');
+    const editHistoryTime = document.getElementById('editHistoryTime');
+    const editHistoryLocation = document.getElementById('editHistoryLocation');
+    const editHistoryDescription = document.getElementById('editHistoryDescription');
+    const saveHistoryEditBtn = document.getElementById('saveHistoryEditBtn');
 
-// --- Multer Setup for file uploads ---
-// Configure storage: using memory storage is often best for Netlify Functions
-// as functions are stateless and don't have a persistent file system.
-const upload = multer({
-    storage: multer.memoryStorage(), // Store the file in memory as a Buffer
-    limits: {
-        fileSize: 5 * 1024 * 1024, // Limit file size to 5MB (adjust as needed)
-    },
-    fileFilter: (req, file, cb) => {
-        // Optional: Filter file types
-        if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf' || file.mimetype.includes('document')) {
-            cb(null, true);
+    // All Trackings Table Body
+    const allTrackingsTableBody = document.getElementById('all-trackings-table-body');
+
+    // Communication Center Elements
+    const emailTrackingIdSelect = document.getElementById('emailTrackingIdSelect');
+    const notificationEmail = document.getElementById('notificationEmail'); // Corrected ID
+    const emailSubject = document.getElementById('emailSubject'); // Corrected ID
+    const notificationMessage = document.getElementById('notificationMessage'); // Corrected ID
+    const emailAttachmentFileUpload = document.getElementById('emailAttachmentFileUpload');
+    const sendEmailForm = document.getElementById('sendEmailForm'); // Make sure this exists
+
+    const attachFileTrackingIdSelect = document.getElementById('attachFileTrackingIdSelect');
+    const packageFileInput = document.getElementById('packageFileInput');
+    const uploadPackageFileForm = document.getElementById('uploadPackageFileForm');
+
+    // User Management Elements
+    const createUserModal = document.getElementById('createUserModal');
+    const createUserForm = document.getElementById('createUserForm');
+    const editUserModal = document.getElementById('editUserModal');
+    const editUserForm = document.getElementById('editUserForm');
+    const deleteUserModalTrigger = document.getElementById('deleteUserModal'); // The modal itself
+    const deleteUserBtn = document.getElementById('deleteUserBtn');
+    const userIdToDeleteInput = document.getElementById('userIdToDeleteInput');
+    const usersTableBody = document.getElementById('users-table-body');
+    const usernameToDelete = document.getElementById('usernameToDelete'); // To display username in delete modal
+
+    // Header and Sidebar Username
+    const adminUsername = document.getElementById('adminUsername');
+    const headerUsername = document.getElementById('headerUsername');
+
+    // Logout Button
+    const logoutBtn = document.getElementById('logout-btn');
+
+
+    // --- Authentication and Token Handling ---
+    function checkAuth() {
+        const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username'); // Assuming you store username on login
+        if (!token) {
+            window.location.href = 'admin_login.html';
         } else {
-            cb(new Error('Invalid file type. Only images, PDFs, and documents are allowed.'), false);
+            // Display username if logged in
+            if (adminUsername) adminUsername.textContent = username || 'Admin';
+            if (headerUsername) headerUsername.textContent = username || 'Admin';
         }
     }
-});
 
-
-// --- Mongoose Models ---
-// Your schema definitions here...
-const trackingHistorySchema = new mongoose.Schema({
-    timestamp: { type: Date, default: Date.now },
-    location: { type: String, default: '' },
-    description: { type: String, required: true }
-});
-
-const TrackingSchema = new mongoose.Schema({
-    trackingId: { type: String, required: true, unique: true },
-    status: { type: String, required: true },
-    statusLineColor: { type: String, default: '#2196F3' }, // Default blue
-    blinkingDotColor: { type: String, default: '#FFFFFF' }, // Default white
-    isBlinking: { type: Boolean, default: false },
-    origin: { type: String, default: '' },
-    destination: { type: String, default: '' },
-    expectedDelivery: { type: Date },
-    senderName: { type: String, default: '' },
-    recipientName: { type: String, default: '' },
-    recipientEmail: { type: String, default: '' },
-    packageContents: { type: String, default: '' },
-    serviceType: { type: String, default: '' },
-    recipientAddress: { type: String, default: '' },
-    specialHandling: { type: String, default: '' },
-    weight: { type: Number, default: 0 }, // in kg or lbs
-    history: [trackingHistorySchema],
-    attachedFileName: { type: String, default: null }, // Stores the filename (or reference like S3 key)
-    lastUpdated: { type: Date, default: Date.now }
-});
-
-const UserSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'admin' }
-});
-
-// Hash password before saving
-UserSchema.pre('save', async function (next) {
-    if (this.isModified('password')) {
-        this.password = await bcrypt.hash(this.password, 10);
-    }
-    next();
-});
-
-const Tracking = mongoose.model('Tracking', TrackingSchema);
-const User = mongoose.model('User', UserSchema, 'users');
-
-// --- Initial Data Population Function (Exported, not automatically run by app.listen) ---
-async function populateInitialData() {
-    try {
-        const existingTracking = await Tracking.findOne({ trackingId: '7770947003939' });
-        if (existingTracking) {
-            console.log('Tracking data already exists. Skipping initial population.');
-        } else {
-            const newTracking = new Tracking({
-                trackingId: '7770947003939',
-                status: 'FedEx Hub',
-                statusLineColor: '#14b31e',
-                blinkingDotColor: '#b93737',
-                isBlinking: true,
-                origin: 'Texas, USA',
-                destination: 'Guangzhou, China',
-                expectedDelivery: new Date('2025-07-13T00:00:00Z'),
-                senderName: 'UNDEF Program',
-                recipientName: 'David R Fox',
-                packageContents: '$250,000 USD',
-                serviceType: 'Express',
-                recipientAddress: 'Hollywood, Barangay Narvarte, Nibaliw west. San Fabian, Pangasinan, Philippines ,2433.',
-                specialHandling: 'Signatured Required',
-                weight: 30,
-                history: [
-                    { location: 'Origin', description: 'Shipment created' }
-                ]
-            });
-            await newTracking.save();
-            console.log('New tracking added to MongoDB:', newTracking.toObject());
-        }
-
-        const adminUserExists = await User.findOne({ username: 'admin' });
-        if (!adminUserExists) {
-            const adminUser = new User({
-                username: 'admin',
-                password: process.env.DEFAULT_ADMIN_PASSWORD || 'adminpass',
-                role: 'admin'
-            });
-            await adminUser.save();
-            console.log('Default admin user created with username "admin".');
-            console.log('PLEASE CHANGE THE DEFAULT_ADMIN_PASSWORD IN YOUR .env FILE FOR SECURITY.');
-        } else {
-            console.log('Admin user "admin" already exists.');
-        }
-
-    } catch (error) {
-        console.error('Error populating initial data:', error);
-    }
-}
-
-
-// --- JWT Authentication Middleware ---
-console.log('Server JWT_SECRET (active):', process.env.JWT_SECRET ? 'Loaded' : 'Not Loaded');
-
-const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    console.log('Backend: Received Authorization header:', authHeader);
-    const token = authHeader && authHeader.split(' ')[1];
-
-    console.log('Backend: Extracted token:', token);
-
-    if (token == null) {
-        console.log('Backend: Token is null or undefined, returning 401.');
-        return res.status(401).json({ message: 'Token required.' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) {
-            console.error('JWT verification error:', err);
-            if (err.name === 'TokenExpiredError') {
-                return res.status(401).json({ message: 'Token expired. Please log in again.' });
-            }
-            if (err.name === 'JsonWebTokenError' && err.message === 'jwt malformed') {
-                console.error('Backend: Received a malformed JWT. Check frontend token storage/transmission.');
-            }
-            return res.status(403).json({ message: 'Invalid token.' });
-        }
-        req.user = user;
-        next();
+    logoutBtn.addEventListener('click', function() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username'); // Clear username on logout
+        M.toast({html: 'Logged out successfully!', classes: 'green darken-2'});
+        setTimeout(() => window.location.href = 'admin_login.html', 1500);
     });
-};
 
-const authenticateAdmin = (req, res, next) => {
-    console.log('Backend: authenticateAdmin middleware triggered.');
-    authenticateToken(req, res, () => {
-        if (req.user && req.user.role === 'admin') {
-            next();
-        } else {
-            res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    // Run auth check on page load
+    checkAuth();
+
+
+    // --- UI Navigation Logic ---
+    function showSection(sectionId) {
+        sections.forEach(section => {
+            section.classList.remove('active-section');
+            section.style.display = 'none'; // Hide all sections
+        });
+        const activeSection = document.getElementById(sectionId);
+        if (activeSection) {
+            activeSection.classList.add('active-section');
+            activeSection.style.display = 'block'; // Show the active section
         }
+
+        sidebarLinks.forEach(link => {
+            link.parentElement.classList.remove('active');
+            if (link.dataset.section === sectionId) {
+                link.parentElement.classList.add('active');
+            }
+        });
+        // Close sidebar on mobile after selection
+        if (sidebar && sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+        }
+    }
+
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const sectionId = this.dataset.section;
+            showSection(sectionId);
+
+            // Fetch data specific to the section when navigating
+            if (sectionId === 'all-trackings-section') {
+                fetchAllTrackings();
+            } else if (sectionId === 'manage-tracking-section') {
+                fetchTrackingIdsForSelect(); // For the single tracking update dropdown
+            } else if (sectionId === 'communication-center-section') {
+                fetchTrackingIdsForEmailSelect(); // For email pre-fill
+                fetchTrackingIdsForAttachFileSelect(); // For file attachment
+            } else if (sectionId === 'user-management-section') {
+                fetchAllUsers();
+            }
+        });
     });
-};
+
+    // --- Date and Time Pickers ---
+    M.Datepicker.init(document.querySelectorAll('.datepicker'), {
+        format: 'yyyy-mm-dd',
+        autoClose: true
+    });
+    M.Timepicker.init(document.querySelectorAll('.timepicker'), {
+        defaultTime: 'now',
+        autoClose: true,
+        twelveHour: false,
+        vibrate: true
+    });
 
 
-// --- API Routes ---
-
-// Public endpoint to get tracking details
-app.get('/api/track/:trackingId', async (req, res) => {
-    try {
-        const trackingId = req.params.trackingId;
-        const trackingDetails = await Tracking.findOne({ trackingId: trackingId });
-
-        if (!trackingDetails) {
-            return res.status(404).json({ message: 'Tracking ID not found.' });
-        }
-
-        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-        res.set('Pragma', 'no-cache');
-        res.set('Expires', '0');
-
-        const publicDetails = {
-            trackingId: trackingDetails.trackingId,
-            status: trackingDetails.status,
-            statusLineColor: trackingDetails.statusLineColor,
-            blinkingDotColor: trackingDetails.blinkingDotColor,
-            isBlinking: trackingDetails.isBlinking,
-            origin: trackingDetails.origin,
-            destination: trackingDetails.destination,
-            expectedDelivery: trackingDetails.expectedDelivery,
-            senderName: trackingDetails.senderName,
-            recipientName: trackingDetails.recipientName,
-            recipientEmail: trackingDetails.recipientEmail,
-            packageContents: trackingDetails.packageContents,
-            serviceType: trackingDetails.serviceType,
-            recipientAddress: trackingDetails.recipientAddress,
-            specialHandling: trackingDetails.specialHandling,
-            weight: trackingDetails.weight,
-            history: trackingDetails.history.map(item => ({
-                timestamp: item.timestamp,
-                location: item.location,
-                description: item.description,
-            })),
-            attachedFileName: trackingDetails.attachedFileName,
-            lastUpdated: trackingDetails.lastUpdated
-        };
-
-        res.json(publicDetails);
-
-    } catch (error) {
-        console.error('Error fetching public tracking details:', error);
-        res.status(500).json({ message: 'Server error while fetching tracking details.' });
-    }
-});
-
-
-// Admin Route: Get all tracking records
-app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
-    try {
-        console.log('Received GET /api/admin/trackings request.');
-        const trackings = await Tracking.find({});
-        res.json(trackings);
-    } catch (error) {
-        console.error('Error fetching all trackings for admin:', error);
-        res.status(500).json({ message: 'Server error while fetching all trackings.', error: error.message });
-    }
-});
-
-// GET /api/admin/trackings/:trackingIdValue/history - Fetch history for a tracking (Admin only)
-app.get('/api/admin/trackings/:trackingIdValue/history', authenticateToken, async (req, res) => {
-    try {
-        // Use the parameter name that matches your frontend (or adjust frontend)
-        // For consistency with your POST route, let's call it trackingIdValue
-        const { trackingIdValue } = req.params;
-
-        console.log('Backend: Fetching history for trackingIdValue:', trackingIdValue);
-
-        // --- CHANGE THIS LINE ---
-        // Instead of findById, use findOne to search by your custom 'trackingId' field
-        const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
-
-        if (!tracking) {
-            console.log('Backend: Tracking record not found for custom ID (history fetch):', trackingIdValue);
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
-
-        res.json({ success: true, history: tracking.history || [] });
-    } catch (error) {
-        console.error('Error fetching tracking history:', error);
-        res.status(500).json({ message: 'Error fetching tracking history.' });
-    }
-});
-
-// Admin Route: Get a single tracking record by ID (Corrected to find by custom 'trackingId')
-app.get('/api/admin/trackings/:trackingIdValue', authenticateAdmin, async (req, res) => {
-    try {
-        const { trackingIdValue } = req.params;
-        console.log(`Backend: Received GET /api/admin/trackings/${trackingIdValue} request.`); // This will log the ID received by backend
-
-        const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
-
-        if (!tracking) {
-            console.log(`Backend: Tracking record not found for custom ID: ${trackingIdValue}`); // This log means the ID wasn't found in DB
-            return res.status(404).json({ message: 'Tracking record not found.' }); // This is the exact message you're seeing
-        }
-
-        res.json(tracking); // Returns the full tracking object
-    } catch (error) {
-        console.error(`Error fetching single tracking ${req.params.trackingIdValue} for admin:`, error);
-        res.status(500).json({ message: 'Server error while fetching single tracking details.', error: error.message });
-    }
-});
-
-
-// Admin Route: Get dashboard statistics
-app.get('/api/admin/dashboard-stats', authenticateAdmin, async (req, res) => {
-    try {
-        console.log('Received GET /api/admin/dashboard-stats request.');
-        const totalTrackings = await Tracking.countDocuments({});
-        const deliveredTrackings = await Tracking.countDocuments({ status: 'Delivered' });
-        const inTransitTrackings = await Tracking.countDocuments({
-            status: { $nin: ['Delivered', 'Cancelled', 'On Hold'] }
-        });
-        const onHoldTrackings = await Tracking.countDocuments({ status: 'On Hold' });
-
-        res.json({
-            totalTrackings,
-            deliveredTrackings,
-            inTransitTrackings,
-            onHoldTrackings,
-        });
-    } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
-        res.status(500).json({ message: 'Server error while fetching dashboard statistics.', error: error.message });
-    }
-});
-
-// POST /admin/trackings - Create a new tracking record (Admin only)
-// Note: This route still expects JSON data, not multipart/form-data.
-// If your 'create new tracking' form also sends files, you'll need multer here too.
-app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
-    try {
-        console.log('Received POST /api/admin/trackings request. Initial req.body:', req.body);
-        console.log('Type of req.body:', typeof req.body);
-        console.log('Is req.rawBody present and type:', req.rawBody ? typeof req.rawBody : 'not present');
-
-        let bodyData = req.body;
-
-        // This workaround is for JSON bodies that might arrive as Buffers in serverless.
-        // It's still relevant if this route consistently receives JSON.
-        if (bodyData instanceof Buffer) {
-            console.log('req.body is a Buffer, attempting to parse it as JSON...');
-            try {
-                bodyData = JSON.parse(bodyData.toString('utf8'));
-                console.log('Successfully parsed req.body from Buffer:', bodyData);
-            } catch (parseError) {
-                console.error('Failed to parse req.body Buffer as JSON:', parseError);
-                return res.status(400).json({ message: 'Invalid JSON body from Buffer parsing.' });
+    // --- Tracking Status Visual Indicator Logic (Add Tracking) ---
+    if (addStatusInput && addStatusCircle) {
+        addStatusInput.addEventListener('input', function() {
+            const status = this.value;
+            addStatusCircle.className = 'status-circle'; // Reset classes
+            addStatusCircle.classList.add(getStatusColorClass(status));
+            // Apply blinking class if checkbox is checked
+            if (addIsBlinkingCheckbox.checked) {
+                addStatusCircle.classList.add('blinking');
             }
-        } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0 && req.rawBody && req.rawBody instanceof Buffer) {
-            console.log('req.body was an empty object, but not a Buffer. Checking for req.rawBody...');
-            try {
-                bodyData = JSON.parse(req.rawBody.toString('utf8'));
-                console.log('Successfully parsed from req.rawBody:', bodyData);
-            } catch (parseError) {
-                console.error('Failed to parse req.rawBody as JSON:', parseError);
-                return res.status(400).json({ message: 'Invalid JSON body in rawBody.' });
-            }
-        }
-        
-        const {
-            trackingId,
-            status,
-            statusLineColor,
-            blinkingDotColor,
-            isBlinking,
-            origin,
-            destination,
-            senderName,
-            recipientName,
-            recipientEmail,
-            packageContents,
-            serviceType,
-            recipientAddress,
-            specialHandling,
-            weight,
-            history,
-            expectedDeliveryDate,
-            expectedDeliveryTime
-        } = bodyData;
+        });
 
-        if (!trackingId || !status) {
-            console.error('Validation failed: Tracking ID or Status is missing. Tracking ID:', trackingId, 'Status:', status);
-            return res.status(400).json({ message: 'Tracking ID and Status are required.' });
-        }
-
-        const existingTracking = await Tracking.findOne({ trackingId });
-        if (existingTracking) {
-            return res.status(409).json({ message: 'Tracking ID already exists.' });
-        }
-
-        let finalExpectedDelivery;
-        if (expectedDeliveryDate) {
-            const effectiveDate = expectedDeliveryDate;
-            const effectiveTimeInput = expectedDeliveryTime || '00:00';
-            const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
-
-            if (parsedTime) {
-                finalExpectedDelivery = new Date(Date.UTC(
-                    new Date(effectiveDate).getUTCFullYear(),
-                    new Date(effectiveDate).getUTCMonth(),
-                    new Date(effectiveDate).getUTCDate(),
-                    parsedTime.hour,
-                    parsedTime.minute
-                ));
-                if (isNaN(finalExpectedDelivery.getTime())) {
-                    console.warn(`Could not parse combined expected delivery date/time: ${effectiveDate} ${effectiveTimeInput}`);
-                    finalExpectedDelivery = undefined;
-                }
+        addIsBlinkingCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                addStatusCircle.classList.add('blinking');
             } else {
-                console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
+                addStatusCircle.classList.remove('blinking');
             }
-        }
+        });
+    }
 
-        const newTracking = new Tracking({
-            trackingId,
-            status,
-            statusLineColor: statusLineColor || '#2196F3',
-            blinkingDotColor: blinkingDotColor || '#FFFFFF',
-            isBlinking: typeof isBlinking === 'boolean' ? isBlinking : false,
-            origin,
-            destination,
-            expectedDelivery: finalExpectedDelivery,
-            senderName,
-            recipientName,
-            recipientEmail,
-            packageContents,
-            serviceType,
-            recipientAddress,
-            specialHandling,
-            weight: parseFloat(weight) || 0,
-            history: history && Array.isArray(history) ? history : [],
-            lastUpdated: new Date()
+
+    // --- Tracking Status Visual Indicator Logic (Update Tracking) ---
+    if (updateStatusInput && updateStatusCircle && updateIsBlinkingOriginal) {
+        updateStatusInput.addEventListener('input', function() {
+            const status = this.value;
+            updateStatusCircle.className = 'status-circle'; // Reset classes
+            updateStatusCircle.classList.add(getStatusColorClass(status));
+            // Apply blinking class if checkbox is checked
+            if (updateIsBlinkingOriginal.checked) { // Use the correct ID for the checkbox
+                updateStatusCircle.classList.add('blinking');
+            }
         });
 
-        await newTracking.save();
-        res.status(201).json({ message: 'Tracking record created successfully!', tracking: newTracking });
+        updateIsBlinkingOriginal.addEventListener('change', function() {
+            if (this.checked) {
+                updateStatusCircle.classList.add('blinking');
+            } else {
+                updateStatusCircle.classList.remove('blinking');
+            }
+        });
+    }
 
-    } catch (error) {
-        console.error('Error adding new tracking record:', error);
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ message: error.message, errors: error.errors });
+    // --- Create New Tracking ---
+    if (addTrackingForm) {
+        addTrackingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const trackingData = {
+                trackingId: document.getElementById('addTrackingId').value,
+                status: addStatusInput.value,
+                isBlinking: addIsBlinkingCheckbox.checked,
+                statusLineColor: document.getElementById('addStatusLineColor').value,
+                blinkingDotColor: document.getElementById('addBlinkingDotColor').value,
+                senderName: document.getElementById('addSenderName').value,
+                recipientName: document.getElementById('addRecipientName').value,
+                recipientEmail: document.getElementById('addRecipientEmail').value,
+                packageContents: document.getElementById('addPackageContents').value,
+                serviceType: document.getElementById('addServiceType').value,
+                recipientAddress: document.getElementById('addRecipientAddress').value,
+                specialHandling: document.getElementById('addSpecialHandling').value,
+                expectedDeliveryDate: document.getElementById('addExpectedDeliveryDate').value,
+                expectedDeliveryTime: document.getElementById('addExpectedDeliveryTime').value,
+                origin: document.getElementById('addOrigin').value,
+                destination: document.getElementById('addDestination').value,
+                weight: parseFloat(document.getElementById('addWeight').value)
+            };
+
+            fetch('/api/admin/trackings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(trackingData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error adding tracking');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({ html: 'Tracking added successfully!', classes: 'green darken-2' });
+                    addTrackingForm.reset();
+                    M.updateTextFields(); // Update Materialize labels
+                    // Re-initialize date/time pickers if needed after reset
+                    M.Datepicker.init(document.querySelectorAll('.datepicker'));
+                    M.Timepicker.init(document.querySelectorAll('.timepicker'));
+                    addStatusCircle.className = 'status-circle'; // Reset indicator
+                    fetchAllTrackings(); // Refresh all trackings table and dashboard stats
+                    fetchTrackingIdsForSelect(); // Refresh dropdowns
+                    fetchTrackingIdsForEmailSelect();
+                    fetchTrackingIdsForAttachFileSelect();
+                } else {
+                    M.toast({ html: `Error: ${data.message || 'Could not add tracking.'}`, classes: 'red darken-2' });
+                }
+            })
+            .catch(error => {
+                console.error('Error adding tracking:', error);
+                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+            });
+        });
+    }
+
+    // --- Fetch All Trackings (for table and dashboard stats) ---
+    function fetchAllTrackings() {
+        fetch('/api/admin/trackings', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error fetching trackings');
+                });
+            }
+            return response.json();
+        })
+        .then(trackings => {
+            updateDashboardStats(trackings); // Update dashboard numbers
+            if (allTrackingsTableBody) {
+                allTrackingsTableBody.innerHTML = ''; // Clear existing rows
+                if (trackings.length === 0) {
+                    allTrackingsTableBody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 20px;">No trackings found.</td></tr>';
+                    return;
+                }
+                trackings.forEach(tracking => {
+                    const row = document.createElement('tr');
+                    const expectedDelivery = tracking.expectedDeliveryDate ?
+                        new Date(tracking.expectedDeliveryDate).toLocaleDateString() + (tracking.expectedDeliveryTime ? ' ' + tracking.expectedDeliveryTime : '') : 'N/A';
+                    const lastUpdated = new Date(tracking.updatedAt || tracking.createdAt).toLocaleString();
+
+                   row.innerHTML = `
+    <td>${tracking.trackingId}</td>
+    <td>
+        <div class="status-indicator">
+            <div class="status-circle ${getStatusColorClass(tracking.status)} ${tracking.isBlinking ? 'blinking' : ''}"
+                style="background-color: ${tracking.isBlinking ? tracking.blinkingDotColor : getStatusColorClass(tracking.status)}; border-color: ${tracking.statusLineColor};"></div>
+            ${tracking.status}
+        </div>
+    </td>
+    <td>${tracking.statusLineColor || 'N/A'}</td>
+    <td>${tracking.isBlinking ? 'Yes' : 'No'}</td>
+    <td>${tracking.senderName}</td>
+    <td>${tracking.recipientName}</td>
+    <td>${tracking.recipientEmail}</td>
+    <td>${tracking.packageContents}</td>
+    <td>${tracking.serviceType}</td>
+    <td>${tracking.recipientAddress}</td>
+    <td>${tracking.specialHandling || 'N/A'}</td>
+    <td>${expectedDelivery}</td>
+    <td>${lastUpdated}</td>
+    <td>
+        <button class="btn btn-small waves-effect waves-light blue darken-1 view-edit-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">edit</i></button>
+        <button class="btn btn-small waves-effect waves-light red darken-2 delete-tracking-btn"
+                data-mongo-id="${tracking._id}"             data-custom-id="${tracking.trackingId}">   <i class="material-icons">delete</i>
+        </button>
+    </td>
+`;
+allTrackingsTableBody.appendChild(row);
+                });
+
+                // Attach event listeners for edit/delete buttons in the table
+                document.querySelectorAll('.view-edit-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const trackingId = this.dataset.trackingId;
+                        // Switch to 'Manage Single Tracking' section
+                        showSection('manage-tracking-section');
+                        // Set the select dropdown to this tracking ID and trigger its change event
+                        const selectInstance = M.FormSelect.getInstance(singleTrackingIdSelect);
+                        if (selectInstance) {
+                            selectInstance.destroy(); // Destroy to prevent issues with setting value
+                        }
+                        singleTrackingIdSelect.value = trackingId;
+                        M.FormSelect.init(singleTrackingIdSelect); // Re-initialize
+                        singleTrackingIdSelect.dispatchEvent(new Event('change')); // Manually trigger change
+                    });
+                });
+
+               document.querySelectorAll('.delete-tracking-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const mongoIdToDelete = this.dataset.mongoId; // <--- CHANGE 2: Read the new data-mongo-id
+        const customTrackingIdForConfirm = this.dataset.customId; // Read the optional data-custom-id
+
+        if (confirm(`Are you sure you want to delete tracking ID: ${customTrackingIdForConfirm || mongoIdToDelete}? This action cannot be undone.`)) {
+            deleteTracking(mongoIdToDelete); // <--- Pass the mongoIdToDelete
         }
-        res.status(500).json({ message: 'Server error while creating tracking record.', error: error.message });
-    }
-});
-
-
-// Helper function to parse time including AM/PM
-function parseTimeWithAmPm(timeString) {
-    const timeRegex24 = /^([01]?[0-9]|2[0-3]):([0-5][0-9])$/; // HH:MM (24-hour)
-    const timeRegex12 = /^([0]?[1-9]|1[0-2]):([0-5][0-9])\s*([APap][Mm])$/; // HH:MM AM/PM
-
-    let match24 = timeString.match(timeRegex24);
-    if (match24) {
-        return { hour: parseInt(match24[1], 10), minute: parseInt(match24[2], 10) };
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching all trackings:', error);
+            if (allTrackingsTableBody) {
+                allTrackingsTableBody.innerHTML = `<tr><td colspan="14" style="text-align: center; padding: 20px; color: red;">Failed to load trackings: ${error.message}</td></tr>`;
+            }
+            M.toast({ html: `Failed to load all trackings: ${error.message}`, classes: 'red darken-2' });
+        });
     }
 
-    let match12 = timeString.match(timeRegex12);
-    if (match12) {
-        let hour = parseInt(match12[1], 10);
-        let minute = parseInt(match12[2], 10);
-        const ampm = match12[3].toLowerCase();
+    // --- Fetch Tracking IDs for Select Dropdowns ---
+    function populateSelect(selectElement, trackings, selectedValue = null) {
+        if (!selectElement) return;
 
-        if (ampm === 'pm' && hour !== 12) {
-            hour += 12;
-        } else if (ampm === 'am' && hour === 12) {
-            hour = 0; // Midnight (12 AM)
+        // Clear existing options, keep the disabled default one
+        selectElement.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
+
+        trackings.forEach(tracking => {
+            const option = document.createElement('option');
+            option.value = tracking.trackingId;
+            option.textContent = tracking.trackingId;
+            selectElement.appendChild(option);
+        });
+
+        if (selectedValue) {
+            selectElement.value = selectedValue;
         }
-        return { hour, minute };
+
+        // Re-initialize Materialize select
+        M.FormSelect.init(selectElement);
     }
 
-    return null;
+    function fetchTrackingIdsForSelect() {
+        fetch('/api/admin/trackings', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch tracking IDs');
+            return response.json();
+        })
+        .then(trackings => {
+            populateSelect(singleTrackingIdSelect, trackings);
+        })
+        .catch(error => {
+            console.error('Error fetching tracking IDs for select:', error);
+            M.toast({ html: `Failed to load tracking IDs: ${error.message}`, classes: 'red darken-2' });
+        });
+    }
+
+    function fetchTrackingIdsForEmailSelect() {
+        fetch('/api/admin/trackings', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch tracking IDs for email select');
+            return response.json();
+        })
+        .then(trackings => {
+            populateSelect(emailTrackingIdSelect, trackings);
+        })
+        .catch(error => {
+            console.error('Error fetching tracking IDs for email select:', error);
+        });
+    }
+
+    function fetchTrackingIdsForAttachFileSelect() {
+        fetch('/api/admin/trackings', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch tracking IDs for attachment select');
+            return response.json();
+        })
+        .then(trackings => {
+            populateSelect(attachFileTrackingIdSelect, trackings);
+        })
+        .catch(error => {
+            console.error('Error fetching tracking IDs for attachment select:', error);
+        });
+    }
+
+    // --- Fetch Single Tracking Details for Update Form ---
+    if (singleTrackingIdSelect) {
+        singleTrackingIdSelect.addEventListener('change', function() {
+            const trackingId = this.value;
+            if (!trackingId) {
+                updateTrackingForm.style.display = 'none';
+                return;
+            }
+
+            fetch(`/api/admin/trackings/${trackingId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching tracking details');
+                    });
+                }
+                return response.json();
+            })
+            .then(tracking => {
+                updateTrackingMongoId.value = tracking._id;
+                updateTrackingId.value = tracking.trackingId;
+                updateStatusInput.value = tracking.status;
+                updateIsBlinkingOriginal.checked = tracking.isBlinking || false; // Set checkbox state
+                document.getElementById('updateStatusLineColor').value = tracking.statusLineColor || '#2196F3';
+                document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
+                document.getElementById('updateSenderName').value = tracking.senderName;
+                document.getElementById('updateRecipientName').value = tracking.recipientName;
+                document.getElementById('updateRecipientEmail').value = tracking.recipientEmail;
+                document.getElementById('updatePackageContents').value = tracking.packageContents || '';
+                document.getElementById('updateServiceType').value = tracking.serviceType;
+                document.getElementById('updateRecipientAddress').value = tracking.recipientAddress;
+                document.getElementById('updateSpecialHandling').value = tracking.specialHandling || '';
+                document.getElementById('updateExpectedDeliveryDate').value = tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toISOString().split('T')[0] : '';
+                document.getElementById('updateExpectedDeliveryTime').value = tracking.expectedDeliveryTime || '';
+                document.getElementById('updateOrigin').value = tracking.origin || '';
+                document.getElementById('updateDestination').value = tracking.destination || '';
+                document.getElementById('updateWeight').value = tracking.weight || '';
+
+                // Manually trigger input event for status to update color circle
+                updateStatusInput.dispatchEvent(new Event('input'));
+                updateIsBlinkingOriginal.dispatchEvent(new Event('change')); // Trigger change for blinking
+
+                M.updateTextFields(); // Update Materialize labels
+                // Re-init date/time pickers for the update form
+                M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+                M.Timepicker.init(document.getElementById('updateExpectedDeliveryTime'));
+
+                updateTrackingForm.style.display = 'block';
+               fetchTrackingHistory(tracking.trackingId);// Fetch and display history for this tracking
+            })
+            .catch(error => {
+                console.error('Error fetching tracking details:', error);
+                M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
+                updateTrackingForm.style.display = 'none';
+            });
+        });
+    }
+
+    // --- Update Tracking ---
+    if (updateTrackingForm) {
+        updateTrackingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const mongoId = updateTrackingMongoId.value;
+            const updatedData = {
+                status: updateStatusInput.value,
+                isBlinking: updateIsBlinkingOriginal.checked,
+                statusLineColor: document.getElementById('updateStatusLineColor').value,
+                blinkingDotColor: document.getElementById('updateBlinkingDotColor').value,
+                senderName: document.getElementById('updateSenderName').value,
+                recipientName: document.getElementById('updateRecipientName').value,
+                recipientEmail: document.getElementById('updateRecipientEmail').value,
+                packageContents: document.getElementById('updatePackageContents').value,
+                serviceType: document.getElementById('updateServiceType').value,
+                recipientAddress: document.getElementById('updateRecipientAddress').value,
+                specialHandling: document.getElementById('updateSpecialHandling').value,
+                expectedDeliveryDate: document.getElementById('updateExpectedDeliveryDate').value,
+                expectedDeliveryTime: document.getElementById('updateExpectedDeliveryTime').value,
+                origin: document.getElementById('updateOrigin').value,
+                destination: document.getElementById('updateDestination').value,
+                weight: parseFloat(document.getElementById('updateWeight').value)
+            };
+
+            fetch(`/api/admin/trackings/${mongoId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(updatedData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error updating tracking');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({ html: 'Tracking updated successfully!', classes: 'green darken-2' });
+                    fetchAllTrackings(); // Refresh all trackings table and dashboard stats
+                    fetchTrackingIdsForSelect(); // Refresh dropdown
+                    updateTrackingForm.style.display = 'none'; // Hide the form after update
+                } else {
+                    M.toast({ html: `Error: ${data.message || 'Could not update tracking.'}`, classes: 'red darken-2' });
+                }
+            })
+            .catch(error => {
+                console.error('Error updating tracking:', error);
+                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+            });
+        });
+    }
+
+ // --- Delete Tracking ---
+function deleteTracking(trackingId) {
+    console.log('Attempting to delete tracking with ID:', trackingId);
+    console.log('Type of tracking ID:', typeof trackingId);
+
+    // Validate tracking ID format (24-character hex string)
+    if (
+        !trackingId ||
+        typeof trackingId !== 'string' ||
+        !trackingId.trim().match(/^[0-9a-fA-F]{24}$/)
+    ) {
+        M.toast({ html: 'Invalid tracking ID format on frontend.', classes: 'red darken-2' });
+        console.error('Client-side validation failed: trackingId is', trackingId);
+        return;
+    }
+
+
+     fetch(`/api/admin/trackings/${trackingId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error deleting tracking');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            M.toast({ html: 'Tracking deleted successfully!', classes: 'green darken-2' });
+            fetchAllTrackings();
+            fetchTrackingIdsForSelect();
+            fetchTrackingIdsForEmailSelect();
+            fetchTrackingIdsForAttachFileSelect();
+        } else {
+            M.toast({ html: `Error: ${data.message || 'Could not delete tracking.'}`, classes: 'red darken-2' });
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting tracking:', error);
+        M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+    });
+}
+    
+
+  // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
+function fetchTrackingHistory(trackingId) { // The 'trackingId' parameter is critical
+    console.log(`Attempting to fetch history for tracking ID: ${trackingId}`); // This log will show what's being sent
+
+    // The fetch request is now going to: /api/admin/trackings/YOUR_CUSTOM_TRACKING_ID
+    fetch(`/api/admin/trackings/${trackingId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) { // This is where response.status is checked
+            if (response.status === 401 || response.status === 403) {
+                // ... session expired logic ...
+            }
+            // If the status is 404 (Not Found), this will run
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error fetching tracking details');
+            });
+        }
+        return response.json();
+    })
+    .then(trackingData => { // The response is now the full tracking object, not just history
+        const historyEvents = trackingData.history; // <--- Extract the history array here!
+
+        const ul = trackingHistoryList.querySelector('ul');
+        ul.innerHTML = ''; // Clear previous history
+
+        if (!historyEvents || historyEvents.length === 0) {
+            ul.innerHTML = '<li class="collection-item">No history events yet.</li>';
+            return;
+        }
+
+        // Sort history by timestamp (assuming it's not already sorted on backend)
+        historyEvents.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        historyEvents.forEach(event => {
+            const li = document.createElement('li');
+            li.classList.add('collection-item');
+            li.innerHTML = `
+                <div class="history-content">
+                    <strong>${new Date(event.timestamp).toLocaleString()}</strong> - ${event.location ? `${event.location}: ` : ''}${event.description}
+                </div>
+                <div class="history-actions">
+                    <button class="btn-small waves-effect waves-light blue edit-history-btn"
+                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}"
+                            data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
+                            data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
+                            data-location="${event.location || ''}"
+                            data-description="${event.description}">
+                        <i class="material-icons">edit</i>
+                    </button>
+                    <button class="btn-small waves-effect waves-light red delete-history-btn"
+                            data-tracking-mongo-id="${trackingData._id}" data-history-id="${event._id}">
+                        <i class="material-icons">delete</i>
+                    </button>
+                </div>
+            `;
+            ul.appendChild(li);
+        });
+
+        // Attach listeners to newly created history buttons
+        attachHistoryButtonListeners();
+    })
+    .catch(error => {
+        console.error('Error fetching tracking history:', error);
+        const ul = trackingHistoryList.querySelector('ul');
+        ul.innerHTML = `<li class="collection-item red-text">Failed to load history: ${error.message}</li>`;
+        M.toast({ html: `Failed to load tracking history: ${error.message}`, classes: 'red darken-2' });
+    });
 }
 
-// POST /api/admin/trackings/:trackingIdValue/history - Add a new history event to a tracking (Admin only)
-app.post('/api/admin/trackings/:trackingIdValue/history', authenticateAdmin, async (req, res) => {
-    console.log('\n--- Backend: Add History Event Request Received ---');
-    // Changed param name for clarity
-    const { trackingIdValue } = req.params;
-    console.log('Backend: req.params.trackingIdValue (Tracking ID from URL):', trackingIdValue);
-    console.log('Backend: Full req.body received:', req.body);
+    function attachHistoryButtonListeners() {
+        document.querySelectorAll('.edit-history-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const trackingMongoId = this.dataset.trackingMongoId;
+                const historyId = this.dataset.historyId;
+                const date = this.dataset.date;
+                const time = this.dataset.time;
+                const location = this.dataset.location;
+                const description = this.dataset.description;
 
-    let bodyData = req.body;
+                editHistoryModalTrackingMongoId.value = trackingMongoId;
+                editHistoryModalHistoryId.value = historyId;
+                editHistoryDate.value = date;
+                editHistoryTime.value = time;
+                editHistoryLocation.value = location;
+                editHistoryDescription.value = description;
 
-    if (bodyData instanceof Buffer) {
-        console.log('Backend: req.body for history is a Buffer, attempting to parse it as JSON...');
-        try {
-            bodyData = JSON.parse(bodyData.toString('utf8'));
-            console.log('Backend: Successfully parsed req.body Buffer for history:', bodyData);
-        } catch (parseError) {
-            console.error('Backend: Failed to parse req.body Buffer as JSON for history:', parseError);
-            return res.status(400).json({ message: 'Invalid JSON body for history from Buffer parsing.' });
-        }
-    } else if (typeof bodyData === 'object' && bodyData !== null && Object.keys(bodyData).length === 0 && req.rawBody && req.rawBody instanceof Buffer) {
-        console.log('Backend: req.body for history was empty object, checking req.rawBody...');
-        try {
-            bodyData = JSON.parse(req.rawBody.toString('utf8'));
-            console.log('Backend: Successfully parsed from req.rawBody for history:', bodyData);
-        } catch (parseError) {
-            console.error('Backend: Failed to parse req.rawBody as JSON for history:', parseError);
-            return res.status(400).json({ message: 'Invalid JSON body in rawBody for history.' });
-        }
-    }
+                M.updateTextFields(); // Update labels for pre-filled fields
+                // Re-init date/time pickers for the modal
+                M.Datepicker.init(editHistoryDate);
+                M.Timepicker.init(editHistoryTime);
 
-    const { date, time, location, description } = bodyData;
-
-    if (!date || date.trim() === '' || !time || time.trim() === '' || !location || location.trim() === '' || !description || description.trim() === '') {
-        console.log('Backend: Validation FAILED - One or more required history fields are missing or empty.');
-        return res.status(400).json({ message: 'Date, Time, Location, and Description are required to add a new history event.' });
-    }
-
-    try {
-        // --- CORRECTED LINE: Use findOne with the 'trackingId' field ---
-        const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
-
-        if (!tracking) {
-            console.log('Backend: Tracking record not found for custom ID:', trackingIdValue);
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
-
-        let eventTimestamp;
-        const parsedTime = parseTimeWithAmPm(time);
-
-        console.log('Backend: Raw time string for parsing:', time);
-        console.log('Backend: Result of parseTimeWithAmPm:', parsedTime);
-
-        if (parsedTime) {
-            eventTimestamp = new Date(Date.UTC(
-                new Date(date).getUTCFullYear(),
-                new Date(date).getUTCMonth(),
-                new Date(date).getUTCDate(),
-                parsedTime.hour,
-                parsedTime.minute
-            ));
-
-            if (isNaN(eventTimestamp.getTime())) {
-                console.warn(`Backend: Could not parse combined history date/time. Resulting timestamp is NaN. Date: ${date}, Time: ${time}`);
-                return res.status(400).json({ message: 'Invalid date or time format provided for history event.' });
-            }
-        } else {
-            console.warn(`Backend: Invalid time format for history event: "${time}". parseTimeWithAmPm returned null.`);
-            return res.status(400).json({ message: 'Invalid time format for history event. Expected HH:MM or HH:MM AM/PM.' });
-        }
-
-        const newHistoryEvent = {
-            timestamp: eventTimestamp,
-            location: location,
-            description: description
-        };
-
-        if (!tracking.history) {
-            tracking.history = [];
-        }
-        tracking.history.push(newHistoryEvent);
-        tracking.lastUpdated = new Date();
-
-        await tracking.save();
-
-        console.log('Backend: History event successfully added to tracking ID:', trackingIdValue);
-        res.status(201).json({ success: true, message: 'History event added successfully!', tracking: tracking.toObject(), newEvent: newHistoryEvent }); // Added success: true
-    } catch (error) {
-        console.error('Backend: Uncaught error adding history event:', error);
-        // CastError should no longer occur here for valid trackingIdValue
-        res.status(500).json({ success: false, message: 'Server error while adding history event.', error: error.message }); // Added success: false
-    }
-});
-
-// Edit a specific history event
-app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
-    const { id, historyId } = req.params;
-    const { date, time, location, description } = req.body; // This assumes JSON body, which is usually the case for PUT updates
-
-    if (date === undefined && time === undefined && location === undefined && description === undefined) {
-        return res.status(400).json({ message: 'At least one field (date, time, location, or description) is required to update a history event.' });
-    }
-
-    try {
-        const tracking = await Tracking.findById(id);
-
-        if (!tracking) {
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
-
-        const historyEvent = tracking.history.id(historyId);
-
-        if (!historyEvent) {
-            return res.status(404).json({ message: 'History event not found.' });
-        }
-
-        if (location !== undefined) historyEvent.location = location;
-        if (description !== undefined) historyEvent.description = description;
-
-        let newTimestamp;
-        if (date !== undefined || time !== undefined) {
-            const existingDateISO = historyEvent.timestamp.toISOString().split('T')[0];
-            const existingTimeISO = historyEvent.timestamp.toISOString().split('T')[1].substring(0, 5);
-
-            const effectiveDate = date !== undefined ? date : existingDateISO;
-            const effectiveTimeInput = time !== undefined ? time : existingTimeISO;
-
-            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-            if (!dateRegex.test(effectiveDate)) {
-                console.warn(`Invalid date format for history event update: ${effectiveDate}`);
-                return res.status(400).json({ message: 'Invalid date format for history event update. Expected YYYY-MM-DD.' });
-            }
-
-            const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
-            if (!parsedTime) {
-                console.warn(`Invalid time format for history event update: ${effectiveTimeInput}`);
-                return res.status(400).json({ message: 'Invalid time format for history event update. Expected HH:MM or HH:MM AM/PM.' });
-            }
-
-            newTimestamp = new Date(Date.UTC(
-                new Date(effectiveDate).getUTCFullYear(),
-                new Date(effectiveDate).getUTCMonth(),
-                new Date(effectiveDate).getUTCDate(),
-                parsedTime.hour,
-                parsedTime.minute
-            ));
-
-            if (isNaN(newTimestamp.getTime())) {
-                console.warn(`Could not parse combined timestamp from admin input: ${effectiveDate} ${effectiveTimeInput}`);
-                return res.status(400).json({ message: 'Invalid date or time provided for history event update.' });
-            }
-            historyEvent.timestamp = newTimestamp;
-        }
-
-        tracking.history.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-        tracking.lastUpdated = new Date();
-        await tracking.save();
-
-        res.json({ message: 'History event updated successfully!', historyEvent: historyEvent.toObject() });
-    } catch (error) {
-        console.error(`Error updating history event ${historyId} for tracking ID ${id}:`, error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid ID format for tracking or history event.' });
-        }
-        res.status(500).json({ message: 'Server error while updating history event.', error: error.message });
-    }
-});
-
-
-// Admin Route to Update Tracking Details (general updates, including trackingId change)
-app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
-    const { id } = req.params;
-    const updateData = req.body; // updateData will be req.body
-
-    // --- IMPORTANT: THESE ARE THE NEW LOGS WE NEED! ---
-    console.log(`Backend: Received PUT request for MongoDB ID: ${id}`);
-    console.log('Backend: Data to update (raw):', req.body); // Still good to keep this
-    console.log('Backend: Type of updateData:', typeof updateData); // <--- NEW LINE
-    console.log('Backend: Keys of updateData:', Object.keys(updateData)); // <--- NEW LINE
-    // ---------------------------------------------------
-
-    try {
-        let currentTracking = await Tracking.findById(id);
-
-        if (!currentTracking) {
-            console.log(`Backend: Tracking record not found for ID: ${id}`);
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
-
-        if (updateData.trackingId && updateData.trackingId !== currentTracking.trackingId) {
-            const newTrackingId = updateData.trackingId;
-            const existingTrackingWithNewId = await Tracking.findOne({ trackingId: newTrackingId });
-
-            if (existingTrackingWithNewId && String(existingTrackingWithNewId._id) !== id) {
-                return res.status(409).json({ message: 'New Tracking ID already exists. Please choose a different one.' });
-            }
-
-            console.log(`Tracking ID changed from (old): ${currentTracking.trackingId} to (new): ${newTrackingId}`);
-            currentTracking.trackingId = newTrackingId;
-        }
-
-        for (const key of Object.keys(updateData)) {
-            if (key === 'expectedDeliveryDate') {
-                const effectiveDate = updateData.expectedDeliveryDate;
-                const effectiveTimeInput = updateData.expectedDeliveryTime;
-
-                if (effectiveDate && effectiveTimeInput) {
-                    const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
-                    if (!parsedTime) {
-                        console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
-                        continue;
-                    }
-
-                    const newExpectedDelivery = new Date(Date.UTC(
-                        new Date(effectiveDate).getUTCFullYear(),
-                        new Date(effectiveDate).getUTCMonth(),
-                        new Date(effectiveDate).getUTCDate(),
-                        parsedTime.hour,
-                        parsedTime.minute
-                    ));
-
-                    if (!isNaN(newExpectedDelivery.getTime())) {
-                        currentTracking.expectedDelivery = newExpectedDelivery;
-                    } else {
-                        console.warn(`Could not parse expectedDelivery: ${effectiveDate} ${effectiveTimeInput}`);
-                    }
-                }
-            } else if (key === 'expectedDeliveryTime') {
-                if (updateData.expectedDeliveryDate === undefined) {
-                    const effectiveDate = currentTracking.expectedDelivery
-                        ? currentTracking.expectedDelivery.toISOString().split('T')[0]
-                        : new Date().toISOString().split('T')[0];
-
-                    const effectiveTimeInput = updateData.expectedDeliveryTime;
-                    if (effectiveTimeInput) {
-                        const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
-                        if (!parsedTime) {
-                            console.warn(`Invalid time format: ${effectiveTimeInput}`);
-                            continue;
-                        }
-
-                        const newExpectedDelivery = new Date(Date.UTC(
-                            new Date(effectiveDate).getUTCFullYear(),
-                            new Date(effectiveDate).getUTCMonth(),
-                            new Date(effectiveDate).getUTCDate(),
-                            parsedTime.hour,
-                            parsedTime.minute
-                        ));
-
-                        if (!isNaN(newExpectedDelivery.getTime())) {
-                            currentTracking.expectedDelivery = newExpectedDelivery;
-                        } else {
-                            console.warn(`Could not parse expectedDelivery: ${effectiveDate} ${effectiveTimeInput}`);
-                        }
-                    }
-                }
-            } else if (key === 'isBlinking') {
-                currentTracking.isBlinking = typeof updateData[key] === 'boolean' ? updateData[key] : currentTracking.isBlinking;
-            } else if (key === 'weight') {
-                currentTracking.weight = parseFloat(updateData.weight) || 0;
-            } else if (key !== 'trackingId') {
-                currentTracking[key] = updateData[key];
-            }
-        }
-
-        currentTracking.lastUpdated = new Date();
-        await currentTracking.save();
-        console.log('Backend: Successfully updated tracking. New data:', currentTracking);
-
-        res.json({ success: true, message: 'Tracking updated successfully!', tracking: currentTracking });
-    } catch (error) {
-        console.error('Error updating tracking details:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid tracking ID format.' });
-        }
-        res.status(500).json({ message: 'Server error when updating tracking details.', error: error.message });
-    }
-});
-
-
-// Delete a specific history event by _id
-app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
-    const { id, historyId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid tracking ID format.' });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(historyId)) {
-        return res.status(400).json({ message: 'Invalid history ID format.' });
-    }
-
-    try {
-        const tracking = await Tracking.findById(id);
-        if (!tracking) {
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
-
-        const before = tracking.history.length;
-        // Corrected line: Use 'new' keyword for ObjectId
-        tracking.history.pull({ _id: new mongoose.Types.ObjectId(historyId) }); // <-- Fix is here!
-
-        if (tracking.history.length === before) {
-            return res.status(404).json({ message: 'History event not found with the provided ID.' });
-        }
-
-        tracking.lastUpdated = new Date();
-        await tracking.save();
-
-        res.json({
-            message: 'History event deleted successfully!',
-            history: tracking.history
+                M.Modal.getInstance(editHistoryModal).open();
+            });
         });
 
-    } catch (error) {
-        console.error('Error deleting history event:', error); // Check your server logs for the exact error here!
-        res.status(500).json({ message: 'Server error while deleting history event.', error: error.message });
-    }
-});
-
-
-// Delete an entire tracking record
-app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
-    const { id } = req.params;
-
-    // Validate the format of the tracking ID
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ message: 'Invalid tracking ID format.' });
+        document.querySelectorAll('.delete-history-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const trackingMongoId = this.dataset.trackingMongoId;
+                const historyId = this.dataset.historyId;
+                if (confirm('Are you sure you want to delete this history event?')) {
+                    deleteHistoryEvent(trackingMongoId, historyId);
+                }
+            });
+        });
     }
 
-    try {
-        // Use findByIdAndDelete directly.
-        // It returns the deleted document if found, null if not found.
-        const deletedTracking = await Tracking.findByIdAndDelete(id); // *** THIS IS THE KEY CHANGE ***
+    if (addHistoryForm) {
+        addHistoryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const trackingMongoId = updateTrackingMongoId.value; // Get the ID of the currently selected tracking
 
-        if (!deletedTracking) {
-            // If deletedTracking is null, it means no document with that _id was found and deleted.
-            return res.status(404).json({ message: 'Tracking record not found.' });
-        }
+            const newHistoryEvent = {
+                timestamp: new Date(`${document.getElementById('newHistoryDate').value}T${document.getElementById('newHistoryTime').value}`).toISOString(),
+                location: document.getElementById('newHistoryLocation').value,
+                description: document.getElementById('newHistoryDescription').value
+            };
 
-        // Optional: Delete attached file if using cloud storage
-        // This logic now correctly runs only if the tracking record was found AND deleted.
-        if (deletedTracking.attachedFileName) {
-            console.log(`Placeholder: Would delete file: ${deletedTracking.attachedFileName}`);
-            // Implement your file deletion logic here (e.g., from AWS S3, Cloudinary, etc.)
-            // Example (pseudo-code): await deleteFileFromCloud(deletedTracking.attachedFileName);
-        }
-
-        // If we reach here, the tracking was found and successfully deleted.
-        res.json({ success: true, message: 'Tracking deleted successfully!' }); // Added success: true for consistency with frontend
-
-    } catch (error) {
-        console.error('Error deleting tracking:', error);
-        res.status(500).json({ success: false, message: 'Error deleting tracking data.', error: error.message });
-    }
-});
-
-
-// --- Initial User Creation (Admin only) ---
-app.post('/api/admin/create-user', async (req, res) => {
-    const { username, password, role } = req.body;
-    try {
-        const existingUser = await User.findOne({ username });
-        if (existingUser) {
-            return res.status(409).json({ message: 'User already exists.' });
-        }
-
-        if (role && !['user', 'admin'].includes(role)) {
-            return res.status(400).json({ message: 'Invalid role specified. Must be "user" or "admin".' });
-        }
-
-        const newUser = new User({ username, password, role: role || 'user' });
-        await newUser.save();
-        res.status(201).json({ message: 'User created successfully!', user: { username: newUser.username, role: newUser.role } });
-    } catch (error) {
-        console.error('Error creating user:', error);
-        res.status(500).json({ message: 'Error creating user.' });
-    }
-});
-
-// User Login (Public Endpoint)
-app.post('/api/login', async (req, res) => {
-    console.log('--- RECEIVED LOGIN REQUEST ---');
-    console.log('Request body BEFORE any custom parsing (from Express):', req.body);
-    console.log('Type of req.body BEFORE any custom parsing (from Express):', typeof req.body);
-    console.log('Is req.body an object and not null BEFORE any custom parsing (from Express)?', typeof req.body === 'object' && req.body !== null);
-
-    let requestBody;
-
-    if (typeof req.body === 'object' && req.body !== null && !req.body.username && req.body instanceof Buffer) {
-        try {
-            requestBody = JSON.parse(req.body.toString('utf8'));
-            console.log('Request body AFTER manual .toString() and JSON.parse:', requestBody);
-        } catch (parseError) {
-            console.error('Error manually parsing request body:', parseError);
-            return res.status(400).json({ message: 'Invalid request body format.' });
-        }
-    } else {
-        requestBody = req.body;
-        console.log('Request body used directly (assumed parsed by express.json() or non-Buffer):', requestBody);
+            fetch(`/api/admin/trackings/${trackingMongoId}/history`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(newHistoryEvent)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error adding history event');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({ html: 'History event added successfully!', classes: 'green darken-2' });
+                    addHistoryForm.reset();
+                    M.updateTextFields();
+                    M.Datepicker.init(document.getElementById('newHistoryDate'));
+                    M.Timepicker.init(document.getElementById('newHistoryTime'));
+                    fetchTrackingHistory(trackingMongoId); // Refresh history list
+                } else {
+                    M.toast({ html: `Error: ${data.message || 'Could not add history event.'}`, classes: 'red darken-2' });
+                }
+            })
+            .catch(error => {
+                console.error('Error adding history event:', error);
+                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+            });
+        });
     }
 
-    const { username, password } = requestBody;
+    if (saveHistoryEditBtn) {
+        saveHistoryEditBtn.addEventListener('click', function() {
+            const trackingMongoId = editHistoryModalTrackingMongoId.value;
+            const historyId = editHistoryModalHistoryId.value;
 
-    console.log('Extracted username:', username);
-    console.log('Extracted password (first few chars):', password ? password.substring(0, 5) + '...' : 'null/undefined');
+            const updatedHistoryEvent = {
+                timestamp: new Date(`${editHistoryDate.value}T${editHistoryTime.value}`).toISOString(),
+                location: editHistoryLocation.value,
+                description: editHistoryDescription.value
+            };
 
-    if (!username || !password) {
-        console.log('Login failed: Username or password missing');
-        return res.status(400).json({ message: 'Please enter all fields' });
+            fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(updatedHistoryEvent)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error updating history event');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({ html: 'History event updated successfully!', classes: 'green darken-2' });
+                    M.Modal.getInstance(editHistoryModal).close();
+                    fetchTrackingHistory(trackingMongoId); // Refresh history list
+                } else {
+                    M.toast({ html: `Error: ${data.message || 'Could not update history event.'}`, classes: 'red darken-2' });
+                }
+            })
+            .catch(error => {
+                console.error('Error updating history event:', error);
+                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+            });
+        });
     }
 
-    try {
-        console.log(`[DEBUG] Attempting User.findOne for username: "${username}"`);
-        const user = await User.findOne({ username });
-        console.log(`[DEBUG] Result of User.findOne for "${username}":`, user ? `User found with ID: ${user._id} and role: ${user.role}` : 'No user document found.');
-
-        if (!user) {
-            console.log('Login failed: User not found for username:', username);
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            console.log('Login failed: Password mismatch for user:', username);
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
-
-        const token = jwt.sign(
-            { id: user._id, username: user.username, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
-        console.log('Login successful for user:', username, 'Role:', user.role);
-        res.json({ message: 'Login successful!', token, role: user.role });
-    } catch (error) {
-        console.error('Error during login route execution:', error);
-        res.status(500).json({ message: 'Server error during login.' });
-    }
-});
-
-// This route requires multipart/form-data parsing via Multer.
-app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment'), async (req, res) => {
-    console.log('\n--- Backend: Send Email Request Received ---');
-    console.log('Backend: req.body (parsed by multer, text fields):', req.body);
-    console.log('Backend: req.file (parsed by multer, file data):', req.file ? {
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size
-    } : 'No file attached');
-
-    try {
-        // 1. Destructure values from req.body (matching frontend keys)
-        const { recipientEmail, subject, message, trackingId } = req.body;
-        const attachment = req.file;
-
-        // 2. Initial Validation (already fixed based on previous discussion)
-        if (!recipientEmail || !subject || !message) {
-            console.log('Validation failed: Recipient, Subject, and Message fields are required.');
-            return res.status(400).json({ message: 'Recipient, Subject, and Message fields are required.' });
-        }
-
-        // 3. Determine the final recipient email address
-        let finalRecipientEmailAddress = recipientEmail;
-        let tracking = null; // Initialize tracking object
-
-        // Only attempt to fetch from DB if a trackingId was provided
-        if (trackingId) {
-            tracking = await Tracking.findOne({ trackingId: trackingId });
-            // If recipientEmail was empty from the form but trackingId exists and has an email, use it
-            if (!finalRecipientEmailAddress && tracking && tracking.recipientEmail) {
-                finalRecipientEmailAddress = tracking.recipientEmail;
-                console.log(`Found recipient email from tracking ID: ${finalRecipientEmailAddress}`);
+    function deleteHistoryEvent(trackingMongoId, historyId) {
+        fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error deleting history event');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                M.toast({ html: 'History event deleted successfully!', classes: 'red darken-2' });
+                fetchTrackingHistory(trackingMongoId); // Refresh history list
+            } else {
+                M.toast({ html: `Error: ${data.message || 'Could not delete history event.'}`, classes: 'red darken-2' });
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting history event:', error);
+            M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+        });
+    }
+
+// --- Send Email Notification ---
+if (sendEmailForm) {
+    sendEmailForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // 1. Get and trim the values from the input fields
+        const recipient = notificationEmail.value.trim();
+        const subject = emailSubject.value.trim();
+        const message = notificationMessage.value.trim();
+        const trackingId = emailTrackingIdSelect.value; // Get tracking ID value
+
+
+        // --- ADDED DEBUGGING LOGS (as discussed) ---
+        console.log('--- Email Form Submission Debug ---');
+        console.log('Recipient Element:', notificationEmail);
+        console.log('Subject Element:', emailSubject);
+        console.log('Message Element:', notificationMessage);
+        console.log('Tracking ID Select Element:', emailTrackingIdSelect);
+
+        console.log('Recipient Value (trimmed):', `'${recipient}'`); // Added quotes to clearly show empty strings
+        console.log('Subject Value (trimmed):', `'${subject}'`);       // Added quotes
+        console.log('Message Value (trimmed):', `'${message}'`);       // Added quotes
+        console.log('Tracking ID Value:', `'${trackingId}'`);         // Added quotes
+        console.log('---------------------------------');
+        // --- END DEBUGGING LOGS ---
+
+        // 2. Perform client-side validation
+        if (!recipient || !subject || !message) {
+            M.toast({ html: 'Recipient, Subject, and Message fields are required.', classes: 'red darken-2' });
+            return; // Stop the form submission if validation fails
         }
         
-        // Final check to ensure we have a recipient email address before trying to send
-        if (!finalRecipientEmailAddress) {
-            return res.status(400).json({ message: 'Recipient email address is required (either directly provided or linked to a tracking ID).' });
+        // Optional: Validate trackingId if it's always required for sending emails
+        if (!trackingId) {
+            M.toast({ html: 'Please select a Tracking ID.', classes: 'red darken-2' });
+            return;
         }
 
-        // --- NODEMAILER SETUP (Your existing code) ---
-        const transporter = nodemailer.createTransport({
-            service: 'gmail', // Or 'smtp', etc., based on your email provider
-            auth: {
-                user: process.env.EMAIL_USER, // Your Gmail email address
-                pass: process.env.EMAIL_PASS, // Your App Password for Gmail
-            },
-        });
+        // 3. If validation passes, proceed with creating FormData
+        const formData = new FormData();
+        formData.append('recipientEmail', recipient);
+        formData.append('subject', subject);
+        formData.append('message', message);
+        formData.append('trackingId', trackingId); // Use the validated trackingId
 
-        // --- CONSTRUCTING THE HTML EMAIL CONTENT ---
-        // Ensure 'tracking' object is available and populated before this block.
-        // If no trackingId was selected or found, 'tracking' will be null, so provide fallbacks.
-        const dynamicTrackingId = tracking ? tracking.trackingId || 'N/A' : 'N/A';
-        const dynamicRecipientName = tracking ? tracking.recipientName || 'Customer' : 'Customer';
-        const dynamicStatus = tracking ? tracking.status || 'N/A' : 'N/A';
-        const dynamicLocation = tracking ? tracking.location || 'N/A' : 'N/A';
-        const dynamicExpectedDelivery = tracking && tracking.expectedDeliveryDate
-            ? new Date(tracking.expectedDeliveryDate).toLocaleDateString()
-            : 'N/A';
-        const yourWebsiteBaseUrl = process.env.FRONTEND_URL || 'https://fedeix.netlify.app'; // Use an environment variable for flexibility
-
-        const emailHtmlContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>Shipment Update</title>
-                <style type="text/css">
-                    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-                    .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                    .header { background-color: #700696ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-                    .logo { max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto; }
-                    .content { padding: 20px; line-height: 1.6; color: #333; }
-                    .footer { text-align: center; font-size: 12px; color: #777; padding: 20px; }
-                    .status-box { background-color: #e0f2f7; padding: 15px; border-left: 5px solid #770489ff; margin-bottom: 20px; }
-                    .status-box p { margin: 0; }
-                    a { color: #0056b3; text-decoration: none; }
-                    a:hover { text-decoration: underline; }
-                </style>
-            </head>
-            <body>
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
-                    <tr>
-                        <td align="center" style="padding: 20px 0;">
-                            <table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                                <tr>
-                                    <td class="header" style="background-color: #350056ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                                        <img src="${yourWebsiteBaseUrl}https://i.imgur.com/j2Qgkor.png" alt="FedEx Logo" class="logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto;">
-                                        <h2 style="color: white; margin: 0;">Shipment Update Notification</h2>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="content" style="padding: 20px; line-height: 1.6; color: #333;">
-                                        <p style="margin-bottom: 10px;">Dear ${dynamicRecipientName},</p>
-                                        <p style="margin-bottom: 10px;">This is an important update regarding your FedEx shipment.</p>
-                                        
-                                        <div class="status-box" style="background-color: #e0f2f7; padding: 15px; border-left: 5px solid #440279ff; margin-bottom: 20px;">
-                                            <p style="margin: 0; font-weight: bold;">Tracking ID: <span style="font-weight: normal;">${dynamicTrackingId}</span></p>
-                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Current Status: <span style="font-weight: normal;">${dynamicStatus}</span></p>
-                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Latest Update: <span style="font-weight: normal;">${new Date().toLocaleString()} at ${dynamicLocation}</span></p>
-                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Expected Delivery: <span style="font-weight: normal;">${dynamicExpectedDelivery}</span></p>
-                                        </div>
-
-                                        <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" style="color: #b300a7ff; text-decoration: none;">Track My Package</a></p>
-
-                                        ${message ? `<p style="margin-top: 20px;">From FedEx Management: <br><i style="display: block; padding: 10px; border-left: 3px solid #ccc; background-color: #f9f9f9;">"${message}"</i></p>` : ''}
-
-                                        <p style="margin-top: 20px;">Thank you for choosing FedEx for your shipping needs.</p>
-                                        <p style="margin-bottom: 0;">Sincerely,</p>
-                                        <p style="margin-top: 5px;">The FedEx Team</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="footer" style="text-align: center; font-size: 12px; color: #777; padding: 20px;">
-                                        <p style="margin: 0;">&copy; ${new Date().getFullYear()} FedEx. All rights reserved.</p>
-                                        <p style="margin: 5px 0 0 0;">This is an automated email, please do not reply.</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </body>
-            </html>
-        `;
-
-        // --- EMAIL OPTIONS (Nodemailer) ---
-        const mailOptions = {
-            from: process.env.EMAIL_FROM, // Your sender email address (e.g., 'Your App <youremail@gmail.com>')
-            to: finalRecipientEmailAddress,
-            subject: subject,
-            html: emailHtmlContent, // <-- Use the generated HTML here
-            // Plain text version - crucial for email clients that don't render HTML, or for accessibility
-            text: `Dear ${dynamicRecipientName},\n\nYour shipment with tracking ID ${dynamicTrackingId} is currently "${dynamicStatus}".\n\nLatest update: ${new Date().toLocaleString()} at ${dynamicLocation}.\n\nExpected delivery: ${dynamicExpectedDelivery}.\n\n${message ? `Admin's message: ${message}\n\n` : ''}Thank you for choosing FedEx.\n\nTrack your package: ${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}`,
-        };
-
-        // --- ATTACHMENT HANDLING (Your existing code) ---
+        const attachment = emailAttachmentFileUpload.files[0];
         if (attachment) {
-            mailOptions.attachments = [{
-                filename: attachment.originalname,
-                content: attachment.buffer,
-                contentType: attachment.mimetype,
-            }];
-            console.log(`Attached file: ${attachment.originalname}, type: ${attachment.mimetype}, size: ${attachment.size} bytes`);
-        } else {
-            console.log('No attachment for this email.');
+            formData.append('attachment', attachment);
         }
 
-        // --- SEND THE EMAIL (Your existing code) ---
-        await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully!');
-
-        res.status(200).json({ success: true, message: 'Email sent successfully!' });
-
-    } catch (error) {
-        console.error('Error sending email:', error);
-        if (error instanceof multer.MulterError) {
-            return res.status(400).json({ success: false, message: `File upload error: ${error.message}` });
-        }
-        res.status(500).json({ success: false, message: error.message || 'Failed to send email.' });
-    }
-});
-
-// --- Serve Static Files (IMPORTANT for Netlify Functions) ---
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
-
-
-// --- Universal 404 Handler ---
-app.use((req, res, next) => {
-    if (!req.path.startsWith('/api/') && !req.path.includes('.')) {
-        res.status(404).json({ message: 'The requested page or API endpoint was not found.' });
-    } else {
-        res.status(404).json({ message: 'Endpoint not found.' });
-    }
-});
-
-
-// --- Global Error Handling Middleware ---
-app.use((err, req, res, next) => {
-    console.error('GLOBAL ERROR HANDLER:', err.stack);
-    res.status(err.statusCode || 500).json({
-        message: err.message || 'An unexpected server error occurred.',
-        error: process.env.NODE_ENV === 'production' ? {} : err.stack
+        fetch('/api/admin/send-email', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error sending email');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                M.toast({ html: 'Email sent successfully!', classes: 'green darken-2' });
+                sendEmailForm.reset();
+                M.updateTextFields();
+                M.FormSelect.init(emailTrackingIdSelect); // Re-init select
+            } else {
+                M.toast({ html: `Error: ${data.message || 'Could not send email.'}`, classes: 'red darken-2' });
+            }
+        })
+        .catch(error => {
+            console.error('Error sending email:', error);
+            M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+        });
     });
+}
+    // --- Pre-fill email on tracking ID selection ---
+    if (emailTrackingIdSelect) {
+        emailTrackingIdSelect.addEventListener('change', function() {
+            const trackingId = this.value;
+            if (trackingId) {
+                fetch(`/api/admin/trackings/${trackingId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch tracking details for email pre-fill');
+                    return response.json();
+                })
+                .then(tracking => {
+                    // Added more robust checks for potentially missing data from backend
+                    if (notificationEmail) notificationEmail.value = tracking.recipientEmail || '';
+                    if (emailSubject) emailSubject.value = `Update on your FedEx Shipment: ${tracking.trackingId || 'N/A'}`;
+                    if (notificationMessage) notificationMessage.value = `Dear ${tracking.recipientName || 'Customer'},\n\nYour shipment with tracking ID ${tracking.trackingId || 'N/A'} is currently "${tracking.status || 'N/A'}".\n\nLatest update: ${tracking.status || 'N/A'} at ${new Date().toLocaleString()}.\n\nExpected delivery: ${new Date(tracking.expectedDeliveryDate || '').toLocaleDateString() || 'N/A'}.\n\nThank you for choosing FedEx.`;
+                    M.updateTextFields(); // Update Materialize labels
+                })
+                .catch(error => {
+                    console.error('Error pre-filling email:', error);
+                    M.toast({ html: `Could not pre-fill email: ${error.message}`, classes: 'red darken-2' });
+                });
+            } else {
+                // Clear fields if no tracking ID is selected
+                if (notificationEmail) notificationEmail.value = '';
+                if (emailSubject) emailSubject.value = '';
+                if (notificationMessage) notificationMessage.value = '';
+                M.updateTextFields();
+            }
+        });
+    }
+
+    // --- Upload Package File ---
+    if (uploadPackageFileForm) {
+        uploadPackageFileForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const trackingId = attachFileTrackingIdSelect.value;
+            const file = packageFileInput.files[0];
+
+            if (!trackingId) {
+                M.toast({ html: 'Please select a Tracking ID to link the file to.', classes: 'red darken-2' });
+                return;
+            }
+            if (!file) {
+                M.toast({ html: 'Please select a file to upload.', classes: 'red darken-2' });
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('packageFile', file); // 'packageFile' must match your backend's expected field name
+
+            fetch(`/api/admin/trackings/${trackingId}/upload-file`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    // Do NOT set Content-Type header when sending FormData, browser sets it correctly
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error uploading file');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({ html: 'File uploaded and linked successfully!', classes: 'green darken-2' });
+                    uploadPackageFileForm.reset();
+                    M.updateTextFields();
+                    M.FormSelect.init(attachFileTrackingIdSelect); // Re-init select
+                } else {
+                    M.toast({ html: `Error: ${data.message || 'Could not upload file.'}`, classes: 'red darken-2' });
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading file:', error);
+                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+            });
+        });
+    }
+
+    // --- User Management Functions ---
+
+    // Fetch All Users
+    function fetchAllUsers() {
+        fetch('/api/admin/users', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error fetching users');
+                });
+            }
+            return response.json();
+        })
+        .then(users => {
+            if (usersTableBody) {
+                usersTableBody.innerHTML = ''; // Clear existing rows
+                if (users.length === 0) {
+                    usersTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No users found.</td></tr>';
+                    return;
+                }
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.username}</td>
+                        <td>${user.email}</td>
+                        <td>${user.role}</td>
+                        <td>
+                            <button class="btn btn-small waves-effect waves-light blue darken-1 edit-user-btn" data-user-id="${user._id}"><i class="material-icons">edit</i></button>
+                            <button class="btn btn-small waves-effect waves-light red darken-2 delete-user-modal-trigger" data-user-id="${user._id}" data-username="${user.username}"><i class="material-icons">delete</i></button>
+                        </td>
+                    `;
+                    usersTableBody.appendChild(row);
+                });
+
+                // Attach event listeners for edit/delete user buttons
+                document.querySelectorAll('.edit-user-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const userId = this.dataset.userId;
+                        fetchUserDetails(userId);
+                    });
+                });
+
+                document.querySelectorAll('.delete-user-modal-trigger').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const userId = this.dataset.userId;
+                        const userNm = this.dataset.username;
+                        userIdToDeleteInput.value = userId;
+                        if (usernameToDelete) usernameToDelete.textContent = userNm;
+                        M.Modal.getInstance(deleteUserModalTrigger).open(); // Open the delete confirmation modal
+                    });
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching users:', error);
+            if (usersTableBody) {
+                usersTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px; color: red;">Failed to load users: ${error.message}</td></tr>`;
+            }
+            M.toast({ html: `Failed to load users: ${error.message}`, classes: 'red darken-2' });
+        });
+    }
+
+    // Create User
+    if (createUserForm) {
+        createUserForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const userData = {
+                username: document.getElementById('newUsername').value,
+                email: document.getElementById('newEmail').value,
+                password: document.getElementById('newPassword').value,
+                role: document.getElementById('newUserRole').value
+            };
+
+            fetch('/api/admin/users/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(userData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error creating user');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({
+                        html: 'User created successfully!',
+                        classes: 'green darken-2'
+                    });
+                    M.Modal.getInstance(createUserModal).close();
+                    createUserForm.reset();
+                    M.updateTextFields();
+                    M.FormSelect.init(document.querySelectorAll('#createUserModal select')); // Re-init selects
+                    fetchAllUsers();
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not create user.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error creating user:', error);
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+        });
+    }
+
+    // Fetch User Details for Edit
+    function fetchUserDetails(userId) {
+        fetch(`/api/admin/users/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error fetching user details');
+                    });
+                }
+                return response.json();
+            })
+            .then(user => {
+                document.getElementById('editUserId').value = user._id;
+                document.getElementById('editUsername').value = user.username;
+                document.getElementById('editEmail').value = user.email;
+                document.getElementById('editUserRole').value = user.role;
+                M.updateTextFields();
+                M.FormSelect.init(document.querySelectorAll('#editUserModal select')); // Re-init select
+                M.Modal.getInstance(editUserModal).open();
+            })
+            .catch(error => {
+                console.error('Error fetching user details:', error);
+                M.toast({
+                    html: `Failed to load user details: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+    }
+
+    // Update User
+    if (editUserForm) {
+        editUserForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const userId = document.getElementById('editUserId').value;
+            const updatedUserData = {
+                username: document.getElementById('editUsername').value,
+                email: document.getElementById('editEmail').value,
+                role: document.getElementById('editUserRole').value
+            };
+
+            const newPassword = document.getElementById('editPassword').value;
+            if (newPassword) {
+                updatedUserData.password = newPassword;
+            }
+
+            fetch(`/api/admin/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(updatedUserData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error updating user');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({
+                        html: 'User updated successfully!',
+                        classes: 'green darken-2'
+                    });
+                    M.Modal.getInstance(editUserModal).close();
+                    editUserForm.reset();
+                    M.updateTextFields();
+                    fetchAllUsers();
+                } else {
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not update user.'}`,
+                        classes: 'red darken-2'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error updating user:', error);
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
+                });
+            });
+        });
+    }
+
+   // Delete User
+if (deleteUserBtn) {
+    deleteUserBtn.addEventListener('click', function() {
+        const userId = userIdToDeleteInput.value.trim(); // Trim whitespace from the ID
+
+        // Add client-side validation for userId
+        if (!userId || userId.length === 0) {
+            M.toast({
+                html: 'Error: User ID is missing or invalid. Cannot delete.',
+                classes: 'red darken-2'
+            });
+            console.error('Client-side validation failed: User ID is', userId);
+            M.Modal.getInstance(deleteUserModalTrigger).close(); // Close modal if validation fails
+            return; // Stop the function
+        }
+
+        fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({
+                        html: 'Session expired or unauthorized. Please log in again.',
+                        classes: 'red darken-2'
+                    });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                }
+                return response.json().then(errorData => {
+                    // Backend validation error would come through here
+                    throw new Error(errorData.message || 'Server error deleting user');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                M.toast({
+                    html: 'User deleted successfully!',
+                    classes: 'green darken-2' // Changed to green for success messages
+                });
+                M.Modal.getInstance(deleteUserModalTrigger).close(); // Correctly close the modal
+                fetchAllUsers(); // Refresh the user list
+            } else {
+                M.toast({
+                    html: `Error: ${data.message || 'Could not delete user.'}`,
+                    classes: 'red darken-2'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting user:', error);
+            M.toast({
+                html: `Network error or server issue: ${error.message}`,
+                classes: 'red darken-2'
+            });
+        });
+    });
+}
+
+
+    // --- Dashboard Quick Stats Update ---
+    function updateDashboardStats(trackings) {
+        const total = trackings.length;
+        const delivered = trackings.filter(t => t.status.toLowerCase().includes('delivered')).length;
+        const inTransit = trackings.filter(t => t.status.toLowerCase().includes('in transit')).length;
+        const pending = trackings.filter(t => t.status.toLowerCase().includes('pending') || t.status.toLowerCase().includes('on hold')).length;
+        const exceptions = trackings.filter(t => t.status.toLowerCase().includes('exception') || t.status.toLowerCase().includes('delay')).length;
+
+        if (totalPackages) totalPackages.textContent = total;
+        if (deliveredPackages) deliveredPackages.textContent = delivered;
+        if (inTransitPackages) inTransitPackages.textContent = inTransit;
+        if (pendingPackages) pendingPackages.textContent = pending;
+        if (exceptionsPackages) exceptionsPackages.textContent = exceptions;
+    }
+
+    function getStatusColorClass(status) {
+        const lowerStatus = status.toLowerCase();
+        if (lowerStatus.includes('delivered')) {
+            return 'delivered';
+        } else if (lowerStatus.includes('in transit')) {
+            return 'in-transit';
+        } else if (lowerStatus.includes('pending') || lowerStatus.includes('on hold')) {
+            return 'pending';
+        } else if (lowerStatus.includes('exception') || lowerStatus.includes('delay')) {
+            return 'exception';
+        } else {
+            return 'unknown';
+        }
+    }
+
+
+    // Initial load: show dashboard and fetch all trackings to populate stats
+    showSection('dashboard-section');
+    fetchAllTrackings(); // This will also call updateDashboardStats
+    fetchTrackingIdsForSelect(); // Populate initial dropdowns
+    fetchTrackingIdsForEmailSelect();
+    fetchTrackingIdsForAttachFileSelect();
+
+
+    // --- Sidebar Toggle Logic ---
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active'); // Toggle the 'active' class to show/hide the sidebar
+        });
+    } else {
+        console.error("Sidebar or menu toggle button not found in the DOM.");
+    }
+
+    // Initialize Modals
+    M.Modal.init(document.querySelectorAll('.modal'));
 });
-
-
-// Export the Express app instance for Netlify Function
-module.exports = {
-    app,
-    populateInitialData,
-    mongoose
-};
