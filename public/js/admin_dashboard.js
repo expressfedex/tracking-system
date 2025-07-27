@@ -631,20 +631,22 @@ function deleteTracking(trackingId) {
 
 
   // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
-function fetchTrackingHistory(trackingId) { // Renamed parameter from mongoId to trackingId for clarity
-    console.log(`Attempting to fetch history for tracking ID: ${trackingId}`); // Add a log for debugging
-    fetch(`/api/admin/trackings/${trackingId}`, { // <-- Call the main GET route for tracking details
+function fetchTrackingHistory(trackingId) { // The 'trackingId' parameter is critical
+    console.log(`Attempting to fetch history for tracking ID: ${trackingId}`); // This log will show what's being sent
+
+    // The fetch request is now going to: /api/admin/trackings/YOUR_CUSTOM_TRACKING_ID
+    fetch(`/api/admin/trackings/${trackingId}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
     })
     .then(response => {
-        if (!response.ok) {
+        if (!response.ok) { // This is where response.status is checked
             if (response.status === 401 || response.status === 403) {
-                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                // ... session expired logic ...
             }
+            // If the status is 404 (Not Found), this will run
             return response.json().then(errorData => {
                 throw new Error(errorData.message || 'Server error fetching tracking details');
             });
