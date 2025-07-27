@@ -45,6 +45,7 @@ body {
 }
 
 /* --- Sidebar --- */
+/* --- Sidebar --- */
 .sidebar {
     width: var(--sidebar-width);
     background-color: var(--sidebar-bg);
@@ -54,12 +55,18 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    position: fixed;
+    position: fixed; /* Keep it fixed */
     top: 0;
-    left: 0;
     height: 100%;
-    transition: transform 0.3s ease-in-out;
     z-index: 999; /* Ensure sidebar is above main content */
+
+    /* --- CRITICAL: Initial Hidden State for a sliding sidebar --- */
+    left: calc(-1 * var(--sidebar-width)); /* Start completely off-screen to the left */
+    transition: left 0.3s ease-in-out; /* Smooth transition for 'left' property */
+}
+/* --- CRITICAL: Active State for Sidebar (when it slides in) --- */
+.sidebar.active {
+    left: 0; /* Slide into view */
 }
 
 .sidebar h2 {
@@ -138,13 +145,22 @@ body {
 
 /* --- Main Content Styling --- */
 .main-content {
-    margin-left: var(--sidebar-width); /* Space for fixed sidebar */
-    flex-grow: 1;
+    /* Initially, no margin-left (sidebar is hidden) */
+    margin-left: 0;
+    flex-grow: 1; /* Allow it to take up available space */
     padding: 20px 30px;
     background-color: var(--background-color);
-    transition: margin-left 0.3s ease-in-out;
+    transition: margin-left 0.3s ease-in-out; /* Smooth transition for 'margin-left' */
+    width: 100%; /* Important for proper layout with flex-grow */
+    box-sizing: border-box; /* Include padding in width calculation */
 }
 
+/* --- CRITICAL: Adjust main content when sidebar is active --- */
+.main-content.pushed { /* You'll need to toggle this class with JS */
+    margin-left: var(--sidebar-width); /* Push content by the sidebar's width */
+}
+
+/* --- Other Main Content Styles (as provided by you) --- */
 .main-content header {
     background-color: white;
     padding: 15px 25px;
@@ -154,9 +170,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: sticky; /* Make header sticky */
+    position: sticky;
     top: 0;
-    z-index: 100; /* Ensure header is above content */
+    z-index: 100;
 }
 
 .main-content header h1 {
@@ -312,21 +328,24 @@ body {
     vertical-align: middle;
 }
 
-/* --- Mobile Adjustments --- */
+/* --- Menu Toggle Button --- */
 .menu-toggle {
-    display: none; /* Hidden by default on desktop */
+    position: fixed; /* Fixed position so it's always accessible */
+    top: 20px; /* Adjust vertical position */
+    left: 20px; /* Initial horizontal position */
     font-size: 1.8em;
+    color: var(--primary-color); /* Or a contrasting color that stands out */
     cursor: pointer;
-    color: var(--sidebar-text);
-    position: fixed; /* Keep toggle button visible */
-    top: 20px;
-    left: 20px;
-    z-index: 1001; /* Above sidebar */
-    background-color: var(--sidebar-bg);
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 1000; /* Ensure it's above everything else, including sidebar */
+    transition: left 0.3s ease-in-out; /* For smooth movement if the toggle itself moves */
 }
+
+/* Optional: Move the toggle button to the right when the sidebar is open */
+.menu-toggle.active {
+    left: calc(var(--sidebar-width) + 20px); /* Move it sidebar-width + padding from left */
+    /* Or if you want it to hide, you could set display: none or opacity: 0; */
+}
+
 
 @media (max-width: 992px) { /* Adjust breakpoint as needed */
     .sidebar {
