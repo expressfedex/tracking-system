@@ -249,17 +249,21 @@ app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     }
 });
 
-app.get('/api/admin/trackings/:id/history', authenticateToken, async (req, res) => {
+// GET /api/admin/trackings/:trackingIdValue/history - Fetch history for a tracking (Admin only)
+app.get('/api/admin/trackings/:trackingIdValue/history', authenticateToken, async (req, res) => {
     try {
-        const trackingId = req.params.id;
+        // Use the parameter name that matches your frontend (or adjust frontend)
+        // For consistency with your POST route, let's call it trackingIdValue
+        const { trackingIdValue } = req.params;
 
-        if (!mongoose.Types.ObjectId.isValid(trackingId)) {
-            return res.status(400).json({ message: 'Invalid tracking ID format.' });
-        }
+        console.log('Backend: Fetching history for trackingIdValue:', trackingIdValue);
 
-        const tracking = await Tracking.findById(trackingId);
+        // --- CHANGE THIS LINE ---
+        // Instead of findById, use findOne to search by your custom 'trackingId' field
+        const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
 
         if (!tracking) {
+            console.log('Backend: Tracking record not found for custom ID (history fetch):', trackingIdValue);
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
@@ -637,7 +641,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
 app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
-    const updateData = req.body; // This route also assumes JSON body, not multipart/form-data.
+    const updateData = req.body;
 
     try {
         let currentTracking = await Tracking.findById(id);
@@ -648,38 +652,26 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 
         if (updateData.trackingId && updateData.trackingId !== currentTracking.trackingId) {
             const newTrackingId = updateData.trackingId;
-
             const existingTrackingWithNewId = await Tracking.findOne({ trackingId: newTrackingId });
+
             if (existingTrackingWithNewId && String(existingTrackingWithNewId._id) !== id) {
                 return res.status(409).json({ message: 'New Tracking ID already exists. Please choose a different one.' });
             }
-            currentTracking.trackingId = newTrackingId;
+
             console.log(`Tracking ID changed from (old): ${currentTracking.trackingId} to (new): ${newTrackingId}`);
+            currentTracking.trackingId = newTrackingId;
         }
 
-        Object.keys(updateData).forEach(key => {
-            if (key === 'trackingId' || key === 'history' || key === '_id' || key === '__v' || updateData[key] === undefined) {
-                return;
-            }
-            if (key === 'recipientEmail') {
-                console.warn('Attempt to update recipientEmail via PUT /api/admin/trackings/:id ignored.');
-                return;
-            }
-
+        for (const key of Object.keys(updateData)) {
             if (key === 'expectedDeliveryDate') {
                 const effectiveDate = updateData.expectedDeliveryDate;
-                const effectiveTimeInput = updateData.expectedDeliveryTime || (currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[1].substring(0, 5) : '00:00');
+                const effectiveTimeInput = updateData.expectedDeliveryTime;
 
-                if (effectiveDate) {
-                    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-                    if (!dateRegex.test(effectiveDate)) {
-                        console.warn(`Invalid date format for expectedDeliveryDate: ${effectiveDate}`);
-                        return;
-                    }
+                if (effectiveDate && effectiveTimeInput) {
                     const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
                     if (!parsedTime) {
-                        console.warn(`Could not parse expectedDeliveryTime for combined timestamp: ${effectiveTimeInput}`);
-                        return;
+                        console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
+                        continue;
                     }
 
                     const newExpectedDelivery = new Date(Date.UTC(
@@ -693,20 +685,23 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                     if (!isNaN(newExpectedDelivery.getTime())) {
                         currentTracking.expectedDelivery = newExpectedDelivery;
                     } else {
-                        console.warn(`Could not parse new expectedDelivery with existing date: ${effectiveDate} ${effectiveTimeInput}`);
+                        console.warn(`Could not parse expectedDelivery: ${effectiveDate} ${effectiveTimeInput}`);
                     }
                 }
             } else if (key === 'expectedDeliveryTime') {
                 if (updateData.expectedDeliveryDate === undefined) {
-                    const effectiveDate = currentTracking.expectedDelivery ? currentTracking.expectedDelivery.toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]);
-                    const effectiveTimeInput = updateData.expectedDeliveryTime;
+                    const effectiveDate = currentTracking.expectedDelivery
+                        ? currentTracking.expectedDelivery.toISOString().split('T')[0]
+                        : new Date().toISOString().split('T')[0];
 
+                    const effectiveTimeInput = updateData.expectedDeliveryTime;
                     if (effectiveTimeInput) {
                         const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
                         if (!parsedTime) {
-                            console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
-                            return;
+                            console.warn(`Invalid time format: ${effectiveTimeInput}`);
+                            continue;
                         }
+
                         const newExpectedDelivery = new Date(Date.UTC(
                             new Date(effectiveDate).getUTCFullYear(),
                             new Date(effectiveDate).getUTCMonth(),
@@ -714,10 +709,11 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                             parsedTime.hour,
                             parsedTime.minute
                         ));
+
                         if (!isNaN(newExpectedDelivery.getTime())) {
                             currentTracking.expectedDelivery = newExpectedDelivery;
                         } else {
-                            console.warn(`Could not parse new expectedDelivery with existing date: ${effectiveDate} ${effectiveTimeInput}`);
+                            console.warn(`Could not parse expectedDelivery: ${effectiveDate} ${effectiveTimeInput}`);
                         }
                     }
                 }
@@ -725,13 +721,14 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
                 currentTracking.isBlinking = typeof updateData[key] === 'boolean' ? updateData[key] : currentTracking.isBlinking;
             } else if (key === 'weight') {
                 currentTracking.weight = parseFloat(updateData.weight) || 0;
-            } else {
+            } else if (key !== 'trackingId') {
                 currentTracking[key] = updateData[key];
             }
-        });
+        }
 
         currentTracking.lastUpdated = new Date();
         await currentTracking.save();
+
         res.json({ message: 'Tracking updated successfully!', tracking: currentTracking });
     } catch (error) {
         console.error('Error updating tracking details:', error);
@@ -746,27 +743,37 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
 app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid tracking ID format.' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(historyId)) {
+        return res.status(400).json({ message: 'Invalid history ID format.' });
+    }
+
     try {
         const tracking = await Tracking.findById(id);
         if (!tracking) {
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
-        const historyLengthBeforePull = tracking.history.length;
-        tracking.history.pull({ _id: historyId });
+        const before = tracking.history.length;
+        tracking.history.pull({ _id: mongoose.Types.ObjectId(historyId) });
 
-        if (tracking.history.length === historyLengthBeforePull) {
+        if (tracking.history.length === before) {
             return res.status(404).json({ message: 'History event not found with the provided ID.' });
         }
 
         tracking.lastUpdated = new Date();
         await tracking.save();
-        res.json({ message: 'History event deleted successfully!', tracking });
+
+        res.json({
+            message: 'History event deleted successfully!',
+            history: tracking.history
+        });
+
     } catch (error) {
         console.error('Error deleting history event:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid ID format for tracking or history event.' });
-        }
         res.status(500).json({ message: 'Server error while deleting history event.', error: error.message });
     }
 });
@@ -775,33 +782,32 @@ app.delete('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, asy
 // Delete an entire tracking record
 app.delete('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
+
+    // Validate the format of the tracking ID
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: 'Invalid tracking ID format.' });
+    }
+
     try {
         const trackingToDelete = await Tracking.findById(id);
         if (!trackingToDelete) {
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
-        /*
-        // IMPORTANT: THIS SECTION NEEDS REFACTORING FOR CLOUD STORAGE (e.g., S3)
-        // If an attached file exists, delete it from the cloud storage (e.g., S3)
+        // Optional: Delete attached file if using cloud storage
         if (trackingToDelete.attachedFileName) {
-            // Example for S3 deletion (requires S3 SDK setup)
-            // const s3Key = trackingToDelete.attachedFileName;
-            // await s3.deleteObject({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key }).promise();
-            console.log(`Placeholder: Would delete file from cloud storage: ${trackingToDelete.attachedFileName}`);
+            console.log(`Placeholder: Would delete file: ${trackingToDelete.attachedFileName}`);
         }
-        */
 
         const result = await Tracking.deleteOne({ _id: id });
         if (result.deletedCount === 0) {
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
+
         res.json({ message: 'Tracking deleted successfully!' });
+
     } catch (error) {
         console.error('Error deleting tracking:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid tracking ID format.' });
-        }
         res.status(500).json({ message: 'Error deleting tracking data.', error: error.message });
     }
 });
