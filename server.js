@@ -249,6 +249,27 @@ app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     }
 });
 
+app.get('/api/admin/trackings/:id/history', authenticateToken, async (req, res) => {
+    try {
+        const trackingId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(trackingId)) {
+            return res.status(400).json({ message: 'Invalid tracking ID format.' });
+        }
+
+        const tracking = await Tracking.findById(trackingId);
+
+        if (!tracking) {
+            return res.status(404).json({ message: 'Tracking record not found.' });
+        }
+
+        res.json({ success: true, history: tracking.history || [] });
+    } catch (error) {
+        console.error('Error fetching tracking history:', error);
+        res.status(500).json({ message: 'Error fetching tracking history.' });
+    }
+});
+
 // Admin Route: Get a single tracking record by ID (Corrected to find by custom 'trackingId')
 app.get('/api/admin/trackings/:trackingIdValue', authenticateAdmin, async (req, res) => {
     try {
