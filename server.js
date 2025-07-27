@@ -444,12 +444,12 @@ function parseTimeWithAmPm(timeString) {
     return null;
 }
 
-
-// POST /api/admin/trackings/:id/history - Add a new history event to a tracking (Admin only)
-// This route is for JSON data, so existing parsing logic is fine.
-app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res) => {
+// POST /api/admin/trackings/:trackingIdValue/history - Add a new history event to a tracking (Admin only)
+app.post('/api/admin/trackings/:trackingIdValue/history', authenticateAdmin, async (req, res) => {
     console.log('\n--- Backend: Add History Event Request Received ---');
-    console.log('Backend: req.params.id (Tracking ID from URL):', req.params.id);
+    // Changed param name for clarity
+    const { trackingIdValue } = req.params;
+    console.log('Backend: req.params.trackingIdValue (Tracking ID from URL):', trackingIdValue);
     console.log('Backend: Full req.body received:', req.body);
 
     let bodyData = req.body;
@@ -482,11 +482,11 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
     }
 
     try {
-        const { id } = req.params;
-        const tracking = await Tracking.findById(id);
+        // --- CORRECTED LINE: Use findOne with the 'trackingId' field ---
+        const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
 
         if (!tracking) {
-            console.log('Backend: Tracking record not found for ID:', id);
+            console.log('Backend: Tracking record not found for custom ID:', trackingIdValue);
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
 
@@ -528,18 +528,14 @@ app.post('/api/admin/trackings/:id/history', authenticateAdmin, async (req, res)
 
         await tracking.save();
 
-        console.log('Backend: History event successfully added to tracking ID:', id);
-        res.status(201).json({ message: 'History event added successfully!', tracking: tracking.toObject(), newEvent: newHistoryEvent });
-
+        console.log('Backend: History event successfully added to tracking ID:', trackingIdValue);
+        res.status(201).json({ success: true, message: 'History event added successfully!', tracking: tracking.toObject(), newEvent: newHistoryEvent }); // Added success: true
     } catch (error) {
         console.error('Backend: Uncaught error adding history event:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'Invalid tracking ID format.' });
-        }
-        res.status(500).json({ message: 'Server error while adding history event.', error: error.message });
+        // CastError should no longer occur here for valid trackingIdValue
+        res.status(500).json({ success: false, message: 'Server error while adding history event.', error: error.message }); // Added success: false
     }
 });
-
 
 // Edit a specific history event
 app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
