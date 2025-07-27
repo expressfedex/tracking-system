@@ -328,6 +328,14 @@ body {
     vertical-align: middle;
 }
 
+.content-section {
+    display: none; /* Hide by default */
+}
+
+.content-section.active {
+    display: block; /* Or flex, grid, etc., depending on your layout */
+}
+
 /* --- Menu Toggle Button --- */
 .menu-toggle {
     position: fixed; /* Fixed position so it's always accessible */
