@@ -504,7 +504,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 M.Timepicker.init(document.getElementById('updateExpectedDeliveryTime'));
 
                 updateTrackingForm.style.display = 'block';
-                fetchTrackingHistory(tracking._id); // Fetch and display history for this tracking
+               fetchTrackingHistory(tracking.trackingId);// Fetch and display history for this tracking
             })
             .catch(error => {
                 console.error('Error fetching tracking details:', error);
