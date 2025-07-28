@@ -1103,7 +1103,7 @@ const emailHtmlContent = `
                                 </div>
 
                                 <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: 
-                                    <a href="${yourWebsiteBaseUrl}/track" 
+                                    <a href="${yourWebsiteBaseUrl}" 
                                        style="
                                            display: inline-block; /* Makes padding work correctly */
                                            background-color: #350056ff; /* Purple background */
@@ -1126,9 +1126,9 @@ const emailHtmlContent = `
                                         border-radius: 5px;
                                         font-size: 14px;                             
                                         line-height: 1.5;
-                                        color: #dcdcdc;
+                                        color: #fffdfdff;
                                     ">
-                                        <p style="margin: 0; font-weight: bold; color: #333;">From FedEx Management:</p>
+                                        <p style="margin: 0; font-weight: bold; color: #fffdfdff;">From FedEx Management:</p>
                                         <p style="margin: 10px 0 0 0; padding: 0 5px;">"<i>${message}</i>"</p>
                                     </div>
                                 ` : ''}
