@@ -1004,84 +1004,153 @@ app.post('/api/admin/send-email', authenticateAdmin, upload.single('attachment')
             },
         });
 
-        // --- CONSTRUCTING THE HTML EMAIL CONTENT ---
-        // Ensure 'tracking' object is available and populated before this block.
-        // If no trackingId was selected or found, 'tracking' will be null, so provide fallbacks.
-        const dynamicTrackingId = tracking ? tracking.trackingId || 'N/A' : 'N/A';
-        const dynamicRecipientName = tracking ? tracking.recipientName || 'Customer' : 'Customer';
-        const dynamicStatus = tracking ? tracking.status || 'N/A' : 'N/A';
-        const dynamicLocation = tracking ? tracking.location || 'N/A' : 'N/A';
-        const dynamicExpectedDelivery = tracking && tracking.expectedDeliveryDate
-            ? new Date(tracking.expectedDeliveryDate).toLocaleDateString()
-            : 'N/A';
-        const yourWebsiteBaseUrl = process.env.FRONTEND_URL || 'https://fedeix.netlify.app'; // Use an environment variable for flexibility
+       // --- CONSTRUCTING THE HTML EMAIL CONTENT ---
+// Ensure 'tracking' object is available and populated before this block.
+// If no trackingId was selected or found, 'tracking' will be null, so provide fallbacks.
+const dynamicTrackingId = tracking ? tracking.trackingId || 'N/A' : 'N/A';
+const dynamicRecipientName = tracking ? tracking.recipientName || 'Customer' : 'Customer';
+const dynamicStatus = tracking ? tracking.status || 'N/A' : 'N/A';
 
-        const emailHtmlContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>Shipment Update</title>
-                <style type="text/css">
-                    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
-                    .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                    .header { background-color: #700696ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-                    .logo { max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto; }
-                    .content { padding: 20px; line-height: 1.6; color: #333; }
-                    .footer { text-align: center; font-size: 12px; color: #777; padding: 20px; }
-                    .status-box { background-color: #e0f2f7; padding: 15px; border-left: 5px solid #770489ff; margin-bottom: 20px; }
-                    .status-box p { margin: 0; }
-                    a { color: #0056b3; text-decoration: none; }
-                    a:hover { text-decoration: underline; }
-                </style>
-            </head>
-            <body>
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
-                    <tr>
-                        <td align="center" style="padding: 20px 0;">
-                            <table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-                                <tr>
-                                    <td class="header" style="background-color: #350056ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-                                        <img src="${yourWebsiteBaseUrl}https://i.imgur.com/j2Qgkor.png" alt="FedEx Logo" class="logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto;">
-                                        <h2 style="color: white; margin: 0;">Shipment Update Notification</h2>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="content" style="padding: 20px; line-height: 1.6; color: #333;">
-                                        <p style="margin-bottom: 10px;">Dear ${dynamicRecipientName},</p>
-                                        <p style="margin-bottom: 10px;">This is an important update regarding your FedEx shipment.</p>
-                                        
-                                        <div class="status-box" style="background-color: #e0f2f7; padding: 15px; border-left: 5px solid #440279ff; margin-bottom: 20px;">
-                                            <p style="margin: 0; font-weight: bold;">Tracking ID: <span style="font-weight: normal;">${dynamicTrackingId}</span></p>
-                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Current Status: <span style="font-weight: normal;">${dynamicStatus}</span></p>
-                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Latest Update: <span style="font-weight: normal;">${new Date().toLocaleString()} at ${dynamicLocation}</span></p>
-                                            <p style="margin: 5px 0 0 0; font-weight: bold;">Expected Delivery: <span style="font-weight: normal;">${dynamicExpectedDelivery}</span></p>
-                                        </div>
+// Logic to determine the latest update timestamp and location from history or fallback
+let latestUpdateTimestamp = 'N/A';
+let latestUpdateLocation = tracking ? tracking.location || 'N/A' : 'N/A'; // Default to tracking.location
 
-                                        <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" style="color: #b300a7ff; text-decoration: none;">Track My Package</a></p>
+if (tracking && tracking.history && tracking.history.length > 0) {
+    // Sort history to get the truly latest event by timestamp (descending)
+    const sortedHistory = [...tracking.history].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const latestEvent = sortedHistory[0];
+    if (latestEvent) {
+        latestUpdateTimestamp = new Date(latestEvent.timestamp).toLocaleString();
+        latestUpdateLocation = latestEvent.location || latestUpdateLocation; // Use event location, fallback to general tracking location
+    }
+} else if (tracking && tracking.lastUpdated) {
+    latestUpdateTimestamp = new Date(tracking.lastUpdated).toLocaleString();
+} else {
+    latestUpdateTimestamp = new Date().toLocaleString(); // Fallback to current time if no tracking or history
+}
 
-                                        ${message ? `<p style="margin-top: 20px;">From FedEx Management: <br><i style="display: block; padding: 10px; border-left: 3px solid #ccc; background-color: #f9f9f9;">"${message}"</i></p>` : ''}
+// Ensure expectedDelivery is correctly formatted from the `expectedDelivery` field, not `expectedDeliveryDate`
+const dynamicExpectedDelivery = tracking && tracking.expectedDelivery
+    ? new Date(tracking.expectedDelivery).toLocaleDateString()
+    : 'N/A';
 
-                                        <p style="margin-top: 20px;">Thank you for choosing FedEx for your shipping needs.</p>
-                                        <p style="margin-bottom: 0;">Sincerely,</p>
-                                        <p style="margin-top: 5px;">The FedEx Team</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="footer" style="text-align: center; font-size: 12px; color: #777; padding: 20px;">
-                                        <p style="margin: 0;">&copy; ${new Date().getFullYear()} FedEx. All rights reserved.</p>
-                                        <p style="margin: 5px 0 0 0;">This is an automated email, please do not reply.</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </body>
-            </html>
-        `;
+const yourWebsiteBaseUrl = process.env.FRONTEND_URL || 'https://fedeix.netlify.app';
 
+// --- FIXED LOGO IMAGE URL ---
+const logoImageUrl = 'https://i.imgur.com/j2Qgkor.png'; // Direct link to the image
+
+const emailHtmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Shipment Update</title>
+        <style type="text/css">
+            body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+            .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+            .header { background-color: #350056ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+            .logo { max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto; }
+            .content { padding: 20px; line-height: 1.6; color: #333; }
+            .footer { text-align: center; font-size: 12px; color: #777; padding: 20px; }
+            .status-box { background-color: #e0f2f7; padding: 15px; border-left: 5px solid #440279ff; margin-bottom: 20px; }
+            .status-box p { margin: 0; }
+            /* Original link style for comparison if needed, overridden by inline for button */
+            a { color: #0056b3; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+
+            /* New style for the custom message box */
+            .message-section {
+                margin-top: 20px;
+                padding: 15px;
+                border: 1px solid #dcdcdc; /* Light gray border */
+                border-left: 4px solid #350056ff; /* Matches header color */
+                background-color: #f8f8f8; /* Very light gray background */
+                border-radius: 5px; /* Slightly rounded corners */
+                font-size: 14px;
+                line-height: 1.5;
+                color: #555;
+            }
+            .message-section p {
+                margin: 0; /* Remove default paragraph margins inside the box */
+            }
+            .message-section strong {
+                color: #333; /* Make title bolder */
+            }
+        </style>
+    </head>
+    <body>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+            <tr>
+                <td align="center" style="padding: 20px 0;">
+                    <table class="container" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <tr>
+                            <td class="header" style="background-color: #350056ff; padding: 20px; text-align: center; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px;">
+                                <img src="${logoImageUrl}" alt="FedEx Logo" class="logo" style="max-width: 150px; height: auto; display: block; margin: 0 auto 20px auto;">
+                                <h2 style="color: white; margin: 0;">Shipment Update Notification</h2>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="content" style="padding: 20px; line-height: 1.6; color: #333;">
+                                <p style="margin-bottom: 10px;">Dear ${dynamicRecipientName},</p>
+                                <p style="margin-bottom: 10px;">This is an important update regarding your FedEx shipment.</p>
+                                
+                                <div class="status-box" style="background-color: #e0f2f7; padding: 15px; border-left: 5px solid #440279ff; margin-bottom: 20px;">
+                                    <p style="margin: 0; font-weight: bold;">Tracking ID: <span style="font-weight: normal;">${dynamicTrackingId}</span></p>
+                                    <p style="margin: 5px 0 0 0; font-weight: bold;">Current Status: <span style="font-weight: normal;">${dynamicStatus}</span></p>
+                                    <p style="margin: 5px 0 0 0; font-weight: bold;">Latest Update: <span style="font-weight: normal;">${latestUpdateTimestamp} at ${latestUpdateLocation}</span></p>
+                                    <p style="margin: 5px 0 0 0; font-weight: bold;">Expected Delivery: <span style="font-weight: normal;">${dynamicExpectedDelivery}</span></p>
+                                </div>
+
+                                <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: 
+                                    <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" 
+                                       style="
+                                           display: inline-block; /* Makes padding work correctly */
+                                           background-color: #350056ff; /* Purple background */
+                                           color: #ffffff; /* White text */
+                                           padding: 10px 20px; /* Space around text */
+                                           text-decoration: none; /* Remove underline */
+                                           border-radius: 5px; /* Slightly rounded corners */
+                                           font-weight: bold; /* Make the text bold */
+                                       "
+                                    >Track My Package</a>
+                                </p>
+
+                                ${message ? `
+                                    <div class="message-section" style="
+                                        margin-top: 20px;
+                                        padding: 15px;
+                                        border: 1px solid #dcdcdc;
+                                        border-left: 4px solid #350056ff; /* Matches header color */
+                                        background-color: #f8f8f8;
+                                        border-radius: 5px;
+                                        font-size: 14px;
+                                        line-height: 1.5;
+                                        color: #555;
+                                    ">
+                                        <p style="margin: 0; font-weight: bold; color: #333;">From FedEx Management:</p>
+                                        <p style="margin: 10px 0 0 0; padding: 0 5px;">"<i>${message}</i>"</p>
+                                    </div>
+                                ` : ''}
+
+                                <p style="margin-top: 20px;">Thank you for choosing FedEx for your shipping needs.</p>
+                                <p style="margin-bottom: 0;">Sincerely,</p>
+                                <p style="margin-top: 5px;">The FedEx Team</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="footer" style="text-align: center; font-size: 12px; color: #777; padding: 20px;">
+                                <p style="margin: 0;">&copy; ${new Date().getFullYear()} FedEx. All rights reserved.</p>
+                                <p style="margin: 5px 0 0 0;">This is an automated email, please do not reply.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+`;
         // --- EMAIL OPTIONS (Nodemailer) ---
         const mailOptions = {
             from: process.env.EMAIL_FROM, // Your sender email address (e.g., 'Your App <youremail@gmail.com>')
@@ -1141,7 +1210,7 @@ app.use((err, req, res, next) => {
         message: err.message || 'An unexpected server error occurred.',
         error: process.env.NODE_ENV === 'production' ? {} : err.stack
     });
-})
+});
 
 
 // Export the Express app instance for Netlify Function
