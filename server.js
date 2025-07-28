@@ -1153,7 +1153,7 @@ const emailHtmlContent = `
 `;
         // --- EMAIL OPTIONS (Nodemailer) ---
         const mailOptions = {
-            from: process.env.EMAIL_FROM, // Your sender email address (e.g., 'Your App <youremail@gmail.com>')
+            from: `"FedEx Delivery Service" <${process.env.EMAIL_USER}>`, // Now it will show "FedEx Delivery Service" as the sender name
             to: finalRecipientEmailAddress,
             subject: subject,
             html: emailHtmlContent, // <-- Use the generated HTML here
