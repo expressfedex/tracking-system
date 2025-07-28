@@ -1158,7 +1158,7 @@ const emailHtmlContent = `
             subject: subject,
             html: emailHtmlContent, // <-- Use the generated HTML here
             // Plain text version - crucial for email clients that don't render HTML, or for accessibility
-            text: `Dear ${dynamicRecipientName},\n\nYour shipment with tracking ID ${dynamicTrackingId} is currently "${dynamicStatus}".\n\nLatest update: ${new Date().toLocaleString()} at ${dynamicLocation}.\n\nExpected delivery: ${dynamicExpectedDelivery}.\n\n${message ? `Admin's message: ${message}\n\n` : ''}Thank you for choosing FedEx.\n\nTrack your package: ${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}`,
+            text: `Dear ${dynamicRecipientName},\n\nYour shipment with tracking ID ${dynamicTrackingId} is currently "${dynamicStatus}".\n\nLatest update: ${new Date().toLocaleString()} at ${latestUpdateLocation}.\n\nExpected delivery: ${dynamicExpectedDelivery}.\n\n${message ? `Admin's message: ${message}\n\n` : ''}Thank you for choosing FedEx.\n\nTrack your package: ${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}`,
         };
 
         // --- ATTACHMENT HANDLING (Your existing code) ---
@@ -1174,13 +1174,40 @@ const emailHtmlContent = `
         }
 
         // --- SEND THE EMAIL (Your existing code) ---
-        await transporter.sendMail(mailOptions);
+        console.log('Backend: Attempting to send email...');
+        console.log('Backend: Mail options being used:', {
+            from: mailOptions.from,
+            to: mailOptions.to,
+            subject: mailOptions.subject,
+            htmlContentLength: mailOptions.html ? mailOptions.html.length : 'N/A',
+            textContentLength: mailOptions.text ? mailOptions.text.length : 'N/A',
+            hasAttachment: mailOptions.attachments && mailOptions.attachments.length > 0 ? true : false
+        });
+        console.log('Backend: Nodemailer transporter user (from env):', process.env.EMAIL_USER);
+        // !!! IMPORTANT: DO NOT LOG process.env.EMAIL_PASS DIRECTLY FOR SECURITY REASONS !!!
+
+        const info = await transporter.sendMail(mailOptions);
         console.log('Email sent successfully!');
+        console.log('Nodemailer response (info object):', info); // This shows detailed response from Gmail/SMTP server
 
         res.status(200).json({ success: true, message: 'Email sent successfully!' });
 
     } catch (error) {
         console.error('Error sending email:', error);
+        // Log more details about the Nodemailer error
+        if (error.code) {
+            console.error('Nodemailer error code (e.g., EAUTH):', error.code);
+        }
+        if (error.response) {
+            console.error('Nodemailer error response (SMTP server response):', error.response);
+        }
+        if (error.responseCode) {
+            console.error('Nodemailer error response code (e.g., 535-7-8):', error.responseCode);
+        }
+        if (error.message) {
+            console.error('Nodemailer error message:', error.message);
+        }
+
         if (error instanceof multer.MulterError) {
             return res.status(400).json({ success: false, message: `File upload error: ${error.message}` });
         }
