@@ -562,9 +562,35 @@ app.post('/api/admin/trackings/:trackingIdValue/history', authenticateAdmin, asy
 // Edit a specific history event
 app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async (req, res) => {
     const { id, historyId } = req.params;
-    const { date, time, location, description } = req.body; // This assumes JSON body, which is usually the case for PUT updates
+    let requestBody = req.body; // Use a temporary variable for req.body initially
+
+    // --- IMPORTANT: ADD THIS MANUAL PARSING LOGIC HERE ---
+    console.log(`Backend: Received PUT request for History ID: ${historyId} on Tracking ID: ${id}`);
+    console.log('Backend: History Data to update (initial req.body):', req.body);
+    console.log('Backend: Type of requestBody (initial):', typeof requestBody);
+    console.log('Backend: Keys of requestBody (initial):', Object.keys(requestBody));
+
+    if (Buffer.isBuffer(requestBody)) {
+        try {
+            // Attempt to parse the Buffer as a JSON string
+            const parsedBody = JSON.parse(requestBody.toString('utf8'));
+            requestBody = parsedBody; // Reassign requestBody to the parsed object
+            console.log('Backend: Manually parsed history body. New requestBody:', requestBody);
+            console.log('Backend: Type of requestBody (after manual parse):', typeof requestBody);
+            console.log('Backend: Keys of requestBody (after manual parse):', Object.keys(requestBody));
+        } catch (parseError) {
+            console.error('Backend: Failed to manually parse history body (likely invalid JSON or empty body):', parseError);
+            // Return an error if parsing fails, as we can't process the request
+            return res.status(400).json({ message: 'Invalid JSON body format or empty request body for history update.' });
+        }
+    }
+    // --------------------------------------------------------
+
+    // Now destructure from the (potentially) parsed requestBody
+    const { date, time, location, description } = requestBody; // This will now correctly get values if parsed
 
     if (date === undefined && time === undefined && location === undefined && description === undefined) {
+        console.log("Backend: Validation failed - no valid fields found in parsed body."); // Add a log for clarity
         return res.status(400).json({ message: 'At least one field (date, time, location, or description) is required to update a history event.' });
     }
 
@@ -580,6 +606,10 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
         if (!historyEvent) {
             return res.status(404).json({ message: 'History event not found.' });
         }
+
+        // Your existing update logic for location, description, and timestamp will now work
+        // because `date`, `time`, `location`, `description` will be correctly populated
+        // from the `requestBody`.
 
         if (location !== undefined) historyEvent.location = location;
         if (description !== undefined) historyEvent.description = description;
@@ -623,6 +653,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
         tracking.lastUpdated = new Date();
         await tracking.save();
+        console.log('Backend: History event updated successfully. New event:', historyEvent.toObject()); // Log success
 
         res.json({ message: 'History event updated successfully!', historyEvent: historyEvent.toObject() });
     } catch (error) {
@@ -633,6 +664,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
         res.status(500).json({ message: 'Server error while updating history event.', error: error.message });
     }
 });
+
 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
 app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
