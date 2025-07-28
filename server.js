@@ -634,18 +634,33 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
     }
 });
 
-
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
 app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
     const { id } = req.params;
-    const updateData = req.body; // updateData will be req.body
+    let updateData = req.body; // Initialize updateData with the raw req.body
 
-    // --- IMPORTANT: THESE ARE THE NEW LOGS WE NEED! ---
+    // --- IMPORTANT: ADD THIS MANUAL PARSING LOGIC HERE ---
     console.log(`Backend: Received PUT request for MongoDB ID: ${id}`);
-    console.log('Backend: Data to update (raw):', req.body); // Still good to keep this
-    console.log('Backend: Type of updateData:', typeof updateData); // <--- NEW LINE
-    console.log('Backend: Keys of updateData:', Object.keys(updateData)); // <--- NEW LINE
-    // ---------------------------------------------------
+    console.log('Backend: Data to update (initial req.body):', req.body);
+    console.log('Backend: Type of updateData (initial):', typeof updateData);
+    console.log('Backend: Keys of updateData (initial):', Object.keys(updateData));
+
+    // Check if req.body is a Buffer (as confirmed by your logs)
+    if (Buffer.isBuffer(updateData)) {
+        try {
+            // Attempt to parse the Buffer as a JSON string
+            const parsedBody = JSON.parse(updateData.toString('utf8'));
+            updateData = parsedBody; // Reassign updateData to the parsed object
+            console.log('Backend: Manually parsed body. New updateData:', updateData);
+            console.log('Backend: Type of updateData (after manual parse):', typeof updateData);
+            console.log('Backend: Keys of updateData (after manual parse):', Object.keys(updateData));
+        } catch (parseError) {
+            console.error('Backend: Failed to manually parse body (likely invalid JSON or empty body):', parseError);
+            // Return an error if parsing fails, as we can't process the request
+            return res.status(400).json({ message: 'Invalid JSON body format or empty request body.' });
+        }
+    }
+    // --------------------------------------------------------
 
     try {
         let currentTracking = await Tracking.findById(id);
@@ -654,6 +669,10 @@ app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
             console.log(`Backend: Tracking record not found for ID: ${id}`);
             return res.status(404).json({ message: 'Tracking record not found.' });
         }
+
+        // The rest of your logic remains the same.
+        // The `for (const key of Object.keys(updateData))` loop will now
+        // operate on the correctly parsed JSON object.
 
         if (updateData.trackingId && updateData.trackingId !== currentTracking.trackingId) {
             const newTrackingId = updateData.trackingId;
