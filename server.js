@@ -564,7 +564,8 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
     const { id, historyId } = req.params;
     let requestBody = req.body; // Use a temporary variable for req.body initially
 
-    // --- IMPORTANT: ADD THIS MANUAL PARSING LOGIC HERE ---
+    // --- CRITICAL: MANUAL PARSING LOGIC TO ENSURE req.body IS A PARSED OBJECT ---
+    // (These are the lines that were missing from your previous logs)
     console.log(`Backend: Received PUT request for History ID: ${historyId} on Tracking ID: ${id}`);
     console.log('Backend: History Data to update (initial req.body):', req.body);
     console.log('Backend: Type of requestBody (initial):', typeof requestBody);
@@ -572,7 +573,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
     if (Buffer.isBuffer(requestBody)) {
         try {
-            // Attempt to parse the Buffer as a JSON string
+            // Convert Buffer to string, then parse as JSON
             const parsedBody = JSON.parse(requestBody.toString('utf8'));
             requestBody = parsedBody; // Reassign requestBody to the parsed object
             console.log('Backend: Manually parsed history body. New requestBody:', requestBody);
@@ -580,17 +581,16 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
             console.log('Backend: Keys of requestBody (after manual parse):', Object.keys(requestBody));
         } catch (parseError) {
             console.error('Backend: Failed to manually parse history body (likely invalid JSON or empty body):', parseError);
-            // Return an error if parsing fails, as we can't process the request
             return res.status(400).json({ message: 'Invalid JSON body format or empty request body for history update.' });
         }
     }
-    // --------------------------------------------------------
+    // -----------------------------------------------------------------------------
 
-    // Now destructure from the (potentially) parsed requestBody
-    const { date, time, location, description } = requestBody; // This will now correctly get values if parsed
+    // Now, destructure from the (potentially) parsed requestBody
+    const { date, time, location, description } = requestBody;
 
     if (date === undefined && time === undefined && location === undefined && description === undefined) {
-        console.log("Backend: Validation failed - no valid fields found in parsed body."); // Add a log for clarity
+        console.log("Backend: Validation failed - no valid fields found in parsed body.");
         return res.status(400).json({ message: 'At least one field (date, time, location, or description) is required to update a history event.' });
     }
 
@@ -606,10 +606,6 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
         if (!historyEvent) {
             return res.status(404).json({ message: 'History event not found.' });
         }
-
-        // Your existing update logic for location, description, and timestamp will now work
-        // because `date`, `time`, `location`, `description` will be correctly populated
-        // from the `requestBody`.
 
         if (location !== undefined) historyEvent.location = location;
         if (description !== undefined) historyEvent.description = description;
@@ -653,7 +649,7 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
 
         tracking.lastUpdated = new Date();
         await tracking.save();
-        console.log('Backend: History event updated successfully. New event:', historyEvent.toObject()); // Log success
+        console.log('Backend: History event updated successfully. New event:', historyEvent.toObject());
 
         res.json({ message: 'History event updated successfully!', historyEvent: historyEvent.toObject() });
     } catch (error) {
@@ -1145,7 +1141,7 @@ app.use((err, req, res, next) => {
         message: err.message || 'An unexpected server error occurred.',
         error: process.env.NODE_ENV === 'production' ? {} : err.stack
     });
-});
+})
 
 
 // Export the Express app instance for Netlify Function
