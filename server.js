@@ -1037,7 +1037,7 @@ const dynamicExpectedDelivery = tracking && tracking.expectedDelivery
 const yourWebsiteBaseUrl = process.env.FRONTEND_URL || 'https://fedeix.netlify.app';
 
 // --- FIXED LOGO IMAGE URL ---
-const logoImageUrl = 'https://i.imgur.com/j2Qgkor.png'; // Direct link to the image
+const logoImageUrl = 'https://i.imgur.com/nShHzww.png'; // Direct link to the image
 
 const emailHtmlContent = `
     <!DOCTYPE html>
@@ -1103,7 +1103,7 @@ const emailHtmlContent = `
                                 </div>
 
                                 <p style="margin-bottom: 10px;">You can track your package anytime by visiting our website: 
-                                    <a href="${yourWebsiteBaseUrl}/track?id=${dynamicTrackingId}" 
+                                    <a href="${yourWebsiteBaseUrl}/track" 
                                        style="
                                            display: inline-block; /* Makes padding work correctly */
                                            background-color: #350056ff; /* Purple background */
@@ -1121,12 +1121,12 @@ const emailHtmlContent = `
                                         margin-top: 20px;
                                         padding: 15px;
                                         border: 1px solid #dcdcdc;
-                                        border-left: 4px solid #350056ff; /* Matches header color */
-                                        background-color: #f8f8f8;
+                                        border-left: 4px solid #d2290fff; /* Matches header color */
+                                        background-color: #350056ff;
                                         border-radius: 5px;
-                                        font-size: 14px;
+                                        font-size: 14px;                             
                                         line-height: 1.5;
-                                        color: #555;
+                                        color: #dcdcdc;
                                     ">
                                         <p style="margin: 0; font-weight: bold; color: #333;">From FedEx Management:</p>
                                         <p style="margin: 10px 0 0 0; padding: 0 5px;">"<i>${message}</i>"</p>
