@@ -351,7 +351,40 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
+    function deleteHistoryEvent(trackingMongoId, historyId) {
+        fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
+                    }
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Server error deleting history event');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    M.toast({ html: 'History event deleted successfully!', classes: 'red darken-2' });
+                    fetchTrackingHistory(trackingMongoId); // Refresh history list
+                } else {
+                    M.toast({ html: `Error: ${data.message || 'Could not delete history event.'}`, classes: 'red darken-2' });
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting history event:', error);
+                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+            });
+    }
+
     // --- Send Email Notification ---
     if (sendEmailForm) {
         sendEmailForm.addEventListener('submit', function(e) {
