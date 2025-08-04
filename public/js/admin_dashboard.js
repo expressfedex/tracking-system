@@ -11,23 +11,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const deleteUserModal = document.getElementById('deleteUserModal');
 
     // Tracking-related elements
-    const trackingTableBody = document.getElementById('tracking-table-body');
-    const historyEventsList = document.querySelector('#historyEvents');
-    const addHistoryForm = document.getElementById('addHistoryForm');
-    const updateTrackingMongoId = document.getElementById('updateTrackingMongoId');
-    const editHistoryModal = document.getElementById('editHistoryModal');
-    const editHistoryModalTrackingMongoId = document.getElementById('editHistoryModalTrackingMongoId');
-    const editHistoryModalHistoryId = document.getElementById('editHistoryModalHistoryId');
-    const editHistoryDate = document.getElementById('editHistoryDate');
-    const editHistoryTime = document.getElementById('editHistoryTime');
-    const editHistoryLocation = document.getElementById('editHistoryLocation');
-    const editHistoryDescription = document.getElementById('editHistoryDescription');
-    const saveHistoryEditBtn = document.getElementById('saveHistoryEditBtn');
-    const updateRecipientNameInput = document.getElementById('updateRecipientName');
-    const updateOriginInput = document.getElementById('updateOrigin');
-    const updateDestinationInput = document.getElementById('updateDestination');
-    const updateStatusInput = document.getElementById('updateStatus');
-    const updateEstimatedDeliveryInput = document.getElementById('updateEstimatedDelivery');
+const trackingTableBody = document.getElementById('tracking-table-body');
+const historyEventsList = document.querySelector('#historyEvents'); // The corrected variable name
+const addHistoryForm = document.getElementById('addHistoryForm');
+const updateTrackingMongoId = document.getElementById('updateTrackingMongoId');
+const editHistoryModal = document.getElementById('editHistoryModal');
+const editHistoryModalTrackingMongoId = document.getElementById('editHistoryModalTrackingMongoId');
+const editHistoryModalHistoryId = document.getElementById('editHistoryModalHistoryId');
+const editHistoryDate = document.getElementById('editHistoryDate');
+const editHistoryTime = document.getElementById('editHistoryTime');
+const editHistoryLocation = document.getElementById('editHistoryLocation');
+const const editHistoryDescription = document.getElementById('editHistoryDescription');
+const saveHistoryEditBtn = document.getElementById('saveHistoryEditBtn');
+const updateRecipientNameInput = document.getElementById('updateRecipientName');
+const updateOriginInput = document.getElementById('updateOrigin');
+const updateDestinationInput = document.getElementById('updateDestination');
+const updateStatusInput = document.getElementById('updateStatus');
+const updateEstimatedDeliveryInput = document.getElementById('updateEstimatedDelivery');
+
 
     // Email-related elements
     const sendEmailForm = document.getElementById('sendEmailForm');
@@ -287,7 +288,7 @@ function attachSingleTrackingSelectListener() {
         });
     }
 
-   function populateUpdateTrackingForm(trackingId) {
+function populateUpdateTrackingForm(trackingId) {
     console.log(`Attempting to fetch details and populate form for tracking ID: ${trackingId}`);
     fetch(`/api/admin/trackings/${trackingId}`, {
         method: 'GET',
@@ -307,7 +308,7 @@ function attachSingleTrackingSelectListener() {
         }
         return response.json();
     })
-         .then(trackingData => {
+        .then(trackingData => {
         // Log the received data to confirm it's correct
         console.log('Received tracking data:', trackingData);
 
@@ -330,7 +331,6 @@ function attachSingleTrackingSelectListener() {
 
         // Populate the history list using the history array from the same API response
         populateTrackingHistory(trackingData.history, trackingData._id);
-
     })
     .catch(error => {
         console.error('Error populating update tracking form:', error);
@@ -471,7 +471,7 @@ function attachSingleTrackingSelectListener() {
             });
     }
 
-    function attachHistoryButtonListeners() {
+   function attachHistoryButtonListeners() {
     document.querySelectorAll('.edit-history-btn').forEach(button => {
         button.addEventListener('click', function() {
             const trackingMongoId = this.dataset.trackingMongoId;
@@ -495,8 +495,7 @@ function attachSingleTrackingSelectListener() {
             M.Modal.getInstance(editHistoryModal).open();
         });
     });
-        
-         document.querySelectorAll('.delete-history-btn').forEach(button => {
+        document.querySelectorAll('.delete-history-btn').forEach(button => {
         button.addEventListener('click', function() {
             const trackingMongoId = this.dataset.trackingMongoId;
             const historyId = this.dataset.historyId;
@@ -673,6 +672,7 @@ function attachSingleTrackingSelectListener() {
     }
 
    function populateTrackingHistory(historyData, trackingMongoId) {
+    // Correctly using the `historyEventsList` variable
     if (!historyEventsList) {
         console.error('Error: The historyEvents list element was not found in the DOM.');
         return;
@@ -716,7 +716,6 @@ function attachSingleTrackingSelectListener() {
     });
     attachHistoryButtonListeners();
 }
-
     // --- Send Email Notification ---
     if (sendEmailForm) {
         sendEmailForm.addEventListener('submit', function(e) {
