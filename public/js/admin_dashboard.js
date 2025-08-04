@@ -108,7 +108,7 @@ document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
         updateDashboardStats(trackings);
 
         // Populate the "Manage Trackings" table
-        const manageTrackingTableBody = document.getElementById('manage-tracking-table-body');
+const manageTrackingTableBody = document.getElementById('all-trackings-table-body');
         if (manageTrackingTableBody) {
             manageTrackingTableBody.innerHTML = '';
             if (trackings.length === 0) {
