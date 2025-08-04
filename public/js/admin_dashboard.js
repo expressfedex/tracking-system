@@ -140,7 +140,7 @@ document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
 }
     
 
-  // Function to fetch all tracking IDs and populate select elements
+ // Function to fetch all tracking IDs and populate select elements
 function fetchTrackingIdsForSelect() {
     fetch('/api/admin/tracking-ids', { // <-- Make sure this is your correct API endpoint
         method: 'GET',
