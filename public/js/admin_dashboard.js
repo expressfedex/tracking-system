@@ -10,9 +10,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const editUserModal = document.getElementById('editUserModal');
     const deleteUserModal = document.getElementById('deleteUserModal');
 
-    // Tracking-related elements
+   // Tracking-related elements
 const trackingTableBody = document.getElementById('tracking-table-body');
-const historyEventsList = document.querySelector('#historyEvents'); // The corrected variable name
+const historyEventsList = document.querySelector('#historyEvents');
 const addHistoryForm = document.getElementById('addHistoryForm');
 const updateTrackingMongoId = document.getElementById('updateTrackingMongoId');
 const editHistoryModal = document.getElementById('editHistoryModal');
@@ -21,7 +21,7 @@ const editHistoryModalHistoryId = document.getElementById('editHistoryModalHisto
 const editHistoryDate = document.getElementById('editHistoryDate');
 const editHistoryTime = document.getElementById('editHistoryTime');
 const editHistoryLocation = document.getElementById('editHistoryLocation');
-const const editHistoryDescription = document.getElementById('editHistoryDescription');
+const editHistoryDescription = document.getElementById('editHistoryDescription'); // <-- Corrected line
 const saveHistoryEditBtn = document.getElementById('saveHistoryEditBtn');
 const updateRecipientNameInput = document.getElementById('updateRecipientName');
 const updateOriginInput = document.getElementById('updateOrigin');
