@@ -120,7 +120,7 @@ document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
                 row.innerHTML = `
                     <td>${tracking.trackingId}</td>
                     <td>${tracking.recipientName}</td>
-                    <td>${new Date(tracking.expectedDeliveryDate).toLocaleDateString()}</td>
+                    <td>${tracking.expectedDelivery ? new Date(tracking.expectedDelivery).toLocaleDateString() : 'N/A'}</td>
                     <td class="status-cell"><span class="status-dot ${statusClass}"></span>${tracking.status}</td>
                     <td>
                         <button class="btn btn-small waves-effect waves-light blue darken-1 update-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">edit</i></button>
