@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Tracking-related elements
     const trackingTableBody = document.getElementById('tracking-table-body');
-    const historyList = document.querySelector('#historyEvents');
+    const historyEventsList = document.querySelector('#historyEvents');
     const addHistoryForm = document.getElementById('addHistoryForm');
     const updateTrackingMongoId = document.getElementById('updateTrackingMongoId');
     const editHistoryModal = document.getElementById('editHistoryModal');
