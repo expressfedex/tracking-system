@@ -188,7 +188,8 @@ function renderAllTrackingsTable(trackings) {
             
             // --- FIX: Add this line to populate the dropdown
             populateSingleTrackingSelect(trackings); 
-            
+
+            attachSingleTrackingSelectListener();     
         })
         .catch(error => {
             console.error('Error fetching trackings:', error);
@@ -230,6 +231,20 @@ function populateSingleTrackingSelect(trackings) {
 
     // Re-initialize Materialize select dropdown to reflect new options
     M.FormSelect.init(selectElement);
+}
+    // --- Event Listener for Single Tracking Dropdown ---
+// NOTE: This function's definition must be outside of the fetchAllTrackings call.
+function attachSingleTrackingSelectListener() {
+    const singleTrackingIdSelect = document.getElementById('singleTrackingIdSelect');
+    if (singleTrackingIdSelect) {
+        singleTrackingIdSelect.addEventListener('change', function() {
+            const selectedTrackingId = this.value;
+            if (selectedTrackingId) {
+                // Call the existing function to populate the form
+                populateUpdateTrackingForm(selectedTrackingId);
+            }
+        });
+    }
 }
     
     function attachTrackingButtonListeners() {
