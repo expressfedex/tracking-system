@@ -1016,15 +1016,13 @@ function populateUpdateTrackingForm(trackingId) {
             return 'unknown';
         }
     }
-
-
+  
     // Initial load: show dashboard and fetch all trackings to populate stats
     showSection('dashboard-section');
     fetchAllTrackings(); // This will also call updateDashboardStats
     fetchTrackingIdsForSelect(); // Populate initial dropdowns
     fetchTrackingIdsForEmailSelect();
     fetchTrackingIdsForAttachFileSelect();
-
 
     // --- Sidebar Toggle Logic ---
     if (menuToggle && sidebar) {
@@ -1037,4 +1035,5 @@ function populateUpdateTrackingForm(trackingId) {
 
     // Initialize Modals
     M.Modal.init(document.querySelectorAll('.modal'));
-});
+
+}); // This is the correct closing
