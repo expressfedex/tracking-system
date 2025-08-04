@@ -661,6 +661,18 @@ app.put('/api/admin/trackings/:id/history/:historyId', authenticateAdmin, async 
     }
 });
 
+// Admin Route: Get all users
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+    try {
+        console.log('Received GET /api/admin/users request.');
+        // Fetch all users from the database, but exclude their password for security
+        const users = await User.find({}).select('-password');
+        res.json(users);
+    } catch (error) {
+        console.error('Error fetching all users for admin:', error);
+        res.status(500).json({ message: 'Server error while fetching users.', error: error.message });
+    }
+});
 
 // Admin Route to Update Tracking Details (general updates, including trackingId change)
 app.put('/api/admin/trackings/:id', authenticateAdmin, async (req, res) => {
