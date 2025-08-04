@@ -115,38 +115,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Functions to handle Tracking Management ---
 
-    // New function to render the tracking table
-    function renderAllTrackingsTable(trackings) {
-        if (!trackingTableBody) return;
-        trackingTableBody.innerHTML = '';
-        if (trackings.length === 0) {
-            trackingTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No trackings found.</td></tr>';
-            return;
-        }
+   function renderAllTrackingsTable(trackings) {
+    const tableBody = document.getElementById('all-trackings-table-body');
+    tableBody.innerHTML = ''; // Clear previous content
 
-        trackings.forEach(tracking => {
-            const row = document.createElement('tr');
-            const lastHistoryEvent = tracking.history.length > 0 ? tracking.history[tracking.history.length - 1] : null;
-            const lastUpdated = lastHistoryEvent ? new Date(lastHistoryEvent.timestamp).toLocaleDateString() : 'N/A';
-            const statusClass = getStatusColorClass(tracking.status);
-
-            row.innerHTML = `
-                <td>${tracking.trackingId}</td>
-                <td>${tracking.recipientName}</td>
-                <td>${tracking.origin}</td>
-                <td>${tracking.status} <span class="status-dot ${statusClass}"></span></td>
-                <td>${lastUpdated}</td>
-                <td>
-                    <button class="btn-small waves-effect waves-light blue darken-1 update-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">edit</i></button>
-                    <button class="btn-small waves-effect waves-light red darken-2 delete-tracking-modal-trigger" data-tracking-id="${tracking.trackingId}"><i class="material-icons">delete</i></button>
-                </td>
-            `;
-            trackingTableBody.appendChild(row);
-        });
-        
-        attachTrackingButtonListeners();
+    if (!trackings || trackings.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="14" style="text-align: center;">No tracking data available.</td></tr>';
+        return;
     }
 
+    trackings.forEach(tracking => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${tracking.trackingId}</td>
+            <td>${tracking.status}</td>
+            <td>${tracking.statusLineColor}</td>
+            <td>${tracking.isBlinking ? 'Yes' : 'No'}</td>
+            <td>${tracking.senderName}</td>
+            <td>${tracking.recipientName}</td>
+            <td>${tracking.recipientEmail}</td>
+            <td>${tracking.packageContents}</td>
+            <td>${tracking.serviceType}</td>
+            <td>${tracking.recipientAddress}</td>
+            <td>${tracking.specialHandling || 'N/A'}</td>
+            <td>${tracking.expectedDeliveryDate || 'N/A'}</td>
+            <td>${tracking.lastUpdated}</td>
+            <td>
+                <button class="btn-small waves-effect waves-light blue darken-2 view-edit-btn" data-tracking-id="${tracking.trackingId}">View/Edit</button>
+                <button class="btn-small waves-effect waves-light red darken-2 delete-btn" data-tracking-id="${tracking.trackingId}">Delete</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
     function fetchAllTrackings() {
         fetch('/api/admin/trackings', {
                 method: 'GET',
