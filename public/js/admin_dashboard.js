@@ -287,43 +287,56 @@ function attachSingleTrackingSelectListener() {
         });
     }
 
-    function populateUpdateTrackingForm(trackingId) {
-        fetch(`/api/admin/trackings/${trackingId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error fetching tracking details');
-                    });
-                }
-                return response.json();
-            })
-            .then(trackingData => {
-                if (updateTrackingMongoId) updateTrackingMongoId.value = trackingData._id;
-                if (updateRecipientNameInput) updateRecipientNameInput.value = trackingData.recipientName;
-                if (updateOriginInput) updateOriginInput.value = trackingData.origin;
-                if (updateDestinationInput) updateDestinationInput.value = trackingData.destination;
-                if (updateStatusInput) updateStatusInput.value = trackingData.status;
-                if (updateEstimatedDeliveryInput) {
-                    updateEstimatedDeliveryInput.value = trackingData.expectedDeliveryDate ? new Date(trackingData.expectedDeliveryDate).toISOString().split('T')[0] : '';
-                }
-
-                M.updateTextFields();
-
-                fetchTrackingHistory(trackingData.trackingId);
-            })
-            .catch(error => {
-                console.error('Error populating update tracking form:', error);
-                M.toast({
-                    html: `Failed to load tracking details: ${error.message}`,
-                    classes: 'red darken-2'
-                });
+   function populateUpdateTrackingForm(trackingId) {
+    console.log(`Attempting to fetch details and populate form for tracking ID: ${trackingId}`);
+    fetch(`/api/admin/trackings/${trackingId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error fetching tracking details');
             });
-    }
+        }
+        return response.json();
+    })
+         .then(trackingData => {
+        // Log the received data to confirm it's correct
+        console.log('Received tracking data:', trackingData);
+
+        // Populate form fields
+        if (updateTrackingMongoId) updateTrackingMongoId.value = trackingData._id;
+        if (updateRecipientNameInput) updateRecipientNameInput.value = trackingData.recipientName;
+        if (updateOriginInput) updateOriginInput.value = trackingData.origin;
+        if (updateDestinationInput) updateDestinationInput.value = trackingData.destination;
+        if (updateStatusInput) updateStatusInput.value = trackingData.status;
+
+        // Correctly handle the expected delivery date field
+        if (updateEstimatedDeliveryInput && trackingData.expectedDelivery) {
+            const date = new Date(trackingData.expectedDelivery);
+            const formattedDate = date.toISOString().split('T')[0];
+            updateEstimatedDeliveryInput.value = formattedDate;
+        }
+
+        // Update Materialize labels
+        M.updateTextFields();
+
+        // Populate the history list using the history array from the same API response
+        populateTrackingHistory(trackingData.history, trackingData._id);
+
+    })
+    .catch(error => {
+        console.error('Error populating update tracking form:', error);
+        M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
+    });
+}
 
     function deleteTracking(trackingId) {
         console.log('Attempting to delete tracking with ID:', trackingId);
@@ -459,41 +472,40 @@ function attachSingleTrackingSelectListener() {
     }
 
     function attachHistoryButtonListeners() {
-        document.querySelectorAll('.edit-history-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const trackingMongoId = this.dataset.trackingMongoId;
-                const historyId = this.dataset.historyId;
-                const date = this.dataset.date;
-                const time = this.dataset.time;
-                const location = this.dataset.location;
-                const description = this.dataset.description;
+    document.querySelectorAll('.edit-history-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const trackingMongoId = this.dataset.trackingMongoId;
+            const historyId = this.dataset.historyId;
+            const date = this.dataset.date;
+            const time = this.dataset.time;
+            const location = this.dataset.location;
+            const description = this.dataset.description;
 
-                editHistoryModalTrackingMongoId.value = trackingMongoId;
-                editHistoryModalHistoryId.value = historyId;
-                editHistoryDate.value = date;
-                editHistoryTime.value = time;
-                editHistoryLocation.value = location;
-                editHistoryDescription.value = description;
+            editHistoryModalTrackingMongoId.value = trackingMongoId;
+            editHistoryModalHistoryId.value = historyId;
+            editHistoryDate.value = date;
+            editHistoryTime.value = time;
+            editHistoryLocation.value = location;
+            editHistoryDescription.value = description;
 
-                M.updateTextFields();
-                M.Datepicker.init(editHistoryDate);
-                M.Timepicker.init(editHistoryTime);
+            M.updateTextFields();
+            M.Datepicker.init(editHistoryDate);
+            M.Timepicker.init(editHistoryTime);
 
-                M.Modal.getInstance(editHistoryModal).open();
-            });
+            M.Modal.getInstance(editHistoryModal).open();
         });
-
-        document.querySelectorAll('.delete-history-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const trackingMongoId = this.dataset.trackingMongoId;
-                const historyId = this.dataset.historyId;
-                if (confirm('Are you sure you want to delete this history event?')) {
-                    deleteHistoryEvent(trackingMongoId, historyId);
-                }
-            });
+    });
+        
+         document.querySelectorAll('.delete-history-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const trackingMongoId = this.dataset.trackingMongoId;
+            const historyId = this.dataset.historyId;
+            if (confirm('Are you sure you want to delete this history event?')) {
+                deleteHistoryEvent(trackingMongoId, historyId);
+            }
         });
-    }
-
+    });
+}
     if (addHistoryForm) {
         addHistoryForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -660,29 +672,49 @@ function attachSingleTrackingSelectListener() {
             });
     }
 
-    function populateTrackingHistory(historyData) {
-    // A quick check to make sure the element exists
-    if (historyEventsList) {
-        historyEventsList.innerHTML = ''; // Clear previous content
-
-        historyData.forEach(event => {
-            const li = document.createElement('li');
-            li.className = 'collection-item'; // Add Materialize class
-            li.innerHTML = `
-                <div class="history-content">
-                    <p><strong>${event.location}</strong> on ${event.date} at ${event.time}</p>
-                    <p>${event.description}</p>
-                </div>
-                <div class="history-actions">
-                    <button class="btn-small blue darken-2 edit-history-btn" data-id="${event._id}">Edit</button>
-                    <button class="btn-small red darken-2 delete-history-btn" data-id="${event._id}">Delete</button>
-                </div>
-            `;
-            historyEventsList.appendChild(li);
-        });
-    } else {
+   function populateTrackingHistory(historyData, trackingMongoId) {
+    if (!historyEventsList) {
         console.error('Error: The historyEvents list element was not found in the DOM.');
+        return;
     }
+    
+    // Clear previous content
+    historyEventsList.innerHTML = ''; 
+
+    if (!historyData || historyData.length === 0) {
+        historyEventsList.innerHTML = '<li class="collection-item">No history events yet.</li>';
+        return;
+    }
+
+    // Sort history events by timestamp
+    historyData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    // Populate the list with new data
+    historyData.forEach(event => {
+        const li = document.createElement('li');
+        li.classList.add('collection-item');
+        li.innerHTML = `
+            <div class="history-content">
+                <strong>${new Date(event.timestamp).toLocaleString()}</strong> - ${event.location ? `${event.location}: ` : ''}${event.description}
+            </div>
+            <div class="history-actions">
+                <button class="btn-small waves-effect waves-light blue edit-history-btn"
+                        data-tracking-mongo-id="${trackingMongoId}" data-history-id="${event._id}"
+                        data-date="${new Date(event.timestamp).toISOString().split('T')[0]}"
+                        data-time="${new Date(event.timestamp).toTimeString().split(' ')[0].substring(0, 5)}"
+                        data-location="${event.location || ''}"
+                        data-description="${event.description}">
+                    <i class="material-icons">edit</i>
+                </button>
+                <button class="btn-small waves-effect waves-light red delete-history-btn"
+                        data-tracking-mongo-id="${trackingMongoId}" data-history-id="${event._id}">
+                    <i class="material-icons">delete</i>
+                </button>
+            </div>
+        `;
+        historyEventsList.appendChild(li);
+    });
+    attachHistoryButtonListeners();
 }
 
     // --- Send Email Notification ---
