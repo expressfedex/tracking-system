@@ -148,44 +148,80 @@ document.addEventListener('DOMContentLoaded', function() {
         tableBody.appendChild(row);
     });
 }
-    function fetchAllTrackings() {
-        fetch('/api/admin/trackings', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({
-                            html: 'Session expired or unauthorized. Please log in again.',
-                            classes: 'red darken-2'
-                        });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error fetching trackings');
+    
+   function fetchAllTrackings() {
+    fetch('/api/admin/trackings', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({
+                        html: 'Session expired or unauthorized. Please log in again.',
+                        classes: 'red darken-2'
                     });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
                 }
-                return response.json();
-            })
-            .then(trackings => {
-                updateDashboardStats(trackings);
-                renderAllTrackingsTable(trackings); // Render the table with the fetched data
-            })
-            .catch(error => {
-                console.error('Error fetching trackings:', error);
-                M.toast({
-                    html: `Failed to load trackings: ${error.message}`,
-                    classes: 'red darken-2'
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error fetching trackings');
                 });
-                if (trackingTableBody) {
-                    trackingTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">Failed to load trackings: ${error.message}</td></tr>`;
-                }
+            }
+            return response.json();
+        })
+        .then(trackings => {
+            // Data has been fetched successfully
+            updateDashboardStats(trackings);
+            renderAllTrackingsTable(trackings); 
+            
+            // --- FIX: Add this line to populate the dropdown
+            populateSingleTrackingSelect(trackings); 
+            
+        })
+        .catch(error => {
+            console.error('Error fetching trackings:', error);
+            M.toast({
+                html: `Failed to load trackings: ${error.message}`,
+                classes: 'red darken-2'
             });
+            const trackingTableBody = document.getElementById('all-trackings-table-body');
+            if (trackingTableBody) {
+                trackingTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: red;">Failed to load trackings: ${error.message}</td></tr>`;
+            }
+        });
+}
+    
+/**
+ * Populates the single tracking select dropdown with tracking IDs.
+ * @param {Array<Object>} trackings - The array of tracking objects.
+ */
+function populateSingleTrackingSelect(trackings) {
+    const selectElement = document.getElementById('singleTrackingIdSelect');
+
+    if (!selectElement) {
+        console.error('Error: Single tracking select dropdown with ID "singleTrackingIdSelect" not found.');
+        return;
     }
 
+    // Clear existing options, keeping the placeholder
+    selectElement.innerHTML = '<option value="" disabled selected>Select Tracking ID</option>';
+
+    if (trackings && trackings.length > 0) {
+        trackings.forEach(tracking => {
+            const option = document.createElement('option');
+            // Based on your JSON, 'trackingId' is the correct property name
+            option.value = tracking.trackingId;
+            option.textContent = tracking.trackingId;
+            selectElement.appendChild(option);
+        });
+    }
+
+    // Re-initialize Materialize select dropdown to reflect new options
+    M.FormSelect.init(selectElement);
+}
+    
     function attachTrackingButtonListeners() {
         // Listener for Edit Tracking Buttons
         document.querySelectorAll('.update-tracking-btn').forEach(button => {
