@@ -142,7 +142,7 @@ document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
 
  // Function to fetch all tracking IDs and populate select elements
 function fetchTrackingIdsForSelect() {
-    fetch('/api/admin/trackings/ids', { // <-- Changed URL to match the backend
+        fetch('/api/admin/trackings', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
