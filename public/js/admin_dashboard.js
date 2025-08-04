@@ -140,16 +140,47 @@ document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
 }
     
 
-    function fetchTrackingIdsForSelect() {
-        console.log('Fetching tracking IDs for select dropdowns...');
-        // Placeholder for the actual fetch call
-        // fetch('/api/tracking-ids')
-        // .then(response => response.json())
-        // .then(ids => {
-        //     // Logic to populate select elements
-        // });
-    }
-
+  // Function to fetch all tracking IDs and populate select elements
+function fetchTrackingIdsForSelect() {
+    fetch('/api/admin/tracking-ids', { // <-- Make sure this is your correct API endpoint
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error fetching tracking IDs');
+            });
+        }
+        return response.json();
+    })
+    .then(trackingIds => {
+        const selects = document.querySelectorAll('#add-tracking-section .tracking-id-select, #manage-tracking-section-update .tracking-id-select');
+        
+        selects.forEach(selectElement => {
+            selectElement.innerHTML = '<option value="" disabled selected>Choose a tracking ID</option>'; // Reset the options
+            trackingIds.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = id;
+                selectElement.appendChild(option);
+            });
+            // Re-initialize Materialize select element
+            M.FormSelect.init(selectElement);
+        });
+    })
+    .catch(error => {
+        console.error('Error fetching tracking IDs:', error);
+        M.toast({ html: `Failed to load tracking IDs: ${error.message}`, classes: 'red darken-2' });
+    });
+}
+    
     function fetchTrackingIdsForEmailSelect() {
         console.log('Fetching tracking IDs for email select dropdown...');
         // Placeholder for the actual fetch call
