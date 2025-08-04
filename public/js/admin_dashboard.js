@@ -142,7 +142,7 @@ const manageTrackingTableBody = document.getElementById('all-trackings-table-bod
 
  // Function to fetch all tracking IDs and populate select elements
 function fetchTrackingIdsForSelect() {
-        fetch('/api/admin/trackings', {
+    fetch('/api/admin/trackings', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -160,7 +160,10 @@ function fetchTrackingIdsForSelect() {
         }
         return response.json();
     })
-    .then(trackingIds => {
+    .then(trackings => { // Renamed the parameter to 'trackings' for clarity
+        // Extract just the trackingId from each object using .map()
+        const trackingIds = trackings.map(t => t.trackingId);
+
         const selects = document.querySelectorAll('#add-tracking-section .tracking-id-select, #manage-tracking-section-update .tracking-id-select');
         
         selects.forEach(selectElement => {
