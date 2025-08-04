@@ -113,9 +113,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- Functions to handle Tracking Management ---
+   // --- Functions to handle Tracking Management ---
 
-   function renderAllTrackingsTable(trackings) {
+function renderAllTrackingsTable(trackings) {
     const tableBody = document.getElementById('all-trackings-table-body');
     tableBody.innerHTML = ''; // Clear previous content
 
@@ -141,8 +141,18 @@ document.addEventListener('DOMContentLoaded', function() {
             <td>${tracking.expectedDeliveryDate || 'N/A'}</td>
             <td>${tracking.lastUpdated}</td>
             <td>
-                <button class="btn-small waves-effect waves-light blue darken-2 view-edit-btn" data-tracking-id="${tracking.trackingId}">View/Edit</button>
-                <button class="btn-small waves-effect waves-light red darken-2 delete-btn" data-tracking-id="${tracking.trackingId}">Delete</button>
+                <div class="action-buttons">
+                    <button class="btn-small waves-effect waves-light blue darken-2 view-edit-btn"
+                            data-tracking-id="${tracking.trackingId}"
+                            data-id="${tracking._id}">
+                        View/Edit
+                    </button>
+                    <button class="btn-small waves-effect waves-light red darken-2 delete-btn"
+                            data-tracking-id="${tracking.trackingId}"
+                            data-id="${tracking._id}">
+                        Delete
+                    </button>
+                </div>
             </td>
         `;
         tableBody.appendChild(row);
