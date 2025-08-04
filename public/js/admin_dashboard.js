@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const exceptionsPackages = document.getElementById('exceptionsPackages');
 
     // Sidebar and navigation
-    const menuToggle = document.getElementById('menu-toggle');
-    const sidebar = document.getElementById('sidebar');
+      const menuToggle = document.querySelector('.menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
 
     // --- Utility Functions ---
     // This is a placeholder function, assume it exists elsewhere in the original file
