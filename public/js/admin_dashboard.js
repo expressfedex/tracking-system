@@ -83,17 +83,62 @@ document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
 
     // --- Utility Functions ---
     // This is a placeholder function, assume it exists elsewhere in the original file
-    function fetchAllTrackings() {
-        console.log('Fetching all trackings...');
-        // Placeholder for the actual fetch call
-        // In a real app, this would fetch trackings and then call updateDashboardStats
-        // fetch('/api/trackings')
-        // .then(response => response.json())
-        // .then(trackings => {
-        //     updateDashboardStats(trackings);
-        //     // Other logic to populate tables, etc.
-        // });
-    }
+ function fetchAllTrackings() {
+    fetch('/api/admin/trackings', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Handle HTTP errors, e.g., 401, 403, 500
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error fetching trackings');
+            });
+        }
+        return response.json();
+    })
+    .then(trackings => {
+        // Update the dashboard statistics using the fetched data
+        updateDashboardStats(trackings);
+
+        // Populate the "Manage Trackings" table
+        const manageTrackingTableBody = document.getElementById('manage-tracking-table-body');
+        if (manageTrackingTableBody) {
+            manageTrackingTableBody.innerHTML = '';
+            if (trackings.length === 0) {
+                manageTrackingTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No trackings found.</td></tr>';
+            }
+            trackings.forEach(tracking => {
+                const statusClass = getStatusColorClass(tracking.status);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${tracking.trackingId}</td>
+                    <td>${tracking.recipientName}</td>
+                    <td>${new Date(tracking.expectedDeliveryDate).toLocaleDateString()}</td>
+                    <td class="status-cell"><span class="status-dot ${statusClass}"></span>${tracking.status}</td>
+                    <td>
+                        <button class="btn btn-small waves-effect waves-light blue darken-1 update-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">edit</i></button>
+                        <button class="btn btn-small waves-effect waves-light red darken-2 delete-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">delete</i></button>
+                    </td>
+                `;
+                manageTrackingTableBody.appendChild(row);
+            });
+            // You may need a function here to attach listeners to the new buttons
+            // attachTrackingButtonListeners();
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching trackings:', error);
+        M.toast({ html: `Failed to load trackings: ${error.message}`, classes: 'red darken-2' });
+    });
+}
+    
 
     function fetchTrackingIdsForSelect() {
         console.log('Fetching tracking IDs for select dropdowns...');
