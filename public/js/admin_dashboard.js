@@ -107,42 +107,46 @@ document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
         // Update the dashboard statistics using the fetched data
         updateDashboardStats(trackings);
 
-        // Populate the "Manage Trackings" table
-const manageTrackingTableBody = document.getElementById('all-trackings-table-body');
-        if (manageTrackingTableBody) {
-            manageTrackingTableBody.innerHTML = '';
-            if (trackings.length === 0) {
-                manageTrackingTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">No trackings found.</td></tr>';
+      // --- Function to Attach Listeners to Tracking Buttons ---
+function attachTrackingButtonListeners() {
+    // Listener for Edit Tracking Buttons
+    document.querySelectorAll('.update-tracking-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const trackingId = this.dataset.trackingId;
+            if (trackingId) {
+                // 1. Switch to the 'Manage Single Tracking' section
+                showSection('manage-tracking-section-update');
+
+                // 2. Populate the form in that section with the selected tracking's data
+                populateUpdateTrackingForm(trackingId);
+            } else {
+                M.toast({ html: 'Tracking ID not found on button.', classes: 'red darken-2' });
             }
-            trackings.forEach(tracking => {
-                const statusClass = getStatusColorClass(tracking.status);
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${tracking.trackingId}</td>
-                    <td>${tracking.recipientName}</td>
-                    <td>${tracking.expectedDelivery ? new Date(tracking.expectedDelivery).toLocaleDateString() : 'N/A'}</td>
-                    <td class="status-cell"><span class="status-dot ${statusClass}"></span>${tracking.status}</td>
-                    <td>
-                        <button class="btn btn-small waves-effect waves-light blue darken-1 update-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">edit</i></button>
-                        <button class="btn btn-small waves-effect waves-light red darken-2 delete-tracking-btn" data-tracking-id="${tracking.trackingId}"><i class="material-icons">delete</i></button>
-                    </td>
-                `;
-                manageTrackingTableBody.appendChild(row);
-            });
-            // You may need a function here to attach listeners to the new buttons
-            // attachTrackingButtonListeners();
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching trackings:', error);
-        M.toast({ html: `Failed to load trackings: ${error.message}`, classes: 'red darken-2' });
+        });
+    });
+
+    // Listener for Delete Tracking Buttons
+    document.querySelectorAll('.delete-tracking-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const trackingId = this.dataset.trackingId;
+            if (trackingId) {
+                // Set the tracking ID in the hidden input of the delete modal
+                document.getElementById('trackingIdToDelete').value = trackingId;
+                // You might also want to display the tracking ID in the modal text
+                document.getElementById('trackingIdConfirmation').textContent = trackingId;
+                
+                // Open the delete confirmation modal
+                M.Modal.getInstance(deleteTrackingModal).open();
+            } else {
+                M.toast({ html: 'Tracking ID not found for deletion.', classes: 'red darken-2' });
+            }
+        });
     });
 }
-    
 
- // Function to fetch all tracking IDs and populate select elements
-function fetchTrackingIdsForSelect() {
-    fetch('/api/admin/trackings', {
+// --- New function to populate the 'Manage Single Tracking' form ---
+function populateUpdateTrackingForm(trackingId) {
+    fetch(`/api/admin/trackings/${trackingId}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -150,39 +154,47 @@ function fetchTrackingIdsForSelect() {
     })
     .then(response => {
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                setTimeout(() => window.location.href = 'admin_login.html', 2000);
-            }
             return response.json().then(errorData => {
-                throw new Error(errorData.message || 'Server error fetching tracking IDs');
+                throw new Error(errorData.message || 'Server error fetching tracking details');
             });
         }
         return response.json();
     })
-    .then(trackings => { // Renamed the parameter to 'trackings' for clarity
-        // Extract just the trackingId from each object using .map()
-        const trackingIds = trackings.map(t => t.trackingId);
+    .then(trackingData => {
+        // Find and select the correct tracking ID in the dropdown
+        const updateTrackingIdSelect = document.getElementById('updateTrackingIdSelect'); // Make sure this ID is correct
+        if (updateTrackingIdSelect) {
+            updateTrackingIdSelect.value = trackingData.trackingId;
+            M.FormSelect.init(updateTrackingIdSelect); // Re-initialize to show the selected value
+        }
 
-        const selects = document.querySelectorAll('#add-tracking-section .tracking-id-select, #manage-tracking-section-update .tracking-id-select');
+        // Populate the main tracking details form
+        if (updateTrackingMongoId) updateTrackingMongoId.value = trackingData._id;
+        if (updateRecipientNameInput) updateRecipientNameInput.value = trackingData.recipientName;
+        if (updateOriginInput) updateOriginInput.value = trackingData.origin;
+        if (updateDestinationInput) updateDestinationInput.value = trackingData.destination;
+        if (updateStatusInput) updateStatusInput.value = trackingData.status;
+        if (updateEstimatedDeliveryInput) {
+            updateEstimatedDeliveryInput.value = trackingData.expectedDelivery ? new Date(trackingData.expectedDelivery).toISOString().split('T')[0] : '';
+        }
         
-        selects.forEach(selectElement => {
-            selectElement.innerHTML = '<option value="" disabled selected>Choose a tracking ID</option>'; // Reset the options
-            trackingIds.forEach(id => {
-                const option = document.createElement('option');
-                option.value = id;
-                option.textContent = id;
-                selectElement.appendChild(option);
-            });
-            // Re-initialize Materialize select element
-            M.FormSelect.init(selectElement);
-        });
+        M.updateTextFields(); // Ensure labels are correctly positioned
+
+        // Now, fetch and populate the history timeline for this tracking
+        fetchTrackingHistory(trackingData._id); // Assuming fetchTrackingHistory uses the Mongo ID
     })
     .catch(error => {
-        console.error('Error fetching tracking IDs:', error);
-        M.toast({ html: `Failed to load tracking IDs: ${error.message}`, classes: 'red darken-2' });
+        console.error('Error populating update tracking form:', error);
+        M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
     });
 }
+
+// --- Update the fetchAllTrackings() function call ---
+// After the table is created, call the new function to attach listeners.
+// So, within your existing fetchAllTrackings() function, change this:
+// `// You may need a function here to attach listeners to the new buttons`
+// to this:
+// `attachTrackingButtonListeners();`
     
     function fetchTrackingIdsForEmailSelect() {
         console.log('Fetching tracking IDs for email select dropdown...');
