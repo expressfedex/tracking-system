@@ -15,145 +15,44 @@
             --in-transit-yellow: #FFC107;
             --pending-orange: #FF9800;
             --exception-red: #F44336;
-            --info-blue: #2196F3; /* Materialize Blue */
-            --danger-red: #F44336; /* Materialize Red */
-            --warning-orange: #FF9800; /* Materialize Orange */
+            --info-blue: #2196F3;
+            --danger-red: #F44336;
+            --warning-orange: #FF9800;
             --sidebar-bg: #ffffff;
             --sidebar-text: #333333;
         }
-        /* Basic styles to make Materialize forms look cohesive with your current setup */
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-row {
-            display: flex;
-            gap: 20px; /* Space between date and time */
-        }
-        .form-row .form-group {
-            flex: 1;
-        }
-        /* Style for buttons to align with Materialize */
-        .btn, .btn-primary, .btn-secondary, .btn-danger {
-            margin-right: 10px; /* Spacing between buttons */
-            margin-top: 10px;
-            /* Materialize classes will handle most of the styling, but you can add custom ones if needed */
-        }
-        /* Ensure Materialize select dropdowns take full width */
-        .select-wrapper input.select-dropdown {
-            width: 100%;
-        }
-
-        /* Status Indicator Styles from previous response */
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-            margin-bottom: 10px;
-        }
-        .status-circle {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            vertical-align: middle;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-        }
+        .form-group { margin-bottom: 20px; }
+        .form-row { display: flex; gap: 20px; }
+        .form-row .form-group { flex: 1; }
+        .btn, .btn-primary, .btn-secondary, .btn-danger { margin-right: 10px; margin-top: 10px; }
+        .select-wrapper input.select-dropdown { width: 100%; }
+        .status-indicator { display: flex; align-items: center; margin-top: 10px; margin-bottom: 10px; }
+        .status-circle { display: inline-block; width: 20px; height: 20px; border-radius: 50%; vertical-align: middle; margin-right: 10px; border: 1px solid #ccc; }
         .status-circle.delivered { background-color: var(--success-green); }
         .status-circle.in-transit { background-color: var(--in-transit-yellow); }
         .status-circle.pending { background-color: var(--pending-orange); }
         .status-circle.exception { background-color: var(--exception-red); }
-        .status-circle.unknown { background-color: #9e9e9e; } /* Grey */
-
-        .status-circle.blinking {
-            animation: blink-animation 1s infinite alternate;
-        }
-
-        @keyframes blink-animation {
-            from { opacity: 1; }
-            to { opacity: 0.5; }
-        }
-
-        /* History List Styling */
-        #trackingHistoryList ul {
-            list-style: none;
-            padding: 0;
-        }
-        #trackingHistoryList li {
-            background-color: #f8f8f8;
-            border: 1px solid #eee;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
-        }
-        #trackingHistoryList .history-content {
-            flex: 1;
-            padding-right: 10px;
-        }
-        #trackingHistoryList .history-actions {
-            display: flex;
-            gap: 5px;
-            margin-top: 5px; /* Add some top margin for wrapped buttons */
-        }
-        #trackingHistoryList .btn-small {
-            padding: 5px 10px;
-            font-size: 0.8em;
-        }
-
-        /* Specific styles for the table */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .data-table th, .data-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            vertical-align: top; /* Align content to the top */
-        }
-
-        .data-table th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-        }
-
-        .data-table tbody tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        .data-table tbody tr:hover {
-            background-color: #e9e9e9;
-        }
-
-        .table-responsive {
-            overflow-x: auto; /* Ensures table is scrollable on small screens */
-        }
-
-        .menu-toggle {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            font-size: 24px;
-            cursor: pointer;
-            z-index: 1000;
-            background-color: var(--sidebar-bg);
-            color: var(--sidebar-text);
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+        .status-circle.unknown { background-color: #9e9e9e; }
+        .status-circle.blinking { animation: blink-animation 1s infinite alternate; }
+        @keyframes blink-animation { from { opacity: 1; } to { opacity: 0.5; } }
+        #trackingHistoryList ul { list-style: none; padding: 0; }
+        #trackingHistoryList li { background-color: #f8f8f8; border: 1px solid #eee; padding: 10px 15px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        #trackingHistoryList .history-content { flex: 1; padding-right: 10px; }
+        #trackingHistoryList .history-actions { display: flex; gap: 5px; margin-top: 5px; }
+        #trackingHistoryList .btn-small { padding: 5px 10px; font-size: 0.8em; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+        .data-table th { background-color: #f2f2f2; font-weight: bold; }
+        .data-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        .data-table tbody tr:hover { background-color: #e9e9e9; }
+        .table-responsive { overflow-x: auto; }
+        .menu-toggle { position: fixed; top: 20px; left: 20px; font-size: 24px; cursor: pointer; z-index: 1000; background-color: var(--sidebar-bg); color: var(--sidebar-text); padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
     </style>
 </head>
 <body>
-  <i id="menu-toggle" class="fas fa-bars menu-toggle" aria-label="Toggle Navigation Menu"></i>
+    <i id="menu-toggle" class="fas fa-bars menu-toggle" aria-label="Toggle Navigation Menu"></i>
 
-<aside id="sidebar" class="sidebar"></aside>
+    <aside id="sidebar" class="sidebar">
         <div>
             <h2>FedEx Admin</h2>
             <nav>
@@ -477,7 +376,6 @@
             </p>
         </section>
 
-
         <section id="communication-center-section" class="dashboard-section">
             <h3><i class="fas fa-paper-plane"></i> FedEx Communication Center</h3>
             <p>Send email notifications to recipients and attach optional files.</p>
@@ -679,7 +577,6 @@
             <button type="button" class="modal-close waves-effect waves-green btn-flat">Cancel</button>
         </div>
     </div>
-
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="/js/admin_dashboard.js"></script>
