@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Tracking-related elements
     const trackingTableBody = document.getElementById('tracking-table-body');
-    const trackingHistoryList = document.getElementById('tracking-history-list');
+    const historyList = document.querySelector('#historyEvents');
     const addHistoryForm = document.getElementById('addHistoryForm');
     const updateTrackingMongoId = document.getElementById('updateTrackingMongoId');
     const editHistoryModal = document.getElementById('editHistoryModal');
@@ -659,6 +659,31 @@ function attachSingleTrackingSelectListener() {
                 });
             });
     }
+
+    function populateTrackingHistory(historyData) {
+    // A quick check to make sure the element exists
+    if (historyEventsList) {
+        historyEventsList.innerHTML = ''; // Clear previous content
+
+        historyData.forEach(event => {
+            const li = document.createElement('li');
+            li.className = 'collection-item'; // Add Materialize class
+            li.innerHTML = `
+                <div class="history-content">
+                    <p><strong>${event.location}</strong> on ${event.date} at ${event.time}</p>
+                    <p>${event.description}</p>
+                </div>
+                <div class="history-actions">
+                    <button class="btn-small blue darken-2 edit-history-btn" data-id="${event._id}">Edit</button>
+                    <button class="btn-small red darken-2 delete-history-btn" data-id="${event._id}">Delete</button>
+                </div>
+            `;
+            historyEventsList.appendChild(li);
+        });
+    } else {
+        console.error('Error: The historyEvents list element was not found in the DOM.');
+    }
+}
 
     // --- Send Email Notification ---
     if (sendEmailForm) {
