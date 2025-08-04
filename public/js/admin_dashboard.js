@@ -188,14 +188,7 @@ function populateUpdateTrackingForm(trackingId) {
         M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
     });
 }
-
-// --- Update the fetchAllTrackings() function call ---
-// After the table is created, call the new function to attach listeners.
-// So, within your existing fetchAllTrackings() function, change this:
-// `// You may need a function here to attach listeners to the new buttons`
-// to this:
-// `attachTrackingButtonListeners();`
-    
+        
     function fetchTrackingIdsForEmailSelect() {
         console.log('Fetching tracking IDs for email select dropdown...');
         // Placeholder for the actual fetch call
