@@ -47,6 +47,40 @@ document.addEventListener('DOMContentLoaded', function() {
      const menuToggle = document.getElementById('menu-toggle');
     const sidebar = document.getElementById('sidebar');
 
+    // --- Sidebar Nav Handler to Switch Sections and Fetch Data ---
+document.querySelectorAll('.sidebar a[data-section]').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const sectionId = this.getAttribute('data-section');
+
+        // Hide all sections and show the target one
+        showSection(sectionId);
+
+        // Remove 'active' class from all links and add to the clicked one
+        document.querySelectorAll('.sidebar a').forEach(item => {
+            item.classList.remove('active');
+        });
+        this.classList.add('active');
+
+        // Fetch data based on the section
+        if (sectionId === 'dashboard-section') {
+            fetchAllTrackings();
+        } else if (sectionId === 'manage-users-section') {
+            fetchAllUsers();
+        } else if (sectionId === 'add-tracking-section') {
+            fetchTrackingIdsForSelect();
+        } else if (sectionId === 'manage-tracking-section') {
+             fetchAllTrackings();
+        } else if (sectionId === 'manage-tracking-section-update') {
+            fetchTrackingIdsForSelect(); // Assuming this populates the update form
+        } else if (sectionId === 'send-email-section') {
+            fetchTrackingIdsForEmailSelect();
+        } else if (sectionId === 'upload-file-section') {
+            fetchTrackingIdsForAttachFileSelect();
+        }
+    });
+});
+
     // --- Utility Functions ---
     // This is a placeholder function, assume it exists elsewhere in the original file
     function fetchAllTrackings() {
