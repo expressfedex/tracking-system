@@ -189,10 +189,18 @@ const authenticateAdmin = (req, res, next) => {
 // --- API Routes ---
 
 // Public endpoint to get tracking details
-app.get('/api/track/:trackingId', async (req, res) => {
+   app.get('/api/track/:trackingId', async (req, res) => {
     try {
         const trackingId = req.params.trackingId;
-        const trackingDetails = await Tracking.findOne({ trackingId: trackingId });
+        
+        // --- ADD THIS LINE ---
+        const numericId = parseInt(trackingId, 10);
+        if (isNaN(numericId)) {
+            return res.status(400).json({ message: 'Invalid Tracking ID format.' });
+        }
+
+        // Use the numeric ID in the query
+        const trackingDetails = await Tracking.findOne({ trackingId: numericId });
 
         if (!trackingDetails) {
             return res.status(404).json({ message: 'Tracking ID not found.' });
@@ -249,18 +257,22 @@ app.get('/api/admin/trackings', authenticateAdmin, async (req, res) => {
     }
 });
 
-// GET /api/admin/trackings/:trackingIdValue/history - Fetch history for a tracking (Admin only)
+// Admin Route: Fetch history for a tracking
 app.get('/api/admin/trackings/:trackingIdValue/history', authenticateToken, async (req, res) => {
     try {
-        // Use the parameter name that matches your frontend (or adjust frontend)
-        // For consistency with your POST route, let's call it trackingIdValue
         const { trackingIdValue } = req.params;
 
         console.log('Backend: Fetching history for trackingIdValue:', trackingIdValue);
+        
+        // --- ADD THESE LINES ---
+        const numericId = parseInt(trackingIdValue, 10);
+        if (isNaN(numericId)) {
+            console.log('Backend: Invalid Tracking ID format for history fetch:', trackingIdValue);
+            return res.status(400).json({ message: 'Invalid Tracking ID format.' });
+        }
 
-        // --- CHANGE THIS LINE ---
-        // Instead of findById, use findOne to search by your custom 'trackingId' field
-        const tracking = await Tracking.findOne({ trackingId: trackingIdValue });
+        // Use the numeric ID in the query
+        const tracking = await Tracking.findOne({ trackingId: numericId });
 
         if (!tracking) {
             console.log('Backend: Tracking record not found for custom ID (history fetch):', trackingIdValue);
