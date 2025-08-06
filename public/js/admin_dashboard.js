@@ -448,71 +448,81 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- Fetch Single Tracking Details for Update Form ---
-    if (singleTrackingIdSelect) {
-        singleTrackingIdSelect.addEventListener('change', function() {
-            const trackingId = this.value;
-            if (!trackingId) {
-                updateTrackingForm.style.display = 'none';
-                return;
+if (singleTrackingIdSelect) {
+    singleTrackingIdSelect.addEventListener('change', function() {
+        // Get the value from the selected option
+        const trackingId = this.value;
+
+        // CRITICAL FIX: Check explicitly for an invalid or empty tracking ID
+        if (!trackingId || trackingId === "") {
+            console.warn('No valid tracking ID selected. Hiding update form.');
+            M.toast({ html: 'Please select a valid tracking ID.', classes: 'orange darken-2' });
+            updateTrackingForm.style.display = 'none';
+            // Also clear the tracking history list to avoid showing old data
+            document.getElementById('trackingHistoryList').innerHTML = '<ul class="collection"></ul>';
+            return; // Exit the function to prevent the API call
+        }
+
+        // Use the selected tracking ID to populate the hidden input for history management
+        document.getElementById('historyTrackingIdInput').value = trackingId;
+
+        fetch(`/api/admin/trackings/${trackingId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
-
-            fetch(`/api/admin/trackings/${trackingId}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
                 }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error fetching tracking details');
-                    });
-                }
-                return response.json();
-            })
-            .then(tracking => {
-                updateTrackingMongoId.value = tracking._id;
-                updateTrackingId.value = tracking.trackingId;
-                updateStatusInput.value = tracking.status;
-                updateIsBlinkingOriginal.checked = tracking.isBlinking || false; // Set checkbox state
-                document.getElementById('updateStatusLineColor').value = tracking.statusLineColor || '#2196F3';
-                document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
-                document.getElementById('updateSenderName').value = tracking.senderName;
-                document.getElementById('updateRecipientName').value = tracking.recipientName;
-                document.getElementById('updateRecipientEmail').value = tracking.recipientEmail;
-                document.getElementById('updatePackageContents').value = tracking.packageContents || '';
-                document.getElementById('updateServiceType').value = tracking.serviceType;
-                document.getElementById('updateRecipientAddress').value = tracking.recipientAddress;
-                document.getElementById('updateSpecialHandling').value = tracking.specialHandling || '';
-                document.getElementById('updateExpectedDeliveryDate').value = tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toISOString().split('T')[0] : '';
-                document.getElementById('updateExpectedDeliveryTime').value = tracking.expectedDeliveryTime || '';
-                document.getElementById('updateOrigin').value = tracking.origin || '';
-                document.getElementById('updateDestination').value = tracking.destination || '';
-                document.getElementById('updateWeight').value = tracking.weight || '';
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error fetching tracking details');
+                });
+            }
+            return response.json();
+        })
+        .then(tracking => {
+            // Populate form fields with data from the fetched tracking object
+            document.getElementById('updateTrackingMongoId').value = tracking._id;
+            document.getElementById('updateTrackingId').value = tracking.trackingId;
+            document.getElementById('updateStatus').value = tracking.status;
+            document.getElementById('updateIsBlinkingOriginal').checked = tracking.isBlinking || false;
+            document.getElementById('updateStatusLineColor').value = tracking.statusLineColor || '#2196F3';
+            document.getElementById('updateBlinkingDotColor').value = tracking.blinkingDotColor || '#FFFFFF';
+            document.getElementById('updateSenderName').value = tracking.senderName;
+            document.getElementById('updateRecipientName').value = tracking.recipientName;
+            document.getElementById('updateRecipientEmail').value = tracking.recipientEmail;
+            document.getElementById('updatePackageContents').value = tracking.packageContents || '';
+            document.getElementById('updateServiceType').value = tracking.serviceType;
+            document.getElementById('updateRecipientAddress').value = tracking.recipientAddress;
+            document.getElementById('updateSpecialHandling').value = tracking.specialHandling || '';
+            document.getElementById('updateExpectedDeliveryDate').value = tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toISOString().split('T')[0] : '';
+            document.getElementById('updateExpectedDeliveryTime').value = tracking.expectedDeliveryTime || '';
+            document.getElementById('updateOrigin').value = tracking.origin || '';
+            document.getElementById('updateDestination').value = tracking.destination || '';
+            document.getElementById('updateWeight').value = tracking.weight || '';
 
-                // Manually trigger input event for status to update color circle
-                updateStatusInput.dispatchEvent(new Event('input'));
-                updateIsBlinkingOriginal.dispatchEvent(new Event('change')); // Trigger change for blinking
+            // Update Materialize elements and show the form
+            M.updateTextFields();
+            M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+            M.Timepicker.init(document.getElementById('updateExpectedDeliveryTime'));
+            updateTrackingForm.style.display = 'block';
 
-                M.updateTextFields(); // Update Materialize labels
-                // Re-init date/time pickers for the update form
-                M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
-                M.Timepicker.init(document.getElementById('updateExpectedDeliveryTime'));
-
-                updateTrackingForm.style.display = 'block';
-                fetchTrackingHistory(tracking._id); // Fetch and display history for this tracking
-            })
-            .catch(error => {
-                console.error('Error fetching tracking details:', error);
-                M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
-                updateTrackingForm.style.display = 'none';
-            });
+            // --- You must also handle the `historyTrackingIdInput` here ---
+            // This is the key part of the fix from our previous conversation.
+            document.getElementById('historyTrackingIdInput').value = tracking.trackingId;
+            fetchTrackingHistory(tracking.trackingId); // Use the valid tracking ID from the API response
+        })
+        .catch(error => {
+            console.error('Error fetching tracking details:', error);
+            M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
+            updateTrackingForm.style.display = 'none';
         });
-    }
+    });
+}
 
     // --- Update Tracking ---
     if (updateTrackingForm) {
@@ -788,52 +798,84 @@ function fetchTrackingHistory(trackingId) { // Renamed parameter from mongoId to
         });
     }
 
-    if (saveHistoryEditBtn) {
-        saveHistoryEditBtn.addEventListener('click', function() {
-            const trackingMongoId = editHistoryModalTrackingMongoId.value;
-            const historyId = editHistoryModalHistoryId.value;
+    // --- Fix for the Invalid Date Error ---
+if (saveHistoryEditBtn) {
+    saveHistoryEditBtn.addEventListener('click', function() {
+        const trackingMongoId = editHistoryModalTrackingMongoId.value;
+        const historyId = editHistoryModalHistoryId.value;
 
-            const updatedHistoryEvent = {
-                timestamp: new Date(`${editHistoryDate.value}T${editHistoryTime.value}`).toISOString(),
-                location: editHistoryLocation.value,
-                description: editHistoryDescription.value
-            };
+        // Get the Materialize Datepicker and Timepicker instances
+        const datepickerInstance = M.Datepicker.getInstance(editHistoryDate);
+        const timepickerInstance = M.Timepicker.getInstance(editHistoryTime);
 
-            fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(updatedHistoryEvent)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error updating history event');
-                    });
+        let isoTimestamp = '';
+        if (datepickerInstance && datepickerInstance.date && timepickerInstance && timepickerInstance.time) {
+            // Get the date object from the datepicker
+            const date = datepickerInstance.date;
+            
+            // Get the time value and parse it
+            const [time, period] = timepickerInstance.time.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            
+            // Convert to 24-hour format
+            if (period === 'PM' && hours < 12) {
+                hours += 12;
+            }
+            if (period === 'AM' && hours === 12) {
+                hours = 0;
+            }
+
+            // Set the hours and minutes on the date object
+            date.setHours(hours, minutes, 0, 0);
+
+            // Format the final ISO string
+            isoTimestamp = date.toISOString();
+        } else {
+            M.toast({ html: 'Please select a valid date and time.', classes: 'red darken-2' });
+            return; // Stop execution if date/time is invalid or missing
+        }
+
+        const updatedHistoryEvent = {
+            timestamp: isoTimestamp,
+            location: editHistoryLocation.value,
+            description: editHistoryDescription.value
+        };
+
+        fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(updatedHistoryEvent)
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                    setTimeout(() => window.location.href = 'admin_login.html', 2000);
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    M.toast({ html: 'History event updated successfully!', classes: 'green darken-2' });
-                    M.Modal.getInstance(editHistoryModal).close();
-                    fetchTrackingHistory(trackingMongoId); // Refresh history list
-                } else {
-                    M.toast({ html: `Error: ${data.message || 'Could not update history event.'}`, classes: 'red darken-2' });
-                }
-            })
-            .catch(error => {
-                console.error('Error updating history event:', error);
-                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
-            });
+                return response.json().then(errorData => {
+                    throw new Error(errorData.message || 'Server error updating history event');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                M.toast({ html: 'History event updated successfully!', classes: 'green darken-2' });
+                M.Modal.getInstance(editHistoryModal).close();
+                fetchTrackingHistory(trackingMongoId); // Refresh history list
+            } else {
+                M.toast({ html: `Error: ${data.message || 'Could not update history event.'}`, classes: 'red darken-2' });
+            }
+        })
+        .catch(error => {
+            console.error('Error updating history event:', error);
+            M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
         });
-    }
+    });
+}
 
     function deleteHistoryEvent(trackingMongoId, historyId) {
         fetch(`/api/admin/trackings/${trackingMongoId}/history/${historyId}`, {
