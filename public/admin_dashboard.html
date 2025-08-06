@@ -321,11 +321,13 @@
             </form>
             <h4 class="mt-4">Tracking History</h4>
             <div id="trackingHistoryList" class="history-list">
-            <ul id="historyEvents" class="collection">
-                    </ul>
+                <ul id="historyEvents" class="collection">
+                </ul>
             </div>
             <form id="addHistoryForm">
                 <h4>Add New History Event</h4>
+                <input type="hidden" id="historyTrackingIdInput" name="trackingId">
+                
                 <div class="input-field">
                     <input type="text" id="newHistoryDate" name="newHistoryDate" class="datepicker" required> <label for="newHistoryDate">Date:</label>
                 </div>
