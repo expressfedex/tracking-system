@@ -274,7 +274,9 @@
             font-size: 0.9em;
             color: #555;
         }
-
+      .history-item.green-line::before {
+        background-color: #4CAF50 !important;
+    }
         /* FedEx Footer Logo */
         .fedex-footer-logo {
             display: block;
@@ -320,9 +322,9 @@
                     <span class="display-field" id="originLocation">N/A</span>
                 </div>
                 <div class="info-item">
-                    <span class="info-label-small">CURRENT LOCATION</span>
-                    <span class="display-field" id="currentLocation">N/A</span>
-                </div>
+                    <span class="info-label-small">DESTINATION</span>
+                    <span class="display-field" id="destination">N/A</span> 
+                    </div>
                 <div class="info-item">
                     <span class="info-label-small">PACKAGE CONTENTS</span>
                     <span class="display-field bold-text" id="packageContents">N/A</span>
@@ -486,7 +488,7 @@
 
         document.getElementById('senderName').textContent = data.senderName || 'N/A';
         document.getElementById('originLocation').textContent = data.origin || 'N/A';
-        document.getElementById('currentLocation').textContent = data.status || 'Unknown';
+        document.getElementById('destination').textContent = data.destination || 'N/A';
         document.getElementById('packageContents').textContent = data.packageContents || 'N/A';
         document.getElementById('packageWeight').textContent = data.weight ? `${data.weight} KG` : 'N/A';
         document.getElementById('serviceType').textContent = data.serviceType || 'N/A';
@@ -504,6 +506,10 @@
             data.history.forEach((item, index) => {
                 const historyItemDiv = document.createElement('div');
                 historyItemDiv.classList.add('history-item');
+
+                 if (index === 0) {
+                historyItemDiv.classList.add('green-line');
+        }
 
                 const iconSpan = document.createElement('span');
                 iconSpan.classList.add('history-icon-circle');
