@@ -1,0 +1,18 @@
+[build]
+  # Replace with your actual build command, e.g., "npm run build" if you have one
+  # If you only have static HTML and JS, and no build process, you can omit or comment this.
+  # command = "echo 'No build command needed for static site'"
+
+  # This should point to the directory containing your index.html, admin_login.html, etc.
+  # Assuming your HTML/JS files are directly in the root or a 'public' folder.
+  # Adjust 'public' if your static files are in a different directory (e.g., '.' for root).
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions" # This points to where your Netlify Function is
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true

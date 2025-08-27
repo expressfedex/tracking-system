@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FedEx Admin Dashboard</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" href="/css/admin_dashboard.css">
+    <style>
+        :root {
+            --success-green: #4CAF50;
+            --in-transit-yellow: #FFC107;
+            --pending-orange: #FF9800;
+            --exception-red: #F44336;
+            --info-blue: #2196F3;
+            --danger-red: #F44336;
+            --warning-orange: #FF9800;
+            --sidebar-bg: #ffffff;
+            --sidebar-text: #333333;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-row { display: flex; gap: 20px; }
+        .form-row .form-group { flex: 1; }
+        .btn, .btn-primary, .btn-secondary, .btn-danger { margin-right: 10px; margin-top: 10px; }
+        .select-wrapper input.select-dropdown { width: 100%; }
+        .status-indicator { display: flex; align-items: center; margin-top: 10px; margin-bottom: 10px; }
+        .status-circle { display: inline-block; width: 20px; height: 20px; border-radius: 50%; vertical-align: middle; margin-right: 10px; border: 1px solid #ccc; }
+        .status-circle.delivered { background-color: var(--success-green); }
+        .status-circle.in-transit { background-color: var(--in-transit-yellow); }
+        .status-circle.pending { background-color: var(--pending-orange); }
+        .status-circle.exception { background-color: var(--exception-red); }
+        .status-circle.unknown { background-color: #9e9e9e; }
+        .status-circle.blinking { animation: blink-animation 1s infinite alternate; }
+        @keyframes blink-animation { from { opacity: 1; } to { opacity: 0.5; } }
+        #trackingHistoryList ul { list-style: none; padding: 0; }
+        #trackingHistoryList li { background-color: #f8f8f8; border: 1px solid #eee; padding: 10px 15px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        #trackingHistoryList .history-content { flex: 1; padding-right: 10px; }
+        #trackingHistoryList .history-actions { display: flex; gap: 5px; margin-top: 5px; }
+        #trackingHistoryList .btn-small { padding: 5px 10px; font-size: 0.8em; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+        .data-table th { background-color: #f2f2f2; font-weight: bold; }
+        .data-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        .data-table tbody tr:hover { background-color: #e9e9e9; }
+        .table-responsive { overflow-x: auto; }
+        .menu-toggle { position: fixed; top: 20px; left: 20px; font-size: 24px; cursor: pointer; z-index: 1000; background-color: var(--sidebar-bg); color: var(--sidebar-text); padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body>
+    <i id="menu-toggle" class="fas fa-bars menu-toggle" aria-label="Toggle Navigation Menu"></i>
+
+    <aside id="sidebar" class="sidebar">
+        <div>
+            <h2>FedEx Admin</h2>
+            <nav>
+                <ul>
+                    <li class="active"><a href="#" data-section="dashboard-section"><i class="fas fa-tachometer-alt"></i> Dashboard Overview</a></li>
+                    <li><a href="#" data-section="add-tracking-section"><i class="fas fa-plus-circle"></i> Add New Tracking</a></li>
+                    <li><a href="#" data-section="manage-tracking-section"><i class="fas fa-edit"></i> Manage Single Tracking</a></li>
+                    <li><a href="#" data-section="all-trackings-section"><i class="fas fa-list"></i> Manage All Trackings</a></li>
+                    <li><a href="#" data-section="communication-center-section"><i class="fas fa-paper-plane"></i> Communication Center</a></li>
+                    <li><a href="#" data-section="user-management-section"><i class="fas fa-users-cog"></i> User Management</a></li>
+                    <li><a href="#" data-section="settings-section"><i class="fas fa-cogs"></i> Settings</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="logout-section">
+            <p>Logged in as: <strong id="adminUsername">Admin</strong></p>
+            <button id="logout-btn" class="btn waves-effect waves-light red darken-2">Logout <i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header>
+            <h1>Admin Dashboard</h1>
+            <div class="user-info">Welcome, <strong id="headerUsername">Admin</strong>!</div>
+        </header>
+
+        <section id="dashboard-section" class="dashboard-section active-section">
+            <h3><i class="fas fa-chart-line"></i> Dashboard Overview</h3>
+            <div class="quick-stats">
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-box"></i></div>
+                    <div class="value" id="totalPackages">0</div>
+                    <div class="label">Total Packages</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-check-circle" style="color: var(--success-green);"></i></div>
+                    <div class="value" id="deliveredPackages">0</div>
+                    <div class="label">Delivered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-truck" style="color: #007bff;"></i></div>
+                    <div class="value" id="inTransitPackages">0</div>
+                    <div class="label">In Transit</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-hourglass-half" style="color: var(--warning-orange);"></i></div>
+                    <div class="value" id="pendingPackages">0</div>
+                    <div class="label">Pending</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-exclamation-triangle" style="color: var(--danger-red);"></i></div>
+                    <div class="value" id="exceptionsPackages">0</div>
+                    <div class="label">Exceptions</div>
+                </div>
+            </div>
+            <p class="note">
+                <small style="color: #666; display: block;">
+                    This overview provides a quick glance at key tracking metrics.
+                    Detailed management is available in specific sections.
+                </small>
+            </p>
+        </section>
+
+        <section id="add-tracking-section" class="dashboard-section">
+            <h3><i class="fas fa-plus-circle"></i> Add New Tracking</h3>
+            <form id="addTrackingForm">
+                <div class="input-field">
+                    <input type="text" id="addTrackingId" name="trackingId" required>
+                    <label for="addTrackingId">Tracking ID:</label>
+                    <small class="form-text text-muted">A unique identifier for the shipment.</small>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addStatus" name="status" required>
+                    <label for="addStatus">Status:</label>
+                    <div class="status-indicator">
+                        <div id="addStatusCircle" class="status-circle"></div>
+                        <span>Visual Status Indicator (based on `addStatus` field)</span>
+                    </div>
+                    <small class="form-text text-muted">Current status of the package (e.g., In Transit, Delivered, Pending).</small>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="addIsBlinking"> <input type="checkbox" id="addIsBlinking" name="isBlinking" />
+                        <span>Tracking is Blinking (for visual emphasis)</span>
+                    </label>
+                </div>
+                <div class="input-field">
+                    <label for="addStatusLineColor">Status Line Color:</label>
+                    <input type="color" id="addStatusLineColor" name="statusLineColor" value="#2196F3">
+                    <small class="form-text text-muted">Default: Blue</small>
+                </div>
+
+                <div class="input-field">
+                    <label for="addBlinkingDotColor">Blinking Dot Color:</label>
+                    <input type="color" id="addBlinkingDotColor" name="blinkingDotColor" value="#FFFFFF">
+                    <small class="form-text text-muted">Default: White</small>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addSenderName" name="senderName" required>
+                    <label for="addSenderName">Sender Name:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addRecipientName" name="recipientName" required>
+                    <label for="addRecipientName">Recipient Name:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="email" id="addRecipientEmail" name="recipientEmail" required>
+                    <label for="addRecipientEmail">Recipient Email:</label>
+                    <small class="form-text text-muted">Email address for notifications.</small>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addPackageContents" name="packageContents" required>
+                    <label for="addPackageContents">Package Contents:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addServiceType" name="serviceType" required>
+                    <label for="addServiceType">Service Type:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addRecipientAddress" name="recipientAddress" required>
+                    <label for="addRecipientAddress">Recipient Address:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addSpecialHandling" name="specialHandling">
+                    <label for="addSpecialHandling">Special Handling/Notes:</label>
+                </div>
+
+                <div class="row">
+                    <div class="input-field col s6">
+                        <input type="text" id="addExpectedDeliveryDate" name="expectedDeliveryDate" class="datepicker">
+                        <label for="addExpectedDeliveryDate">Expected Delivery Date:</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <input type="text" id="addExpectedDeliveryTime" name="expectedDeliveryTime" class="timepicker">
+                        <label for="addExpectedDeliveryTime">Expected Delivery Time:</label>
+                    </div>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addOrigin" name="origin">
+                    <label for="addOrigin">Origin:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="addDestination" name="destination">
+                    <label for="addDestination">Destination:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="number" step="0.1" id="addWeight" name="weight">
+                    <label for="addWeight">Weight (kg):</label>
+                </div>
+
+                <button type="submit" class="btn waves-effect waves-light green darken-2"><i class="fas fa-plus-circle"></i> Add New Tracking</button>
+            </form>
+        </section>
+
+        <section id="manage-tracking-section" class="dashboard-section">
+            <h3><i class="fas fa-edit"></i> Manage Single Tracking</h3>
+            <p>Select a tracking ID to view and update its details.</p>
+
+            <div class="input-field">
+                <select id="singleTrackingIdSelect" name="selectedTrackingId">
+                    <option value="" disabled selected>Select Tracking ID</option>
+                </select>
+                <label for="singleTrackingIdSelect">Select Tracking to Edit</label>
+            </div>
+
+            <form id="updateTrackingForm" style="display: none;">
+                <h4>Update Tracking Details</h4>
+                <input type="hidden" id="updateTrackingMongoId" name="mongoId">
+
+                <div class="input-field">
+                    <input type="text" id="updateTrackingId" name="trackingId" required readonly>
+                    <label for="updateTrackingId">Tracking ID:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="updateStatus" name="status" required>
+                    <label for="updateStatus">Status:</label>
+                    <div class="status-indicator">
+                        <div id="updateStatusCircle" class="status-circle"></div>
+                        <span>Visual Status Indicator (based on `updateStatus` field)</span>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="updateIsBlinkingOriginal"> <input type="checkbox" id="updateIsBlinkingOriginal" name="isBlinking" />
+                        <span>Tracking is Blinking (for visual emphasis)</span>
+                    </label>
+                </div>
+                <div class="input-field">
+                    <label for="updateStatusLineColor">Status Line Color:</label>
+                    <input type="color" id="updateStatusLineColor" name="statusLineColor">
+                </div>
+                <div class="input-field">
+                    <label for="updateBlinkingDotColor">Blinking Dot Color:</label>
+                    <input type="color" id="updateBlinkingDotColor" name="blinkingDotColor">
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="updateSenderName" name="senderName" required>
+                    <label for="updateSenderName">Sender Name:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="updateRecipientName" name="recipientName" required>
+                    <label for="updateRecipientName">Recipient Name:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="email" id="updateRecipientEmail" name="recipientEmail" required>
+                    <label for="updateRecipientEmail">Recipient Email:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="updatePackageContents" name="packageContents">
+                    <label for="updatePackageContents">Package Contents:</label>
+                </div>
+                <div class="input-field">
+                    <input type="text" id="updateServiceType" name="serviceType" required>
+                    <label for="updateServiceType">Service Type:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="updateRecipientAddress" name="recipientAddress" required>
+                    <label for="updateRecipientAddress">Recipient Address:</label>
+                </div>
+
+                <div class="input-field">
+                    <input type="text" id="updateSpecialHandling" name="specialHandling">
+                    <label for="updateSpecialHandling">Special Handling/Notes:</label>
+                </div>
+
+                <div class="row">
+                    <div class="input-field col s6">
+                        <input type="text" id="updateExpectedDeliveryDate" name="expectedDeliveryDate" class="datepicker">
+                        <label for="updateExpectedDeliveryDate">Expected Delivery Date:</label>
+                    </div>
+                    <div class="input-field col s6">
+                        <input type="text" id="updateExpectedDeliveryTime" name="expectedDeliveryTime" class="timepicker">
+                        <label for="updateExpectedDeliveryTime">Expected Delivery Time:</label>
+                    </div>
+                </div>
+                <div class="input-field">
+                    <input type="text" id="updateOrigin" name="origin">
+                    <label for="updateOrigin">Origin:</label>
+                </div>
+                <div class="input-field">
+                    <input type="text" id="updateDestination" name="destination">
+                    <label for="updateDestination">Destination:</label>
+                </div>
+                <div class="input-field">
+                    <input type="number" step="0.1" id="updateWeight" name="weight">
+                    <label for="updateWeight">Weight (kg):</label>
+                </div>
+                <button type="submit" class="btn waves-effect waves-light blue darken-2"><i class="fas fa-save"></i> Update Tracking</button>
+            </form>
+            <h4 class="mt-4">Tracking History</h4>
+            <div id="trackingHistoryList" class="history-list">
+                <ul id="historyEvents" class="collection">
+                </ul>
+            </div>
+            <form id="addHistoryForm">
+                <h4>Add New History Event</h4>
+                <input type="hidden" id="historyTrackingIdInput" name="trackingId">
+                
+                <div class="input-field">
+                    <input type="text" id="newHistoryDate" name="newHistoryDate" class="datepicker" required> <label for="newHistoryDate">Date:</label>
+                </div>
+                <div class="input-field">
+                    <input type="text" id="newHistoryTime" name="newHistoryTime" class="timepicker" required> <label for="newHistoryTime">Time:</label>
+                </div>
+                <div class="input-field">
+                    <input type="text" id="newHistoryLocation" name="newHistoryLocation"> <label for="newHistoryLocation">Location:</label>
+                </div>
+                <div class="input-field">
+                    <textarea id="newHistoryDescription" name="newHistoryDescription" class="materialize-textarea" required></textarea> <label for="newHistoryDescription">Description:</label>
+                </div>
+                <button type="submit" class="btn waves-effect waves-light teal lighten-1"><i class="fas fa-calendar-plus"></i> Add Event</button>
+            </form>
+        </section>
+
+        <section id="all-trackings-section" class="dashboard-section">
+            <h3><i class="fas fa-list"></i> Manage All Trackings</h3>
+            <div class="table-responsive">
+                <table id="trackingTable" class="data-table striped responsive-table">
+                    <thead>
+                        <tr>
+                            <th>Tracking ID</th>
+                            <th>Status</th>
+                            <th>Status Color</th>
+                            <th>Blinking</th>
+                            <th>Sender Name</th>
+                            <th>Recipient Name</th>
+                            <th>Recipient Email</th>
+                            <th>Package Contents</th>
+                            <th>Service Type</th>
+                            <th>Recipient Address</th>
+                            <th>Special Handling</th>
+                            <th>Expected Delivery</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-trackings-table-body">
+                        <tr><td colspan="14" style="text-align: center; padding: 20px;">Loading tracking data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="note" style="margin-top: 20px;">
+                <small style="color: #666; display: block;">
+                    Click 'View/Edit' to manage full details and history for a specific tracking.
+                </small>
+            </p>
+        </section>
+
+        <section id="communication-center-section" class="dashboard-section">
+            <h3><i class="fas fa-paper-plane"></i> FedEx Communication Center</h3>
+            <p>Send email notifications to recipients and attach optional files.</p>
+
+            <div class="communication-content">
+                <div class="card full-width">
+                    <h3><i class="fas fa-envelope"></i> Send Email Notification with Optional Attachment</h3>
+                    <form id="sendEmailForm">
+                        <div class="input-field">
+                            <select id="emailTrackingIdSelect" name="emailTrackingId">
+                                <option value="" disabled selected>Select Tracking ID (Optional, for pre-filling email)</option>
+                                </select>
+                            <label for="emailTrackingIdSelect">Link to Tracking (Optional)</label>
+                        </div>
+                        <div class="input-field">
+                            <input type="email" id="notificationEmail" name="notificationEmail" required> <label for="notificationEmail">Recipient Email:</label>
+                        </div>
+                        <div class="input-field">
+                            <input type="text" id="emailSubject" name="emailSubject" required> <label for="emailSubject">Subject:</label>
+                        </div>
+                        <div class="input-field">
+                            <textarea id="notificationMessage" name="notificationMessage" class="materialize-textarea" rows="8" required></textarea> <label for="notificationMessage">Message Body:</label>
+                        </div>
+                        <div class="file-field input-field">
+                            <div class="btn">
+                                <span>Attach File</span>
+                                <input type="file" id="emailAttachmentFileUpload" name="emailAttachmentFile">
+                            </div>
+                            <div class="file-path-wrapper">
+                                <input class="file-path validate" type="text" name="emailAttachmentFileName" placeholder="Upload optional attachment">
+                            </div>
+                        </div>
+                        <button type="submit" id="sendEmailButton" class="btn waves-effect waves-light light-blue darken-1"><i class="fas fa-paper-plane"></i> Send Email</button>
+                    </form>
+                </div>
+
+                <div class="card full-width">
+                    <h3><i class="fas fa-file-upload"></i> Upload Package File</h3>
+                    <form id="uploadPackageFileForm">
+                        <div class="input-field">
+                            <select id="attachFileTrackingIdSelect" name="attachFileTrackingId">
+                                <option value="" disabled selected>Select Tracking ID</option>
+                                </select>
+                            <label for="attachFileTrackingIdSelect">Tracking ID to link file to:</label>
+                        </div>
+                        <div class="file-field input-field">
+                            <div class="btn">
+                                <span>Choose File</span>
+                                <input type="file" id="packageFileInput" name="packageFile" required>
+                            </div>
+                            <div class="file-path-wrapper">
+                                <input class="file-path validate" type="text" name="packageFileName" placeholder="Upload package document">
+                            </div>
+                        </div>
+                        <button class="btn waves-effect waves-light green"><i class="material-icons left">cloud_upload</i> Upload & Link File</button>
+                    </form>
+                </div>
+            </div>
+            <p class="note" style="margin-top: 20px;">
+                <small style="color: #666; display: block;">
+                    Note: Email sending and file uploads require server-side integration.
+                    This interface provides the client-side functionality.
+                </small>
+            </p>
+        </section>
+
+        <section id="user-management-section" class="dashboard-section">
+            <h3><i class="fas fa-users-cog"></i> User Management</h3>
+            <p>Manage user accounts (add, edit, delete users and roles).</p>
+
+            <a class="waves-effect waves-light btn modal-trigger blue darken-2" href="#createUserModal"><i class="material-icons left">person_add</i>Add New User</a>
+
+            <div class="table-responsive" style="margin-top: 20px;">
+                <table class="striped responsive-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr><td colspan="4" style="text-align: center; padding: 20px;">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="settings-section" class="dashboard-section">
+            <h3><i class="fas fa-cogs"></i> Settings</h3>
+            <p>Coming Soon: Configure dashboard settings and preferences.</p>
+        </section>
+    </main>
+
+    <div id="editHistoryModal" class="modal">
+        <div class="modal-content">
+            <h4>Edit History Event</h4>
+            <input type="hidden" id="editHistoryModalTrackingMongoId" name="editHistoryModalTrackingMongoId">
+            <input type="hidden" id="editHistoryModalHistoryId" name="editHistoryModalHistoryId">
+            <div class="input-field">
+                <input type="text" id="editHistoryDate" name="editHistoryDate" class="datepicker">
+                <label for="editHistoryDate">Date:</label>
+            </div>
+            <div class="input-field">
+                <input type="text" id="editHistoryTime" name="editHistoryTime" class="timepicker">
+                <label for="editHistoryTime">Time:</label>
+            </div>
+            <div class="input-field">
+                <input type="text" id="editHistoryLocation" name="editHistoryLocation">
+                <label for="editHistoryLocation">Location:</label>
+            </div>
+            <div class="input-field">
+                <textarea id="editHistoryDescription" name="editHistoryDescription" class="materialize-textarea"></textarea>
+                <label for="editHistoryDescription">Description:</label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="saveHistoryEditBtn" class="modal-close waves-effect waves-green btn-flat">Save Changes</button>
+            <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+        </div>
+    </div>
+
+    <div id="createUserModal" class="modal">
+        <div class="modal-content">
+            <h4>Create New User</h4>
+            <form id="createUserForm">
+                <div class="input-field">
+                    <input type="text" id="newUsername" required>
+                    <label for="newUsername">Username</label>
+                </div>
+                <div class="input-field">
+                    <input type="email" id="newEmail" required>
+                    <label for="newEmail">Email</label>
+                </div>
+                <div class="input-field">
+                    <input type="password" id="newPassword" required>
+                    <label for="newPassword">Password</label>
+                </div>
+                <div class="input-field">
+                    <select id="newUserRole" required>
+                        <option value="" disabled selected>Choose user role</option>
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                    <label for="newUserRole">User Role</label>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn waves-effect waves-light green darken-2">Create User</button>
+                    <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editUserModal" class="modal">
+        <div class="modal-content">
+            <h4>Edit User</h4>
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="input-field">
+                    <input type="text" id="editUsername" required>
+                    <label for="editUsername">Username</label>
+                </div>
+                <div class="input-field">
+                    <input type="email" id="editEmail" required>
+                    <label for="editEmail">Email</label>
+                </div>
+                <div class="input-field">
+                    <input type="password" id="editPassword">
+                    <label for="editPassword">New Password (leave blank to keep current)</label>
+                </div>
+                <div class="input-field">
+                    <select id="editUserRole" required>
+                        <option value="" disabled selected>Choose user role</option>
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                    <label for="editUserRole">User Role</label>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn waves-effect waves-light blue darken-2">Update User</button>
+                    <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="deleteUserModal" class="modal">
+        <div class="modal-content">
+            <h4>Confirm Delete User</h4>
+            <p>Are you sure you want to delete user <strong id="usernameToDelete"></strong>? This action cannot be undone.</p>
+            <input type="hidden" id="userIdToDeleteInput">
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="deleteUserBtn" class="waves-effect waves-light btn red darken-2">Delete</button>
+            <button type="button" class="modal-close waves-effect waves-green btn-flat">Cancel</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="/js/admin_dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,877 @@
+/* --- Root Variables (Consolidated and Organized) --- */
+:root {
+    /* --- Main Dashboard Theme (FedEx Orange) --- */
+    --primary-color: #FF6200; /* FedEx Orange */
+    --primary-dark-color: #b04300;
+    --secondary-color: #4CAF50; /* Example green */
+    --background-color: #f4f7f6;
+    --text-color: #333;
+    --sidebar-width: 250px;
+    --sidebar-bg: #263238; /* Dark grey */
+    --sidebar-text: #eceff1;
+    --sidebar-hover: #37474F;
+    --header-height: 64px;
+
+    /* --- General Status/Alert Colors --- */
+    --success-green: #28a745; /* Used in dashboard stats and general success */
+    --warning-orange: #ffc107; /* Used in dashboard stats and general warning */
+    --danger-red: #dc3545; /* Used in dashboard stats, general danger, logout */
+    --info-blue: #2196F3; /* Materialize Blue - for general info/links */
+
+    /* --- Tracking Status Specific Colors (for status-circle) --- */
+    --in-transit-blue: #007bff; /* Specific blue for in-transit icon */
+    --pending-orange: #FF9800; /* Specific orange for pending status circle */
+    --exception-red: #F44336; /* Specific red for exception status circle */
+
+
+    /* --- Communication Center's Purple/Orange Theme --- */
+    --comm-purple-dark: #4A148C; /* Deep Purple */
+    --comm-purple-medium: #7B1FA2; /* Amethyst */
+    --comm-purple-light: #BA68C8; /* Lavender */
+    --comm-orange-glow: #FFA726; /* Vibrant Orange for glow/accents */
+    --comm-white: #ffffff;
+    --comm-light-bg: #F3E5F5; /* Very light purple for subtle backgrounds */
+}
+
+/* --- Global Body & Layout --- */
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    min-height: 100vh;
+}
+
+/* --- Sidebar --- */
+/* --- Sidebar --- */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: fixed; /* Keep it fixed */
+    top: 0;
+    height: 100%;
+    z-index: 999; /* Ensure sidebar is above main content */
+
+    /* --- CRITICAL: Initial Hidden State for a sliding sidebar --- */
+    left: calc(-1 * var(--sidebar-width)); /* Start completely off-screen to the left */
+    transition: left 0.3s ease-in-out; /* Smooth transition for 'left' property */
+}
+/* --- CRITICAL: Active State for Sidebar (when it slides in) --- */
+.sidebar.active {
+    left: 0; /* Slide into view */
+}
+
+.sidebar h2 {
+    color: white;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.8em;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 15px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin-bottom: 10px;
+}
+
+.sidebar ul li a {
+    color: var(--sidebar-text);
+    text-decoration: none;
+    padding: 12px 15px;
+    display: flex;
+    align-items: center;
+    border-radius: 5px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar ul li a i {
+    margin-right: 15px;
+    font-size: 1.2em;
+}
+
+.sidebar ul li a:hover,
+.sidebar ul li.active a { /* Changed to target <a> within active LI */
+    background-color: var(--sidebar-hover);
+    color: var(--primary-color);
+}
+
+.logout-section {
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+}
+
+.logout-section p {
+    margin: 0 0 10px 0;
+    font-size: 0.9em;
+}
+
+.logout-section button {
+    background-color: var(--danger-red); /* Red for logout */
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+}
+
+.logout-section button:hover {
+    background-color: #c82333;
+}
+
+.logout-section button i {
+    margin-left: 8px;
+    font-size: 1.1em;
+}
+
+/* --- Main Content Styling --- */
+.main-content {
+    /* Initially, no margin-left (sidebar is hidden) */
+    margin-left: 0;
+    flex-grow: 1; /* Allow it to take up available space */
+    padding: 20px 30px;
+    background-color: var(--background-color);
+    transition: margin-left 0.3s ease-in-out; /* Smooth transition for 'margin-left' */
+    width: 100%; /* Important for proper layout with flex-grow */
+    box-sizing: border-box; /* Include padding in width calculation */
+}
+
+/* --- CRITICAL: Adjust main content when sidebar is active --- */
+.main-content.pushed { /* You'll need to toggle this class with JS */
+    margin-left: var(--sidebar-width); /* Push content by the sidebar's width */
+}
+
+/* --- Other Main Content Styles (as provided by you) --- */
+.main-content header {
+    background-color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.main-content header h1 {
+    margin: 0;
+    font-size: 1.8em;
+    color: var(--primary-color);
+}
+
+.main-content header .user-info {
+    font-size: 1em;
+    color: #555;
+}
+
+.main-content section {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 25px;
+}
+
+.main-content section h3 {
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.6em;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.main-content section h3 i {
+    margin-right: 10px;
+    color: #555;
+}
+
+/* --- Quick Stats Styling --- */
+.quick-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.stat-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    text-align: center;
+    border-bottom: 4px solid var(--primary-color);
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-card .icon {
+    font-size: 2.5em;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.stat-card .value {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.stat-card .label {
+    font-size: 1em;
+    color: #666;
+    text-transform: uppercase;
+}
+
+/* --- Form Layouts --- */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+@media (min-width: 600px) {
+    .form-row {
+        grid-template-columns: 1fr 1fr; /* Two columns on larger screens */
+    }
+}
+
+/* Generic form group styling, overridden by Materialize .input-field where applicable */
+.form-group {
+    margin-bottom: 20px; /* Increased margin for better spacing */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input[type="email"],
+.form-group textarea,
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="time"],
+.form-group input[type="number"],
+.form-group select,
+.form-group input[type="color"] {
+    width: calc(100% - 20px); /* Adjust for padding */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    box-sizing: border-box;
+    color: var(--text-color); /* Ensure text is readable */
+}
+
+.form-group textarea {
+    resize: vertical; /* Allow vertical resizing */
+    min-height: 100px;
+}
+
+.form-group .form-control-file {
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 5px;
+    background-color: #fff;
+    width: calc(100% - 16px);
+}
+
+.form-group .form-text {
+    font-size: 0.85em;
+    color: #777;
+    margin-top: 5px;
+}
+
+/* Checkbox styling */
+.form-group.mb-3 {
+    margin-bottom: 1rem !important; /* Ensuring Bootstrap-like spacing */
+}
+
+.form-check-input {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.form-check-label {
+    display: inline-block;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+.content-section {
+    display: none; /* Hide by default */
+}
+
+.content-section.active {
+    display: block; /* Or flex, grid, etc., depending on your layout */
+}
+
+/* --- Menu Toggle Button --- */
+.menu-toggle {
+    position: fixed; /* Fixed position so it's always accessible */
+    top: 20px; /* Adjust vertical position */
+    left: 20px; /* Initial horizontal position */
+    font-size: 1.8em;
+    color: var(--primary-color); /* Or a contrasting color that stands out */
+    cursor: pointer;
+    z-index: 1000; /* Ensure it's above everything else, including sidebar */
+    transition: left 0.3s ease-in-out; /* For smooth movement if the toggle itself moves */
+}
+
+/* Optional: Move the toggle button to the right when the sidebar is open */
+.menu-toggle.active {
+    left: calc(var(--sidebar-width) + 20px); /* Move it sidebar-width + padding from left */
+    /* Or if you want it to hide, you could set display: none or opacity: 0; */
+}
+
+
+@media (max-width: 992px) { /* Adjust breakpoint as needed */
+    .sidebar {
+        transform: translateX(-100%); /* Hide sidebar off-screen */
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    }
+
+    .sidebar.active {
+        transform: translateX(0); /* Show sidebar */
+    }
+
+    .main-content {
+        margin-left: 0; /* No margin on mobile */
+    }
+
+    .menu-toggle {
+        display: block; /* Show menu toggle on smaller screens */
+    }
+
+    .main-content header {
+        justify-content: flex-start; /* Align items to the start */
+    }
+
+    .main-content header h1 {
+        margin-left: 20px; /* Space between toggle and title */
+    }
+}
+
+/* --- Communication Center Specific Styling (Modified and Overriding) --- */
+.communication-content {
+    background-color: var(--comm-white); /* White base for the card */
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Soft glow */
+    margin-top: 20px;
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr;
+    transition: all 0.3s ease-in-out; /* Smooth transitions */
+}
+
+/* Optional: Add a subtle glow on hover for the entire communication content area */
+.communication-content:hover {
+    box-shadow: 0 6px 20px rgba(123, 31, 162, 0.15); /* Light purple glow on hover */
+}
+
+.communication-content .card {
+    border: 1px solid var(--comm-purple-light); /* Light purple border */
+    border-radius: 8px;
+    padding: 20px;
+    background-color: var(--comm-light-bg); /* Very light purple background */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.communication-content h3 {
+    color: var(--comm-purple-dark); /* Dark purple for headings */
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.6em; /* Slightly larger heading */
+    border-bottom: none; /* Remove existing border-bottom from main-content section h3 */
+    padding-bottom: 10px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    text-align: center;
+    justify-content: center; /* Center the heading */
+}
+
+.communication-content h3 i {
+    margin-right: 10px;
+    color: var(--comm-purple-medium); /* Medium purple for icons */
+}
+
+/* Glowing underline for h3 */
+.communication-content h3::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 80px; /* Wider underline */
+    height: 3px;
+    background: linear-gradient(to right, var(--comm-purple-medium), var(--comm-orange-glow)); /* Purple to Orange gradient */
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(255, 167, 38, 0.5); /* Orange glow */
+}
+
+/* Form Group Labels, Inputs, and Textareas specific to Communication Center */
+.form-group label {
+    color: var(--comm-purple-medium); /* Medium purple for labels */
+    font-weight: 600; /* Slightly bolder labels */
+    transition: color 0.2s ease;
+}
+
+.form-group input[type="email"],
+.form-group textarea,
+.form-group input[type="text"],
+.form-group select,
+.file-path-wrapper input.file-path { /* Apply to Materialize file input path */
+    border: 1px solid var(--comm-purple-light); /* Light purple border */
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 1em;
+    box-sizing: border-box;
+    width: 100%; /* Ensure full width */
+    color: var(--comm-purple-dark); /* Dark purple text */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: var(--comm-white); /* White background for inputs */
+}
+
+.form-group input[type="email"]:focus,
+.form-group textarea:focus,
+.form-group input[type="text"]:focus,
+.form-group select:focus,
+.file-path-wrapper input.file-path:focus {
+    border-color: var(--comm-orange-glow) !important; /* Orange border on focus */
+    box-shadow: 0 0 0 2px rgba(255, 167, 38, 0.3) !important; /* Soft orange glow on focus */
+    outline: none; /* Remove default outline */
+}
+
+/* Materialize label and input focus overrides to match Communication Center theme */
+.input-field input:not(.browser-default):focus:not([readonly]) + label {
+    color: var(--comm-orange-glow) !important; /* Orange label on focus */
+}
+.input-field input:not(.browser-default):focus:not([readonly]) {
+    border-bottom: 1px solid var(--comm-orange-glow) !important;
+    box-shadow: 0 1px 0 0 var(--comm-orange-glow) !important;
+}
+.input-field input.select-dropdown:focus { /* For Materialize select dropdown */
+    border-bottom: 1px solid var(--comm-orange-glow) !important;
+    box-shadow: 0 1px 0 0 var(--comm-orange-glow) !important;
+}
+
+/* File input button (Materialize) specific to Communication Center */
+.file-field .btn {
+    background: linear-gradient(45deg, var(--comm-purple-medium) 0%, var(--comm-purple-light) 100%); /* Purple gradient for file button */
+    color: white;
+    padding: 0 1rem;
+    height: 36px;
+    line-height: 36px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    margin-top: 0; /* Remove top margin, handled by form-group */
+    box-shadow: 0 2px 8px rgba(123, 31, 162, 0.2);
+}
+.file-field .btn:hover {
+    background: linear-gradient(45deg, var(--comm-orange-glow) 0%, #FFCC80 100%); /* Orange gradient on hover */
+    box-shadow: 0 4px 10px rgba(255, 167, 38, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Submit Button specific to Communication Center */
+.communication-content .btn-primary {
+    background: linear-gradient(45deg, var(--comm-purple-medium) 0%, var(--comm-purple-light) 100%); /* Purple gradient for submit */
+    color: var(--comm-white);
+    padding: 12px 25px; /* Slightly larger padding */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em; /* Slightly larger font */
+    font-weight: bold;
+    transition: all 0.3s ease;
+    margin-top: 20px; /* More space above button */
+    box-shadow: 0 4px 10px rgba(123, 31, 162, 0.3); /* Purple shadow */
+    width: auto; /* Allow button to size naturally */
+    display: inline-block; /* For better centering if needed */
+}
+
+.communication-content .btn-primary:hover {
+    background: linear-gradient(45deg, var(--comm-orange-glow) 0%, #FFCC80 100%); /* Orange gradient on hover */
+    box-shadow: 0 6px 15px rgba(255, 167, 38, 0.4); /* Orange shadow on hover */
+    transform: translateY(-2px);
+}
+
+/* Toast messages (Materialize specific, adjusting colors) */
+.toast.light-blue.darken-1 { /* For email sent successfully messages */
+    background-color: var(--comm-orange-glow) !important; /* Make success toast orange */
+    color: white !important;
+}
+.toast.red.darken-2 { /* For error messages */
+    background-color: var(--danger-red) !important; /* Keep standard red for errors */
+    color: white !important;
+}
+
+/* Responsive adjustment for communication-content grid */
+@media (min-width: 768px) {
+    .communication-content {
+        grid-template-columns: 1fr; /* Now only one card, so keep it single column */
+    }
+    .communication-content .card.full-width {
+        grid-column: span 1; /* Adjust span for single column */
+    }
+}
+
+/* --- IMPORTANT: Dashboard Section Visibility CSS --- */
+/* All sections are hidden by default */
+.dashboard-section {
+    display: none;
+}
+
+/* Only the active section is displayed */
+.dashboard-section.active-section {
+    display: block; /* Or flex, grid, etc. based on your layout needs */
+}
+
+/* --- Status Indicator Colors and Blinking --- */
+.status-circle {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    vertical-align: middle;
+    border: 1px solid #ccc; /* Default border */
+}
+
+.status-circle.delivered {
+    background-color: var(--success-green); /* Green */
+}
+
+.status-circle.in-transit {
+    background-color: var(--in-transit-blue); /* Blue */
+}
+
+.status-circle.pending {
+    background-color: var(--pending-orange); /* Yellow/Orange */
+}
+
+.status-circle.exception {
+    background-color: var(--exception-red); /* Red */
+}
+
+.status-circle.unknown { background-color: #9e9e9e; } /* Grey */
+
+
+/* Blinking animation */
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
+
+@keyframes blink-animation { /* Kept both for now, can consolidate if desired */
+    from { opacity: 1; }
+    to { opacity: 0.5; }
+}
+
+.status-circle.blinking {
+    animation: blink 1s infinite; /* Using the shorter blink for now */
+    /* animation: blink-animation 1s infinite alternate; */
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    margin-top: 10px; /* Adjusted to 10px */
+    margin-bottom: 10px; /* Adjusted to 10px */
+    font-size: 0.9em;
+    color: #666;
+}
+
+
+/* --- Styles for Tracking History List --- */
+.history-list {
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #fff;
+    margin-bottom: 20px;
+}
+.history-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.history-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between; /* Space out content and buttons */
+    align-items: center;
+    font-size: 0.95em;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+.history-list li:last-child {
+    border-bottom: none;
+}
+.history-list li .history-content {
+    flex-grow: 1;
+    padding-right: 10px;
+}
+.history-list li .history-actions {
+    display: flex; /* Arrange buttons side-by-side */
+    gap: 5px; /* Space between buttons */
+    margin-top: 5px; /* Add some top margin for wrapped buttons */
+}
+.history-list li .history-actions button {
+    /* Inherit common button styles, override as needed */
+    padding: 5px 10px;
+    font-size: 0.8em;
+    border-radius: 4px;
+}
+/* Specific styles for #trackingHistoryList ul and li (duplicate but fine as they are more specific) */
+#trackingHistoryList ul {
+    list-style: none;
+    padding: 0;
+}
+#trackingHistoryList li {
+    background-color: #f8f8f8;
+    border: 1px solid #eee;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+#trackingHistoryList .history-content {
+    flex: 1;
+    padding-right: 10px;
+}
+#trackingHistoryList .history-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+#trackingHistoryList .btn-small {
+    padding: 5px 10px;
+    font-size: 0.8em;
+}
+
+
+/* --- Modal CSS --- */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+    max-width: 500px;
+    border-radius: 8px;
+    position: relative;
+}
+
+.modal-content .close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.modal-content .close-button:hover,
+.modal-content .close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* --- Table styles for "Manage All Trackings" --- */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.data-table th, .data-table td {
+    border: 1px solid #e0e0e0;
+    padding: 12px 15px;
+    text-align: left;
+    vertical-align: top;
+}
+.data-table th {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+.data-table tbody tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+.data-table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+.data-table td button {
+    margin-right: 5px;
+    /* Adjust button styles for table */
+    padding: 6px 10px;
+    font-size: 0.85em;
+}
+.table-responsive {
+    overflow-x: auto; /* Makes table scrollable on small screens */
+    width: 100%;
+}
+
+/* --- General Button Styles (Overridden by specific ones if present) --- */
+.btn, .btn-primary { /* Materialize will handle much of .btn, but can still set defaults */
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+    margin-top: 10px; /* Spacing for buttons below form fields */
+    margin-right: 10px; /* Spacing between buttons */
+}
+
+.btn:hover, .btn-primary:hover {
+    background-color: var(--primary-dark-color);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: background-color 0.2s ease;
+}
+.btn-info:hover {
+    background-color: #138496;
+}
+
+/* --- Materialize Specific Overrides & Integrations --- */
+/* Ensure Materialize select dropdowns take full width */
+.select-wrapper input.select-dropdown {
+    width: 100%;
+}
+
+/* Materialize input field focus colors to match primary theme where not overridden by comm-center */
+.input-field input:not(.browser-default):focus:not([readonly]) + label {
+    color: var(--primary-color) !important;
+}
+.input-field input:not(.browser-default):focus:not([readonly]) {
+    border-bottom: 1px solid var(--primary-color) !important;
+    box-shadow: 0 1px 0 0 var(--primary-color) !important;
+}
+
+/* File Input field to match general form styling if not overridden by comm-center */
+.file-path-wrapper input.file-path {
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 1em;
+    width: 100%;
+    height: auto;
+}
+
+/* General Materialize button style for file input button if not overridden by comm-center */
+.file-field .btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0 1rem;
+    height: 36px;
+    line-height: 36px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+    margin-top: 10px; /* Adjust as needed */
+}
+.file-field .btn:hover {
+    background-color: var(--primary-dark-color);
+}
+
+/* --- Utility Classes --- */
+.mt-4 {
+    margin-top: 20px; /* Equivalent to 1rem * 4 in Bootstrap */
+}

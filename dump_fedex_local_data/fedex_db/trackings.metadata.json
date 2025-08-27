@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"trackingId":{"$numberInt":"1"}},"name":"trackingId_1","background":true,"unique":true}],"uuid":"8fb194a4ef814f61a94dad024096519c","collectionName":"trackings","type":"collection"}
