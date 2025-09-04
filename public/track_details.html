@@ -591,29 +591,35 @@ if (data.expectedDelivery) {
         }
     }
 
-    function formatHistoryDateTimeScreenshot(isoString) {
-        try {
-            const dateObj = new Date(isoString);
-            if (isNaN(dateObj.getTime())) {
-                return 'Invalid Date';
-            }
-            const year = dateObj.getFullYear();
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const day = String(dateObj.getDate()).padStart(2, '0');
-
-            let hours = dateObj.getHours();
-            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            const formattedTime = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
-
-            return `${year}-${month}-${day} • ${formattedTime}`;
-        } catch (e) {
-            console.error('Error formatting date:', isoString, e);
-            return 'Date N/A';
+   function formatHistoryDateTimeScreenshot(isoString) {
+    try {
+        const dateObj = new Date(isoString);
+        if (isNaN(dateObj.getTime())) {
+            return 'Invalid Date'; // Handle cases where the date string is not valid
         }
+
+        // Extract UTC components directly to ensure no timezone conversion
+        const year = dateObj.getUTCFullYear();
+        const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const day = String(dateObj.getUTCDate()).padStart(2, '0');
+
+        let hours = dateObj.getUTCHours();
+        const minutes = String(dateObj.getUTCMinutes()).padStart(2, '0');
+        
+        // Convert UTC hours to 12-hour format with AM/PM
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12; // Handle midnight (0 hours) and noon (12 hours) correctly
+
+        const formattedTime = `${hours}:${minutes} ${ampm}`;
+
+        // Combine date and time for display. This will be the exact time set by the admin.
+        return `${year}-${month}-${day} • ${formattedTime}`;
+    } catch (e) {
+        console.error('Error formatting date:', isoString, e);
+        return 'Date N/A'; // Fallback for formatting errors
     }
+}
 </script>
 </body>
 </html>
