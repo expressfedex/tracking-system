@@ -505,7 +505,7 @@ if (data.expectedDelivery) {
     const utcHours = String(deliveryDate.getUTCHours()).padStart(2, '0');
     const utcMinutes = String(deliveryDate.getUTCMinutes()).padStart(2, '0');
 
-    expectedDeliveryTimeElem.textContent = `${utcHours}:${utcMinutes} (Admin Time)`;
+    expectedDeliveryTimeElem.textContent = `${utcHours}:${utcMinutes}`;
 
 } else {
     expectedDeliveryDateElem.textContent = 'N/A';
