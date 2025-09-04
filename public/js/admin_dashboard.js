@@ -226,47 +226,52 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             fetch('/api/admin/trackings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify(trackingData)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
-                        setTimeout(() => window.location.href = 'admin_login.html', 2000);
-                    }
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Server error adding tracking');
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    M.toast({ html: 'Tracking added successfully!', classes: 'green darken-2' });
-                    addTrackingForm.reset();
-                    M.updateTextFields(); // Update Materialize labels
-                    // Re-initialize date/time pickers if needed after reset
-                    M.Datepicker.init(document.querySelectorAll('.datepicker'));
-                    M.Timepicker.init(document.querySelectorAll('.timepicker'));
-                    addStatusCircle.className = 'status-circle'; // Reset indicator
-                    fetchAllTrackings(); // Refresh all trackings table and dashboard stats
-                    fetchTrackingIdsForSelect(); // Refresh dropdowns
-                    fetchTrackingIdsForEmailSelect();
-                    fetchTrackingIdsForAttachFileSelect();
-                } else {
-                    M.toast({ html: `Error: ${data.message || 'Could not add tracking.'}`, classes: 'red darken-2' });
-                }
-            })
-            .catch(error => {
-                console.error('Error adding tracking:', error);
-                M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(trackingData)
+    })
+    .then(response => {
+        // Check if the response status is OK (e.g., 200, 201)
+        if (!response.ok) {
+            // Handle unauthorized or forbidden errors specifically
+            if (response.status === 401 || response.status === 403) {
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
+                setTimeout(() => window.location.href = 'admin_login.html', 2000);
+            }
+            // For other errors, parse the JSON response to get the error message
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Server error adding tracking');
             });
-        });
+        }
+        // If the response is OK, parse the JSON body and return it
+        return response.json();
+    })
+    .then(data => {
+        M.toast({ html: data.message || 'Tracking added successfully!', classes: 'green darken-2' });
+
+        // Perform all successful actions here
+        addTrackingForm.reset();
+        M.updateTextFields(); // Update Materialize labels
+        // Re-initialize date/time pickers if needed after reset
+        M.Datepicker.init(document.querySelectorAll('.datepicker'));
+        M.Timepicker.init(document.querySelectorAll('.timepicker'));
+        addStatusCircle.className = 'status-circle'; // Reset indicator
+        
+        // Refresh other parts of the dashboard
+        fetchAllTrackings();
+        fetchTrackingIdsForSelect();
+        fetchTrackingIdsForEmailSelect();
+        fetchTrackingIdsForAttachFileSelect();
+    })
+    .catch(error => {
+        // This block catches network errors or errors thrown in the .then() blocks (like from response.json() or the thrown Error)
+        console.error('Error adding tracking:', error);
+        M.toast({ html: `Error: ${error.message}`, classes: 'red darken-2' });
+    });
+});
     }
 
     // --- Fetch All Trackings (for table and dashboard stats) ---

@@ -484,14 +484,34 @@
         const expectedDeliveryDateElem = document.getElementById('expectedDeliveryDate');
         const expectedDeliveryTimeElem = document.getElementById('expectedDeliveryTime');
 
-        if (data.expectedDelivery) {
-            const deliveryDate = new Date(data.expectedDelivery);
-            expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            expectedDeliveryTimeElem.textContent = deliveryDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        } else {
-            expectedDeliveryDateElem.textContent = 'N/A';
-            expectedDeliveryTimeElem.textContent = 'N/A';
-        }
+     if (data.expectedDelivery) {
+    const deliveryDate = new Date(data.expectedDelivery);
+    expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    expectedDeliveryTimeElem.textContent = deliveryDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+} else {
+    expectedDeliveryDateElem.textContent = 'N/A';
+    expectedDeliveryTimeElem.textContent = 'N/A';
+}
+
+// Replace it with this corrected code:
+if (data.expectedDelivery) {
+    const deliveryDate = new Date(data.expectedDelivery);
+
+    // Format the date using the user's local timezone for clarity
+    expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Format the time by extracting the UTC hour and minute, which will match
+    // the time entered by the admin.
+    const utcHours = String(deliveryDate.getUTCHours()).padStart(2, '0');
+    const utcMinutes = String(deliveryDate.getUTCMinutes()).padStart(2, '0');
+
+    expectedDeliveryTimeElem.textContent = `${utcHours}:${utcMinutes} (Admin Time)`;
+
+} else {
+    expectedDeliveryDateElem.textContent = 'N/A';
+    expectedDeliveryTimeElem.textContent = 'N/A';
+}
+
 
         document.getElementById('senderName').textContent = data.senderName || 'N/A';
         document.getElementById('originLocation').textContent = data.origin || 'N/A';

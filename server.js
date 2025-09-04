@@ -394,29 +394,28 @@ app.post('/api/admin/trackings', authenticateAdmin, async (req, res) => {
             return res.status(409).json({ message: 'Tracking ID already exists.' });
         }
 
-        let finalExpectedDelivery;
-        if (expectedDeliveryDate) {
-            const effectiveDate = expectedDeliveryDate;
-            const effectiveTimeInput = expectedDeliveryTime || '00:00';
-            const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
+       let finalExpectedDelivery;
+if (expectedDeliveryDate) {
+    const effectiveDate = expectedDeliveryDate;
+    const effectiveTimeInput = expectedDeliveryTime || '00:00';
+    const parsedTime = parseTimeWithAmPm(effectiveTimeInput);
 
-            if (parsedTime) {
-                finalExpectedDelivery = new Date(Date.UTC(
-                    new Date(effectiveDate).getUTCFullYear(),
-                    new Date(effectiveDate).getUTCMonth(),
-                    new Date(effectiveDate).getUTCDate(),
-                    parsedTime.hour,
-                    parsedTime.minute
-                ));
-                if (isNaN(finalExpectedDelivery.getTime())) {
-                    console.warn(`Could not parse combined expected delivery date/time: ${effectiveDate} ${effectiveTimeInput}`);
-                    finalExpectedDelivery = undefined;
-                }
-            } else {
-                console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
-            }
+    if (parsedTime) {
+        // Create a new Date object from the date string, which will be interpreted in the server's local timezone.
+        // Then, use the parsed time to set the hours and minutes.
+        const localDate = new Date(`${effectiveDate}T${String(parsedTime.hour).padStart(2, '0')}:${String(parsedTime.minute).padStart(2, '0')}:00`);
+
+        // Now, convert this local time to UTC for storage.
+        finalExpectedDelivery = new Date(localDate.toISOString());
+
+        if (isNaN(finalExpectedDelivery.getTime())) {
+            console.warn(`Could not parse combined expected delivery date/time: ${effectiveDate} ${effectiveTimeInput}`);
+            finalExpectedDelivery = undefined;
         }
-
+    } else {
+        console.warn(`Invalid time format for expectedDeliveryTime: ${effectiveTimeInput}`);
+    }
+}
         const newTracking = new Tracking({
             trackingId,
             status,
