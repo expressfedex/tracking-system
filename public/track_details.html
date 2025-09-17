@@ -291,16 +291,21 @@
             margin-right: auto;
             height: 35px; /* Adjust size as needed */
         }
-        /* --- Mobile Responsiveness --- */
+      /* --- Mobile Responsiveness --- */
 @media (max-width: 600px) {
-    /* Main Container */
+    /* Main Container - Key change for full width */
     .main-container {
+        width: 100%; /* Force the container to take up the full width */
+        max-width: 100%; /* Override the 800px max-width */
         padding: 10px; /* Reduce padding for smaller screens */
+        border-radius: 0; /* Remove border-radius for a seamless look */
+        box-shadow: none; /* Remove box shadow */
     }
 
     /* Cards */
     .card {
-        padding: 20px; /* Slightly reduce padding inside cards */
+        padding: 15px; /* Slightly reduce padding inside cards */
+        box-shadow: none; /* Make cards flush with the background */
     }
 
     /* Header */
@@ -308,63 +313,70 @@
         flex-direction: column; /* Stack items vertically */
         align-items: flex-start; /* Align to the left */
         gap: 10px; /* Adjust gap */
+        padding-bottom: 10px; /* Reduce bottom padding */
     }
 
     .tracking-header .right-section {
-        flex-direction: row; /* Keep these items in a row */
-        align-self: stretch; /* Stretch to fill the width */
-        justify-content: space-between; /* Space out the button and logo */
+        flex-direction: row;
+        align-self: stretch;
+        justify-content: space-between;
     }
 
     .tracking-header h1 {
-        font-size: 0.9em; /* Smaller font size for the header */
+        font-size: 1.1em; /* Adjust font size to be more readable */
     }
     
     .track-again-btn {
-        width: auto; /* Allow the button to size based on content */
-        font-size: 0.7em; /* Make the button text smaller */
-        padding: 8px 12px; /* Add more padding for easier tapping */
+        width: auto;
+        font-size: 0.8em;
+        padding: 8px 12px;
     }
 
     .fedex-logo {
-        height: 35px; /* Reduce logo size */
+        height: 35px;
     }
 
     /* Info Grid */
     .info-grid {
-        /* This rule ensures columns don't get too small and stack appropriately */
-        grid-template-columns: 1fr; /* Force a single column layout on small screens */
+        grid-template-columns: 1fr; /* Force a single column layout */
+        gap: 15px; /* Reduce gap between items */
     }
 
     .info-item {
-        margin-bottom: 15px; /* Add space between stacked items */
+        margin-bottom: 0; /* Remove extra space between stacked items */
+    }
+
+    .display-field {
+        font-size: 0.9em; /* Ensure text is easily readable */
+        padding: 8px 10px; /* Adjust padding */
     }
 
     /* History Timeline */
+    .delivery-history-card {
+        padding: 15px;
+    }
+
     .history-item {
-        flex-direction: row; /* Maintain horizontal layout, but with adjusted spacing */
-        align-items: flex-start; /* Align content to the top */
-        margin-bottom: 15px; /* Reduce vertical spacing */
+        margin-bottom: 15px;
     }
     
-    /* Adjustments to the timeline line */
     .history-item::before {
-        left: 11px; /* Ensure the line still aligns with the icon center */
+        left: 11px;
     }
 
     .history-content {
-        margin-left: 10px; /* Reduce space between icon and text */
+        margin-left: 10px;
     }
     
     .history-time, 
     .history-location, 
     .history-description-detailed {
-        font-size: 0.8em; /* Smaller font sizes for all history text */
+        font-size: 0.8em;
     }
 
-    .display-field,
-    .expected-delivery-info p {
-        font-size: 0.85em; /* Smaller text for better fit */
+    .expected-delivery-info {
+        padding: 10px; /* Smaller padding for delivery info */
+        font-size: 0.9em;
     }
 }
     </style>
