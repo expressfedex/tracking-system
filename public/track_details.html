@@ -440,7 +440,7 @@
     </div>
 
    <script>
-    let pollingIntervalId; // Store the interval ID so we can clear it later
+    let pollingIntervalId;
 
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -454,28 +454,22 @@
         } else {
             console.warn('No tracking ID provided in URL. Displaying placeholder data.');
             document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : 77200452739`;
-            activeTrackingId = '77200452739'; // Default for testing
+            activeTrackingId = '77200452739';
         }
 
-        // --- Start polling for updates ---
-        // Call immediately on load, then every 15 seconds
-        fetchTrackingDetails(activeTrackingId); // Initial fetch
+        fetchTrackingDetails(activeTrackingId);
         pollingIntervalId = setInterval(() => {
             fetchTrackingDetails(activeTrackingId);
-        }, 15000); // Poll every 15 seconds (adjust as needed)
-        // --- End polling setup ---
+        }, 15000);
 
-        // Add event listener for "Track Parcel Again" button
         document.querySelector('.track-again-btn').addEventListener('click', (e) => {
             e.preventDefault();
-            // Clear the polling interval when leaving the page
             if (pollingIntervalId) {
                 clearInterval(pollingIntervalId);
             }
             window.location.href = '/';
         });
 
-        // Optional: Clear interval if user navigates away or closes the tab
         window.addEventListener('beforeunload', () => {
             if (pollingIntervalId) {
                 clearInterval(pollingIntervalId);
@@ -493,21 +487,18 @@
             } else {
                 alert('Tracking ID not found: ' + (data.message || 'Please try again.'));
                 if (pollingIntervalId) {
-                    clearInterval(pollingIntervalId); // Stop polling if tracking ID is invalid
+                    clearInterval(pollingIntervalId);
                 }
                 window.location.href = '/';
             }
         } catch (error) {
             console.error('Error fetching tracking data:', error);
-            // Don't stop polling on network error, as it might be temporary
-            // alert('Network error or server unreachable. Could not fetch tracking details.');
         }
     }
 
     function populateTrackingData(data) {
         if (!data || typeof data !== 'object') {
             console.error('populateTrackingData received invalid or empty data:', data);
-            // Consider stopping polling or showing a persistent error if data consistently invalid
             return;
         }
 
@@ -537,49 +528,26 @@
         const brightnessDot = ((rDot * 299) + (gDot * 587) + (bDot * 114)) / 1000;
         statusDot.style.border = (brightnessDot > 180) ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(255, 255, 255, 0.2)';
 
-        currentStatusElem.textContent = data.status || 'Unknown Status';
+          currentStatusElem.textContent = data.status || 'Unknown Status';
 
-        if (data.isBlinking) {
-            statusDot.classList.add('blinking');
-        } else {
-            statusDot.classList.remove('blinking');
-        }
+            if (data.isBlinking) {
+                statusDot.classList.add('blinking');
+            } else {
+                statusDot.classList.remove('blinking');
+            }
 
-        const expectedDeliveryDateElem = document.getElementById('expectedDeliveryDate');
-        const expectedDeliveryTimeElem = document.getElementById('expectedDeliveryTime');
-
-     if (data.expectedDelivery) {
-    const deliveryDate = new Date(data.expectedDelivery);
-    expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    expectedDeliveryTimeElem.textContent = deliveryDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-} else {
-    expectedDeliveryDateElem.textContent = 'N/A';
-    expectedDeliveryTimeElem.textContent = 'N/A';
-}
-
-// Replace it with this corrected code:
-if (data.expectedDelivery) {
-    const deliveryDate = new Date(data.expectedDelivery);
-
-    // Format the date using the user's local timezone for clarity
-    expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-    // Format the time by extracting the UTC hour and minute, which will match
-    // the time entered by the admin.
-    const utcHours = String(deliveryDate.getUTCHours()).padStart(2, '0');
-    const utcMinutes = String(deliveryDate.getUTCMinutes()).padStart(2, '0');
-
-    expectedDeliveryTimeElem.textContent = `${utcHours}:${utcMinutes}`;
-
-} else {
-    expectedDeliveryDateElem.textContent = 'N/A';
-    expectedDeliveryTimeElem.textContent = 'N/A';
-}
-
+            if (data.expectedDelivery) {
+                const deliveryDate = new Date(data.expectedDelivery);
+                document.getElementById('expectedDeliveryDate').textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                document.getElementById('expectedDeliveryTime').textContent = formatTimeFromUTC(deliveryDate);
+            } else {
+                document.getElementById('expectedDeliveryDate').textContent = 'N/A';
+                document.getElementById('expectedDeliveryTime').textContent = 'N/A';
+            }
 
         document.getElementById('senderName').textContent = data.senderName || 'N/A';
         document.getElementById('originLocation').textContent = data.origin || 'N/A';
-        document.getElementById('destination').textContent = data.destination || 'N/A';
+        document.getElementById('currentLocation').textContent = data.status || 'Unknown';
         document.getElementById('packageContents').textContent = data.packageContents || 'N/A';
         document.getElementById('packageWeight').textContent = data.weight ? `${data.weight} KG` : 'N/A';
         document.getElementById('serviceType').textContent = data.serviceType || 'N/A';
@@ -597,10 +565,6 @@ if (data.expectedDelivery) {
             data.history.forEach((item, index) => {
                 const historyItemDiv = document.createElement('div');
                 historyItemDiv.classList.add('history-item');
-
-                 if (index === 0) {
-                historyItemDiv.classList.add('green-line');
-        }
 
                 const iconSpan = document.createElement('span');
                 iconSpan.classList.add('history-icon-circle');
@@ -655,35 +619,35 @@ if (data.expectedDelivery) {
         }
     }
 
-   function formatHistoryDateTimeScreenshot(isoString) {
-    try {
-        const dateObj = new Date(isoString);
-        if (isNaN(dateObj.getTime())) {
-            return 'Invalid Date'; // Handle cases where the date string is not valid
-        }
+        function formatHistoryDateTime(isoString) {
+            try {
+                const dateObj = new Date(isoString);
+                if (isNaN(dateObj.getTime())) return 'Invalid Date';
 
-        // Extract UTC components directly to ensure no timezone conversion
-        const year = dateObj.getUTCFullYear();
-        const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-        const day = String(dateObj.getUTCDate()).padStart(2, '0');
+                const options = {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: 'numeric', minute: '2-digit', hour12: true
+                };
+                return dateObj.toLocaleDateString('en-US', options).replace(',', ' •');
+            } catch (e) {
+                console.error('Error formatting date:', isoString, e);
+                return 'Date N/A';
+            }
+        }
 
-        let hours = dateObj.getUTCHours();
-        const minutes = String(dateObj.getUTCMinutes()).padStart(2, '0');
-        
-        // Convert UTC hours to 12-hour format with AM/PM
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12; // Handle midnight (0 hours) and noon (12 hours) correctly
+        function formatTimeFromUTC(dateObj) {
+            const utcHours = String(dateObj.getUTCHours()).padStart(2, '0');
+            const utcMinutes = String(dateObj.getUTCMinutes()).padStart(2, '0');
+            return `${utcHours}:${utcMinutes} UTC`;
+        }
 
-        const formattedTime = `${hours}:${minutes} ${ampm}`;
-
-        // Combine date and time for display. This will be the exact time set by the admin.
-        return `${year}-${month}-${day} • ${formattedTime}`;
-    } catch (e) {
-        console.error('Error formatting date:', isoString, e);
-        return 'Date N/A'; // Fallback for formatting errors
-    }
-}
-</script>
+        function getBrightness(hexColor) {
+            const hex = hexColor.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        }
+    </script>
 </body>
 </html>
