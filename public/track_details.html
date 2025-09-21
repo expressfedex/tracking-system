@@ -59,8 +59,8 @@
                     <span id="originLocation" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
                 </div>
                 <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">CURRENT LOCATION</span>
-                    <span id="currentLocation" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">DESTINATION</span>
+                    <span id="destination" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
                 </div>
                 <div class="info-item flex flex-col gap-1">
                     <span class="info-label-small text-xs text-gray-500 uppercase font-medium">PACKAGE CONTENTS</span>
@@ -207,7 +207,7 @@
 
             document.getElementById('senderName').textContent = data.senderName || 'N/A';
             document.getElementById('originLocation').textContent = data.origin || 'N/A';
-            document.getElementById('currentLocation').textContent = data.currentLocation || 'N/A';
+            document.getElementById('destination').textContent = data.destination || 'N/A';
             document.getElementById('packageContents').textContent = data.packageContents || 'N/A';
             document.getElementById('packageWeight').textContent = data.weight ? `${data.weight} KG` : 'N/A';
             document.getElementById('serviceType').textContent = data.serviceType || 'N/A';
