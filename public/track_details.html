@@ -14,302 +14,347 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
+ <style>
         body {
             font-family: 'Poppins', sans-serif;
+            @apply bg-[#f0f2f5] flex justify-center items-start min-h-screen text-[#333];
         }
-
         @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.2; }
         }
-
         .blinking {
             animation: blink 1s linear infinite alternate;
         }
     </style>
 </head>
-<body class="bg-[#f0f2f5] md:p-5 flex justify-center items-start min-h-screen text-[#333] p-0">
-        <div class="main-container w-full max-w-none md:max-w-4xl flex flex-col gap-4 md:gap-5 bg-white bg-opacity-90 rounded-none md:rounded-lg p-4 md:p-6 shadow-xl min-h-screen md:min-h-0">
-        <div class="tracking-header flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-200 mb-4">
-            <h1 id="trackingDetailsHeader" class="text-xl md:text-2xl font-semibold m-0">Tracking Details: 7770947003939</h1>
-            <div class="right-section flex items-center justify-between w-full md:w-auto md:justify-end gap-3 md:gap-4">
-                <a href="index.html" class="track-again-btn bg-[#9f15c9] text-white py-2 px-3 rounded-md text-xs md:text-sm font-semibold transition-colors duration-300 hover:bg-[#8511a8]">Track Parcel Again</a>
-                
-            </div>
-        </div>
+<body class="bg-[#f0f2f5] flex justify-center items-start min-h-screen text-[#333]">
+    <div class="main-container w-full max-w-7xl lg:max-w-screen-xl mx-auto flex flex-col gap-5 md:gap-5 bg-white bg-opacity-90 rounded-lg p-3 md:p-6 shadow-xl">
+        <div class="tracking-header flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-200 mb-4">
+            <h1 id="trackingDetailsHeader" class="text-xl md:text-2xl font-semibold m-0">Tracking Details: 7770947003939</h1>
+            <div class="right-section flex items-center justify-between w-full md:w-auto md:justify-end gap-3 md:gap-4">
+                <a href="index.html" class="track-again-btn bg-[#9f15c9] text-white py-2 px-3 rounded-md text-xs md:text-sm font-semibold transition-colors duration-300 hover:bg-[#8511a8]">Track Parcel Again</a>
+            </div>
+        </div>
 
-        <div class="card status-card bg-white rounded-lg shadow-md p-4 flex flex-col gap-3">
-            <div id="statusLine" class="status-line flex items-center p-3 rounded-md font-semibold text-sm md:text-base text-white" style="background-color: #2196F3;">
-                <span id="statusIndicatorDot" class="status-indicator-dot w-2.5 h-2.5 rounded-full mr-2 border-2 border-white" style="background-color: #FFFFFF;"></span>
-                <span id="currentStatus">In Transit</span>
-            </div>
-            
-            <div class="expected-delivery-info bg-gray-100 border border-gray-300 rounded-md p-3 flex flex-col gap-1 text-sm md:text-base">
-                <p class="font-semibold text-black">Expected Delivery</p>
-                <p class="text-gray-700">On: <span id="expectedDeliveryDate" class="text-black">N/A</span></p>
-                <p class="text-gray-700">By: <span id="expectedDeliveryTime" class="text-black">N/A</span></p>
-            </div>
-        </div>
+        <div class="card status-card bg-white rounded-lg shadow-md p-4 flex flex-col gap-3">
+            <div id="statusLine" class="status-line flex items-center p-3 rounded-md font-semibold text-sm md:text-base text-white" style="background-color: #2196F3;">
+            <span id="statusIndicatorDot" class="status-indicator-dot w-2.5 h-2.5 rounded-full mr-2 border-2 border-white" style="background-color: #FFFFFF;"></span>
+                <span id="currentStatus">In Transit</span>
+            </div>
+            
+            <div class="expected-delivery-info bg-gray-100 border border-gray-300 rounded-md p-3 flex flex-col gap-1 text-sm md:text-base">
+                <p class="font-semibold text-black">Expected Delivery</p>
+                <p class="text-gray-700">On: <span id="expectedDeliveryDate" class="text-black">N/A</span></p>
+                <p class="text-gray-700">By: <span id="expectedDeliveryTime" class="text-black">N/A</span></p>
+            </div>
+        </div>
 
-        <div class="card bg-white rounded-lg shadow-md p-4">
-            <h3 class="section-header text-lg font-semibold mb-3">Package Information</h3>
-            <div class="info-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">SENT FROM</span>
-                    <span id="senderName" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-                <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">ORIGIN LOCATION</span>
-                    <span id="originLocation" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-                <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">DESTINATION</span>
-                    <span id="destination" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-                <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">PACKAGE CONTENTS</span>
-                    <span id="packageContents" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black font-semibold min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-                <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">WEIGHT</span>
-                    <span id="packageWeight" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-                <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">SERVICE TYPE</span>
-                    <span id="serviceType" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-                <div class="info-item flex flex-col gap-1">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">SPECIAL HANDLING</span>
-                    <span id="specialHandling" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-            </div>
-        </div>
+        <div class="card bg-white rounded-lg shadow-md p-4">
+            <h3 class="section-header text-lg font-semibold mb-3">Package Information</h3>
+            <div class="info-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="info-item flex flex-col gap-1">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">SENT FROM</span>
+                    <span id="senderName" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+                <div class="info-item flex flex-col gap-1">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">ORIGIN LOCATION</span>
+                    <span id="originLocation" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+                <div class="info-item flex flex-col gap-1">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">DESTINATION</span>
+                    <span id="destination" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+                <div class="info-item flex flex-col gap-1">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">PACKAGE CONTENTS</span>
+                    <span id="packageContents" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black font-semibold min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+                <div class="info-item flex flex-col gap-1">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">WEIGHT</span>
+                    <span id="packageWeight" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+                <div class="info-item flex flex-col gap-1">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">SERVICE TYPE</span>
+                    <span id="serviceType" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+                <div class="info-item flex flex-col gap-1">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">SPECIAL HANDLING</span>
+                    <span id="specialHandling" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+            </div>
+        </div>
 
-        <div class="card bg-white rounded-lg shadow-md p-4">
-            <h3 class="section-header text-lg font-semibold mb-3">Delivery To</h3>
-            <div class="info-grid grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="info-item flex flex-col gap-1 col-span-full">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">RECIPIENT</span>
-                    <span id="recipientName" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black font-semibold min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-                <div class="info-item flex flex-col gap-1 col-span-full">
-                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">DELIVERY ADDRESS</span>
-                    <span id="recipientAddress" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
-                </div>
-            </div>
-        </div>
+        <div class="card bg-white rounded-lg shadow-md p-4">
+            <h3 class="section-header text-lg font-semibold mb-3">Delivery To</h3>
+            <div class="info-grid grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="info-item flex flex-col gap-1 col-span-full">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">RECIPIENT</span>
+                    <span id="recipientName" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black font-semibold min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+                <div class="info-item flex flex-col gap-1 col-span-full">
+                    <span class="info-label-small text-xs text-gray-500 uppercase font-medium">DELIVERY ADDRESS</span>
+                    <span id="recipientAddress" class="display-field bg-gray-100 border border-gray-300 rounded-md p-2 text-sm text-black min-h-[30px] flex items-center whitespace-pre-wrap">N/A</span>
+                </div>
+            </div>
+        </div>
 
-        <div class="card delivery-history-card bg-white rounded-lg shadow-md p-4">
-            <h3 class="section-header text-lg font-semibold mb-3">Delivery History</h3>
-            <div id="deliveryHistoryContainer" class="relative">
-                <p class="text-center text-gray-500">No history events available yet.</p>
-            </div>
-        </div>
+        <div class="card delivery-history-card bg-white rounded-lg shadow-md p-4">
+            <h3 class="section-header text-lg font-semibold mb-3">Delivery History</h3>
+            <div id="deliveryHistoryContainer" class="relative">
+                <p class="text-center text-gray-500">No history events available yet.</p>
+            </div>
+        </div>
+    </div>
 
-        
-    </div>
+    <script>
+        let pollingIntervalId;
 
-    <script>
-        let pollingIntervalId;
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const trackingId = urlParams.get('trackingId');
+            let activeTrackingId = trackingId || '77200452739';
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const trackingId = urlParams.get('trackingId');
-            let activeTrackingId = trackingId || '77200452739';
+            document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${activeTrackingId}`;
 
-            document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${activeTrackingId}`;
+            fetchTrackingDetails(activeTrackingId);
+            pollingIntervalId = setInterval(() => {
+                fetchTrackingDetails(activeTrackingId);
+            }, 15000);
 
-            fetchTrackingDetails(activeTrackingId);
-            pollingIntervalId = setInterval(() => {
-                fetchTrackingDetails(activeTrackingId);
-            }, 15000);
+            document.querySelector('.track-again-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (pollingIntervalId) {
+                    clearInterval(pollingIntervalId);
+                }
+                window.location.href = '/';
+            });
 
-            document.querySelector('.track-again-btn').addEventListener('click', (e) => {
-                e.preventDefault();
-                if (pollingIntervalId) {
-                    clearInterval(pollingIntervalId);
-                }
-                window.location.href = '/';
-            });
+            window.addEventListener('beforeunload', () => {
+                if (pollingIntervalId) {
+                    clearInterval(pollingIntervalId);
+                }
+            });
+        });
 
-            window.addEventListener('beforeunload', () => {
-                if (pollingIntervalId) {
-                    clearInterval(pollingIntervalId);
-                }
-            });
-        });
+        async function fetchTrackingDetails(trackingId) {
+            try {
+                const response = await fetch(`/api/track/${trackingId}`);
+                const data = await response.json();
 
-        async function fetchTrackingDetails(trackingId) {
-            try {
-                const response = await fetch(`/api/track/${trackingId}`);
-                const data = await response.json();
+                if (response.ok) {
+                    populateTrackingData(data);
+                } else {
+                    alert('Tracking ID not found: ' + (data.message || 'Please try again.'));
+                    if (pollingIntervalId) {
+                        clearInterval(pollingIntervalId);
+                    }
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error fetching tracking data:', error);
+            }
+        }
 
-                if (response.ok) {
-                    populateTrackingData(data);
-                } else {
-                    alert('Tracking ID not found: ' + (data.message || 'Please try again.'));
-                    if (pollingIntervalId) {
-                        clearInterval(pollingIntervalId);
-                    }
-                    window.location.href = '/';
-                }
-            } catch (error) {
-                console.error('Error fetching tracking data:', error);
-            }
-        }
+        function populateTrackingData(data) {
+            if (!data || typeof data !== 'object') {
+                console.error('populateTrackingData received invalid or empty data:', data);
+                return;
+            }
 
-        function populateTrackingData(data) {
-            if (!data || typeof data !== 'object') {
-                console.error('populateTrackingData received invalid or empty data:', data);
-                return;
-            }
+            document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${data.trackingId || 'N/A'}`;
 
-            document.getElementById('trackingDetailsHeader').textContent = `Tracking Details : ${data.trackingId || 'N/A'}`;
+            const statusLine = document.getElementById('statusLine');
+            const statusDot = document.getElementById('statusIndicatorDot');
+            const currentStatusElem = document.getElementById('currentStatus');
 
-            const statusLine = document.getElementById('statusLine');
-            const statusDot = document.getElementById('statusIndicatorDot');
-            const currentStatusElem = document.getElementById('currentStatus');
+            if (statusLine) {
+                statusLine.style.backgroundColor = data.statusLineColor || '#2196F3';
+                const statusLineHex = (data.statusLineColor || '2196F3').replace('#', '');
+                const rLine = parseInt(statusLineHex.substring(0, 2), 16);
+                const gLine = parseInt(statusLineHex.substring(2, 4), 16);
+                const bLine = parseInt(statusLineHex.substring(4, 6), 16);
+                const brightnessLine = ((rLine * 299) + (gLine * 587) + (bLine * 114)) / 1000;
+                statusLine.style.color = (brightnessLine > 180) ? '#333' : '#fff';
+            }
 
-            statusLine.style.backgroundColor = data.statusLineColor || '#2196F3';
-            statusDot.style.backgroundColor = data.blinkingDotColor || '#FFFFFF';
+            if (statusDot) {
+                statusDot.style.backgroundColor = data.blinkingDotColor || '#FFFFFF';
+                const dotHex = (data.blinkingDotColor || 'FFFFFF').replace('#', '');
+                const rDot = parseInt(dotHex.substring(0, 2), 16);
+                const gDot = parseInt(dotHex.substring(2, 4), 16);
+                const bDot = parseInt(dotHex.substring(4, 6), 16);
+                const brightnessDot = ((rDot * 299) + (gDot * 587) + (bDot * 114)) / 1000;
+                statusDot.style.borderColor = (brightnessDot > 180) ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)';
+            
+                if (data.isBlinking) {
+                    statusDot.classList.add('blinking');
+                } else {
+                    statusDot.classList.remove('blinking');
+                }
+            }
 
-            const statusLineHex = (data.statusLineColor || '2196F3').replace('#', '');
-            const rLine = parseInt(statusLineHex.substring(0, 2), 16);
-            const gLine = parseInt(statusLineHex.substring(2, 4), 16);
-            const bLine = parseInt(statusLineHex.substring(4, 6), 16);
-            const brightnessLine = ((rLine * 299) + (gLine * 587) + (bLine * 114)) / 1000;
-            statusLine.style.color = (brightnessLine > 180) ? '#333' : '#fff';
+            if (currentStatusElem) {
+                currentStatusElem.textContent = data.status || 'Unknown Status';
+            }
 
-            const dotHex = (data.blinkingDotColor || 'FFFFFF').replace('#', '');
-            const rDot = parseInt(dotHex.substring(0, 2), 16);
-            const gDot = parseInt(dotHex.substring(2, 4), 16);
-            const bDot = parseInt(dotHex.substring(4, 6), 16);
-            const brightnessDot = ((rDot * 299) + (gDot * 587) + (bDot * 114)) / 1000;
-            statusDot.style.borderColor = (brightnessDot > 180) ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.2)';
+            const expectedDeliveryDateElem = document.getElementById('expectedDeliveryDate');
+            const expectedDeliveryTimeElem = document.getElementById('expectedDeliveryTime');
 
-            currentStatusElem.textContent = data.status || 'Unknown Status';
+            if (data.expectedDelivery) {
+                const deliveryDate = new Date(data.expectedDelivery);
+                if (expectedDeliveryDateElem) {
+                    expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                }
+                const utcHours = String(deliveryDate.getUTCHours()).padStart(2, '0');
+                const utcMinutes = String(deliveryDate.getUTCMinutes()).padStart(2, '0');
+                if (expectedDeliveryTimeElem) {
+                    expectedDeliveryTimeElem.textContent = `${utcHours}:${utcMinutes}`;
+                }
+            } else {
+                if (expectedDeliveryDateElem) {
+                    expectedDeliveryDateElem.textContent = 'N/A';
+                }
+                if (expectedDeliveryTimeElem) {
+                    expectedDeliveryTimeElem.textContent = 'N/A';
+                }
+            }
 
-            if (data.isBlinking) {
-                statusDot.classList.add('blinking');
-            } else {
-                statusDot.classList.remove('blinking');
-            }
+            const senderNameElem = document.getElementById('senderName');
+            if (senderNameElem) {
+                senderNameElem.textContent = data.senderName || 'N/A';
+            }
 
-            const expectedDeliveryDateElem = document.getElementById('expectedDeliveryDate');
-            const expectedDeliveryTimeElem = document.getElementById('expectedDeliveryTime');
+            const originLocationElem = document.getElementById('originLocation');
+            if (originLocationElem) {
+                originLocationElem.textContent = data.origin || 'N/A';
+            }
 
-            if (data.expectedDelivery) {
-                const deliveryDate = new Date(data.expectedDelivery);
-                expectedDeliveryDateElem.textContent = deliveryDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                const utcHours = String(deliveryDate.getUTCHours()).padStart(2, '0');
-                const utcMinutes = String(deliveryDate.getUTCMinutes()).padStart(2, '0');
-                expectedDeliveryTimeElem.textContent = `${utcHours}:${utcMinutes}`;
-            } else {
-                expectedDeliveryDateElem.textContent = 'N/A';
-                expectedDeliveryTimeElem.textContent = 'N/A';
-            }
+            const destinationElem = document.getElementById('destination');
+            if (destinationElem) {
+                destinationElem.textContent = data.destination || 'N/A';
+            }
 
-            document.getElementById('senderName').textContent = data.senderName || 'N/A';
-            document.getElementById('originLocation').textContent = data.origin || 'N/A';
-            document.getElementById('destination').textContent = data.destination || 'N/A';
-            document.getElementById('packageContents').textContent = data.packageContents || 'N/A';
-            document.getElementById('packageWeight').textContent = data.weight ? `${data.weight} KG` : 'N/A';
-            document.getElementById('serviceType').textContent = data.serviceType || 'N/A';
-            document.getElementById('specialHandling').textContent = data.specialHandling || 'None';
-            document.getElementById('recipientName').textContent = data.recipientName || 'N/A';
-            document.getElementById('recipientAddress').textContent = data.recipientAddress || 'N/A';
+            const packageContentsElem = document.getElementById('packageContents');
+            if (packageContentsElem) {
+                packageContentsElem.textContent = data.packageContents || 'N/A';
+            }
 
-            const historyContainer = document.getElementById('deliveryHistoryContainer');
-            historyContainer.innerHTML = '';
+            const packageWeightElem = document.getElementById('packageWeight');
+            if (packageWeightElem) {
+                packageWeightElem.textContent = data.weight ? `${data.weight} KG` : 'N/A';
+            }
 
-            if (data.history && Array.isArray(data.history) && data.history.length > 0) {
-                data.history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                data.history.forEach((item, index) => {
-                    const historyItemDiv = document.createElement('div');
-                    historyItemDiv.className = 'history-item flex items-start mb-4 relative';
-                    if (index < data.history.length - 1) {
-                        historyItemDiv.classList.add('after:content-[""]', 'after:absolute', 'after:left-[11px]', 'after:top-6', 'after:bottom-[-20px]', 'after:w-0.5', 'after:bg-gray-300', 'after:z-0');
-                    }
+            const serviceTypeElem = document.getElementById('serviceType');
+            if (serviceTypeElem) {
+                serviceTypeElem.textContent = data.serviceType || 'N/A';
+            }
 
-                    const iconSpan = document.createElement('span');
-                    iconSpan.className = 'history-icon-circle w-6 h-6 rounded-full text-white flex justify-center items-center text-sm flex-shrink-0 z-10';
+            const specialHandlingElem = document.getElementById('specialHandling');
+            if (specialHandlingElem) {
+                specialHandlingElem.textContent = data.specialHandling || 'None';
+            }
 
-                    let iconClass = 'bg-gray-500';
-                    let iconHTML = '<i class="fas fa-circle"></i>';
+            const recipientNameElem = document.getElementById('recipientName');
+            if (recipientNameElem) {
+                recipientNameElem.textContent = data.recipientName || 'N/A';
+            }
 
-                    const lowerDescription = (item.description || '').toLowerCase();
-                    if (lowerDescription.includes('departed') || lowerDescription.includes('transit')) {
-                        iconClass = 'bg-blue-500';
-                        iconHTML = '<i class="fas fa-truck"></i>';
-                    } else if (lowerDescription.includes('delivered')) {
-                        iconClass = 'bg-green-500';
-                        iconHTML = '<i class="fas fa-check"></i>';
-                    } else if (lowerDescription.includes('held') || lowerDescription.includes('officer') || lowerDescription.includes('exception')) {
-                        iconClass = 'bg-red-500';
-                        iconHTML = '<i class="fas fa-exclamation-triangle"></i>';
-                    } else if (index === 0) {
-                        iconClass = 'bg-green-500';
-                        iconHTML = '<i class="fas fa-map-marker-alt"></i>';
-                    }
+            const recipientAddressElem = document.getElementById('recipientAddress');
+            if (recipientAddressElem) {
+                recipientAddressElem.textContent = data.recipientAddress || 'N/A';
+            }
 
-                    iconSpan.classList.add(iconClass);
-                    iconSpan.innerHTML = iconHTML;
+            const historyContainer = document.getElementById('deliveryHistoryContainer');
+            if (historyContainer) {
+                historyContainer.innerHTML = '';
+                if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+                    data.history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    data.history.forEach((item, index) => {
+                        const historyItemDiv = document.createElement('div');
+                        historyItemDiv.className = 'history-item flex items-start mb-4 relative';
+                        if (index < data.history.length - 1) {
+                            historyItemDiv.classList.add('after:content-[""]', 'after:absolute', 'after:left-[11px]', 'after:top-6', 'after:bottom-[-20px]', 'after:w-0.5', 'after:bg-gray-300', 'after:z-0');
+                        }
 
-                    const contentDiv = document.createElement('div');
-                    contentDiv.className = 'history-content ml-3 flex-grow';
+                        const iconSpan = document.createElement('span');
+                        iconSpan.className = 'history-icon-circle w-6 h-6 rounded-full text-white flex justify-center items-center text-sm flex-shrink-0 z-10';
 
-                    const timeP = document.createElement('p');
-                    timeP.className = 'history-time text-xs text-gray-500 mb-0.5';
-                    timeP.textContent = formatHistoryDateTimeScreenshot(item.timestamp || new Date().toISOString());
+                        let iconClass = 'bg-gray-500';
+                        let iconHTML = '<i class="fas fa-circle"></i>';
 
-                    const locationP = document.createElement('p');
-                    locationP.className = 'history-location font-semibold text-sm text-black mb-1';
-                    locationP.textContent = item.description || 'N/A';
+                        const lowerDescription = (item.description || '').toLowerCase();
+                        if (lowerDescription.includes('departed') || lowerDescription.includes('transit')) {
+                            iconClass = 'bg-blue-500';
+                            iconHTML = '<i class="fas fa-truck"></i>';
+                        } else if (lowerDescription.includes('delivered')) {
+                            iconClass = 'bg-green-500';
+                            iconHTML = '<i class="fas fa-check"></i>';
+                        } else if (lowerDescription.includes('held') || lowerDescription.includes('officer') || lowerDescription.includes('exception')) {
+                            iconClass = 'bg-red-500';
+                            iconHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                        } else if (index === 0) {
+                            iconClass = 'bg-green-500';
+                            iconHTML = '<i class="fas fa-map-marker-alt"></i>';
+                        }
 
-                    const descriptionP = document.createElement('p');
-                    descriptionP.className = 'history-description-detailed text-sm text-gray-700';
-                    descriptionP.textContent = item.location || 'N/A';
+                        iconSpan.classList.add(iconClass);
+                        iconSpan.innerHTML = iconHTML;
 
-                    contentDiv.appendChild(timeP);
-                    contentDiv.appendChild(locationP);
-                    contentDiv.appendChild(descriptionP);
+                        const contentDiv = document.createElement('div');
+                        contentDiv.className = 'history-content ml-3 flex-grow';
 
-                    historyItemDiv.appendChild(iconSpan);
-                    historyItemDiv.appendChild(contentDiv);
+                        const timeP = document.createElement('p');
+                        timeP.className = 'history-time text-xs text-gray-500 mb-0.5';
+                        timeP.textContent = formatHistoryDateTimeScreenshot(item.timestamp || new Date().toISOString());
 
-                    historyContainer.appendChild(historyItemDiv);
-                });
-            } else {
-                historyContainer.innerHTML = '<p class="text-center text-gray-500">No history events available yet.</p>';
-            }
-        }
+                        const locationP = document.createElement('p');
+                        locationP.className = 'history-location font-semibold text-sm text-black mb-1';
+                        locationP.textContent = item.description || 'N/A';
 
-        function formatHistoryDateTimeScreenshot(isoString) {
-            try {
-                const dateObj = new Date(isoString);
-                if (isNaN(dateObj.getTime())) {
-                    return 'Invalid Date';
-                }
+                        const descriptionP = document.createElement('p');
+                        descriptionP.className = 'history-description-detailed text-sm text-gray-700';
+                        descriptionP.textContent = item.location || 'N/A';
 
-                const year = dateObj.getUTCFullYear();
-                const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(dateObj.getUTCDate()).padStart(2, '0');
-                let hours = dateObj.getUTCHours();
-                const minutes = String(dateObj.getUTCMinutes()).padStart(2, '0');
-                
-                const ampm = hours >= 12 ? 'PM' : 'AM';
-                hours = hours % 12;
-                hours = hours ? hours : 12;
+                        contentDiv.appendChild(timeP);
+                        contentDiv.appendChild(locationP);
+                        contentDiv.appendChild(descriptionP);
 
-                const formattedTime = `${hours}:${minutes} ${ampm}`;
+                        historyItemDiv.appendChild(iconSpan);
+                        historyItemDiv.appendChild(contentDiv);
 
-                return `${year}-${month}-${day} • ${formattedTime}`;
-            } catch (e) {
-                console.error('Error formatting date:', isoString, e);
-                return 'Date N/A';
-            }
-        }
-    </script>
+                        historyContainer.appendChild(historyItemDiv);
+                    });
+                } else {
+                    historyContainer.innerHTML = '<p class="text-center text-gray-500">No history events available yet.</p>';
+                }
+            }
+        }
+
+        function formatHistoryDateTimeScreenshot(isoString) {
+            try {
+                const dateObj = new Date(isoString);
+                if (isNaN(dateObj.getTime())) {
+                    return 'Invalid Date';
+                }
+
+                const year = dateObj.getUTCFullYear();
+                const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(dateObj.getUTCDate()).padStart(2, '0');
+                let hours = dateObj.getUTCHours();
+                const minutes = String(dateObj.getUTCMinutes()).padStart(2, '0');
+                
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+
+                const formattedTime = `${hours}:${minutes} ${ampm}`;
+
+                return `${year}-${month}-${day} • ${formattedTime}`;
+            } catch (e) {
+                console.error('Error formatting date:', isoString, e);
+                return 'Date N/A';
+            }
+        }
+    </script>
 </body>
 </html>
