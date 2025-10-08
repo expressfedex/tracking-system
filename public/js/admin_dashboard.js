@@ -3,8 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     M.AutoInit();
 
     // Get DOM elements for various forms and sections
-   const sidebar = document.getElementById('sidebar'); // Uses the ID "sidebar"
-    const menuToggle = document.getElementById('menu-toggle'); // Uses the ID "menu-toggle"
+    const sidebar = document.querySelector('.sidebar');
+    const menuToggle = document.querySelector('.menu-toggle');
     const sections = document.querySelectorAll('.dashboard-section');
     const sidebarLinks = document.querySelectorAll('.sidebar nav ul li a');
 
@@ -451,7 +451,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching tracking IDs for attachment select:', error);
         });
     }
-// --- Fetch Single Tracking Details for Update Form ---
+
+    // --- Fetch Single Tracking Details for Update Form ---
 if (singleTrackingIdSelect) {
     singleTrackingIdSelect.addEventListener('change', function() {
         // Get the value from the selected option
@@ -460,15 +461,10 @@ if (singleTrackingIdSelect) {
         // CRITICAL FIX: Check explicitly for an invalid or empty tracking ID
         if (!trackingId || trackingId === "") {
             console.warn('No valid tracking ID selected. Hiding update form.');
-            
-            // Replaced M.toast with Tailwind-friendly showToast
-            showToast('Please select a valid tracking ID.', 'bg-yellow-500'); 
-            
+            M.toast({ html: 'Please select a valid tracking ID.', classes: 'orange darken-2' });
             updateTrackingForm.style.display = 'none';
-            
             // Also clear the tracking history list to avoid showing old data
-            // Assuming trackingHistoryList is the outer container
-            document.getElementById('trackingHistoryList').innerHTML = '<ul id="historyEvents" class="divide-y divide-gray-200 border border-gray-200 rounded-lg"></ul>';
+            document.getElementById('trackingHistoryList').innerHTML = '<ul class="collection"></ul>';
             return; // Exit the function to prevent the API call
         }
 
@@ -484,8 +480,7 @@ if (singleTrackingIdSelect) {
         .then(response => {
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
-                    // Replaced M.toast with Tailwind-friendly showToast
-                    showToast('Session expired or unauthorized. Please log in again.', 'bg-red-500'); 
+                    M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
                     setTimeout(() => window.location.href = 'admin_login.html', 2000);
                 }
                 return response.json().then(errorData => {
@@ -509,30 +504,26 @@ if (singleTrackingIdSelect) {
             document.getElementById('updateServiceType').value = tracking.serviceType;
             document.getElementById('updateRecipientAddress').value = tracking.recipientAddress;
             document.getElementById('updateSpecialHandling').value = tracking.specialHandling || '';
-            
-            // Format date for standard input type="text" (or you can use type="date")
             document.getElementById('updateExpectedDeliveryDate').value = tracking.expectedDeliveryDate ? new Date(tracking.expectedDeliveryDate).toISOString().split('T')[0] : '';
-            
             document.getElementById('updateExpectedDeliveryTime').value = tracking.expectedDeliveryTime || '';
             document.getElementById('updateOrigin').value = tracking.origin || '';
             document.getElementById('updateDestination').value = tracking.destination || '';
             document.getElementById('updateWeight').value = tracking.weight || '';
 
-            // Removed M.updateTextFields() (not needed with plain HTML/Tailwind)
-            // Removed M.Datepicker.init() and M.Timepicker.init() (replace with a custom library if needed, otherwise use native input types)
-            
-            // Show the form
+            // Update Materialize elements and show the form
+            M.updateTextFields();
+            M.Datepicker.init(document.getElementById('updateExpectedDeliveryDate'));
+            M.Timepicker.init(document.getElementById('updateExpectedDeliveryTime'));
             updateTrackingForm.style.display = 'block';
 
-            // --- Handle History Population ---
+            // --- You must also handle the `historyTrackingIdInput` here ---
+            // This is the key part of the fix from our previous conversation.
             document.getElementById('historyTrackingIdInput').value = tracking.trackingId;
-            // Assuming this function is defined elsewhere and handles fetching/rendering history
-            fetchTrackingHistory(tracking.trackingId); 
+            fetchTrackingHistory(tracking.trackingId); // Use the valid tracking ID from the API response
         })
         .catch(error => {
             console.error('Error fetching tracking details:', error);
-            // Replaced M.toast with Tailwind-friendly showToast
-            showToast(`Failed to load tracking details: ${error.message}`, 'bg-red-500'); 
+            M.toast({ html: `Failed to load tracking details: ${error.message}`, classes: 'red darken-2' });
             updateTrackingForm.style.display = 'none';
         });
     });
@@ -600,24 +591,24 @@ if (singleTrackingIdSelect) {
         });
     }
 
- // --- Delete Tracking (Tailwind / Plain JS Version) ---
+ // --- Delete Tracking ---
 function deleteTracking(trackingId) {
-    // 1. Basic Validation (Allowing the human-readable ID)
-    const idToDelete = trackingId ? trackingId.trim() : '';
+    console.log('Attempting to delete tracking with ID:', trackingId);
+    console.log('Type of tracking ID:', typeof trackingId);
 
-    if (!idToDelete) {
-        // Replaced M.toast with showToast (using red for error)
-        showToast('Error: Tracking ID is missing. Cannot delete.', 'bg-red-500');
+    // Validate tracking ID format (24-character hex string)
+    if (
+        !trackingId ||
+        typeof trackingId !== 'string' ||
+        !trackingId.trim().match(/^[0-9a-fA-F]{24}$/)
+    ) {
+        M.toast({ html: 'Invalid tracking ID format on frontend.', classes: 'red darken-2' });
         console.error('Client-side validation failed: trackingId is', trackingId);
         return;
     }
-    
-    // NOTE: Removed the strict !trackingId.trim().match(/^[0-9a-fA-F]{24}$/) check
-    // because you are passing the human-readable ID, not the MongoDB _id.
 
-    console.log('Attempting to delete tracking with ID:', idToDelete);
 
-    fetch(`/api/admin/trackings/${idToDelete}`, {
+     fetch(`/api/admin/trackings/${trackingId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -626,8 +617,7 @@ function deleteTracking(trackingId) {
     .then(response => {
         if (!response.ok) {
             if (response.status === 401 || response.status === 403) {
-                // Replaced M.toast with showToast
-                showToast('Session expired or unauthorized. Please log in again.', 'bg-red-500'); 
+                M.toast({ html: 'Session expired or unauthorized. Please log in again.', classes: 'red darken-2' });
                 setTimeout(() => window.location.href = 'admin_login.html', 2000);
             }
             return response.json().then(errorData => {
@@ -638,25 +628,21 @@ function deleteTracking(trackingId) {
     })
     .then(data => {
         if (data.success) {
-            // Replaced M.toast with showToast (using green for success)
-            showToast('Tracking deleted successfully! 🗑️', 'bg-green-500'); 
-            
-            // Refresh all relevant lists
+            M.toast({ html: 'Tracking deleted successfully!', classes: 'green darken-2' });
             fetchAllTrackings();
             fetchTrackingIdsForSelect();
             fetchTrackingIdsForEmailSelect();
             fetchTrackingIdsForAttachFileSelect();
         } else {
-            // Replaced M.toast with showToast
-            showToast(`Error: ${data.message || 'Could not delete tracking.'}`, 'bg-red-500');
+            M.toast({ html: `Error: ${data.message || 'Could not delete tracking.'}`, classes: 'red darken-2' });
         }
     })
     .catch(error => {
         console.error('Error deleting tracking:', error);
-        // Replaced M.toast with showToast
-        showToast(`Network error or server issue: ${error.message}`, 'bg-red-500');
+        M.toast({ html: `Network error or server issue: ${error.message}`, classes: 'red darken-2' });
     });
 }
+    
 
 
   // Assuming `trackingId` here is your custom, human-readable tracking ID (e.g., '7770947003939')
@@ -1164,7 +1150,7 @@ if (sendEmailForm) {
         });
     }
 
-   // Create User
+    // Create User
     if (createUserForm) {
         createUserForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1187,7 +1173,10 @@ if (sendEmailForm) {
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
-                        showToast('Session expired or unauthorized. Please log in again.', 'bg-red-500'); // Tailwind toast
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
                         setTimeout(() => window.location.href = 'admin_login.html', 2000);
                     }
                     return response.json().then(errorData => {
@@ -1198,19 +1187,28 @@ if (sendEmailForm) {
             })
             .then(data => {
                 if (data.success) {
-                    showToast('User created successfully! 🎉', 'bg-green-500'); // Tailwind toast
-                    // Assuming createUserModal is the DOM element for the modal
-                    createUserModal.classList.add('hidden'); // Close modal (Tailwind convention)
+                    M.toast({
+                        html: 'User created successfully!',
+                        classes: 'green darken-2'
+                    });
+                    M.Modal.getInstance(createUserModal).close();
                     createUserForm.reset();
-                    // No M.updateTextFields() or M.FormSelect.init() needed with pure Tailwind
+                    M.updateTextFields();
+                    M.FormSelect.init(document.querySelectorAll('#createUserModal select')); // Re-init selects
                     fetchAllUsers();
                 } else {
-                    showToast(`Error: ${data.message || 'Could not create user.'}`, 'bg-red-500'); // Tailwind toast
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not create user.'}`,
+                        classes: 'red darken-2'
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error creating user:', error);
-                showToast(`Network error or server issue: ${error.message}`, 'bg-red-500'); // Tailwind toast
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
+                });
             });
         });
     }
@@ -1226,7 +1224,10 @@ if (sendEmailForm) {
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
-                        showToast('Session expired or unauthorized. Please log in again.', 'bg-red-500'); // Tailwind toast
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
                         setTimeout(() => window.location.href = 'admin_login.html', 2000);
                     }
                     return response.json().then(errorData => {
@@ -1240,13 +1241,16 @@ if (sendEmailForm) {
                 document.getElementById('editUsername').value = user.username;
                 document.getElementById('editEmail').value = user.email;
                 document.getElementById('editUserRole').value = user.role;
-                
-                // No M.updateTextFields() or M.FormSelect.init() needed with pure Tailwind
-                editUserModal.classList.remove('hidden'); // Open modal (Tailwind convention)
+                M.updateTextFields();
+                M.FormSelect.init(document.querySelectorAll('#editUserModal select')); // Re-init select
+                M.Modal.getInstance(editUserModal).open();
             })
             .catch(error => {
                 console.error('Error fetching user details:', error);
-                showToast(`Failed to load user details: ${error.message}`, 'bg-red-500'); // Tailwind toast
+                M.toast({
+                    html: `Failed to load user details: ${error.message}`,
+                    classes: 'red darken-2'
+                });
             });
     }
 
@@ -1278,7 +1282,10 @@ if (sendEmailForm) {
             .then(response => {
                 if (!response.ok) {
                     if (response.status === 401 || response.status === 403) {
-                        showToast('Session expired or unauthorized. Please log in again.', 'bg-red-500'); // Tailwind toast
+                        M.toast({
+                            html: 'Session expired or unauthorized. Please log in again.',
+                            classes: 'red darken-2'
+                        });
                         setTimeout(() => window.location.href = 'admin_login.html', 2000);
                     }
                     return response.json().then(errorData => {
@@ -1289,18 +1296,27 @@ if (sendEmailForm) {
             })
             .then(data => {
                 if (data.success) {
-                    showToast('User updated successfully! ✅', 'bg-green-500'); // Tailwind toast
-                    editUserModal.classList.add('hidden'); // Close modal
+                    M.toast({
+                        html: 'User updated successfully!',
+                        classes: 'green darken-2'
+                    });
+                    M.Modal.getInstance(editUserModal).close();
                     editUserForm.reset();
-                    // No M.updateTextFields() needed with pure Tailwind
+                    M.updateTextFields();
                     fetchAllUsers();
                 } else {
-                    showToast(`Error: ${data.message || 'Could not update user.'}`, 'bg-red-500'); // Tailwind toast
+                    M.toast({
+                        html: `Error: ${data.message || 'Could not update user.'}`,
+                        classes: 'red darken-2'
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error updating user:', error);
-                showToast(`Network error or server issue: ${error.message}`, 'bg-red-500'); // Tailwind toast
+                M.toast({
+                    html: `Network error or server issue: ${error.message}`,
+                    classes: 'red darken-2'
+                });
             });
         });
     }
@@ -1312,9 +1328,12 @@ if (deleteUserBtn) {
 
         // Add client-side validation for userId
         if (!userId || userId.length === 0) {
-            showToast('Error: User ID is missing or invalid. Cannot delete.', 'bg-red-500'); // Tailwind toast
+            M.toast({
+                html: 'Error: User ID is missing or invalid. Cannot delete.',
+                classes: 'red darken-2'
+            });
             console.error('Client-side validation failed: User ID is', userId);
-            deleteUserModalTrigger.classList.add('hidden'); // Close modal (Assuming deleteUserModalTrigger is the modal element)
+            M.Modal.getInstance(deleteUserModalTrigger).close(); // Close modal if validation fails
             return; // Stop the function
         }
 
@@ -1327,7 +1346,10 @@ if (deleteUserBtn) {
         .then(response => {
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
-                    showToast('Session expired or unauthorized. Please log in again.', 'bg-red-500'); // Tailwind toast
+                    M.toast({
+                        html: 'Session expired or unauthorized. Please log in again.',
+                        classes: 'red darken-2'
+                    });
                     setTimeout(() => window.location.href = 'admin_login.html', 2000);
                 }
                 return response.json().then(errorData => {
@@ -1339,16 +1361,25 @@ if (deleteUserBtn) {
         })
         .then(data => {
             if (data.success) {
-                showToast('User deleted successfully! 🗑️', 'bg-red-500'); // Tailwind toast (Red for destructive action success)
-                deleteUserModalTrigger.classList.add('hidden'); // Correctly close the modal
+                M.toast({
+                    html: 'User deleted successfully!',
+                    classes: 'green darken-2' // Changed to green for success messages
+                });
+                M.Modal.getInstance(deleteUserModalTrigger).close(); // Correctly close the modal
                 fetchAllUsers(); // Refresh the user list
             } else {
-                showToast(`Error: ${data.message || 'Could not delete user.'}`, 'bg-red-500'); // Tailwind toast
+                M.toast({
+                    html: `Error: ${data.message || 'Could not delete user.'}`,
+                    classes: 'red darken-2'
+                });
             }
         })
         .catch(error => {
             console.error('Error deleting user:', error);
-            showToast(`Network error or server issue: ${error.message}`, 'bg-red-500'); // Tailwind toast
+            M.toast({
+                html: `Network error or server issue: ${error.message}`,
+                classes: 'red darken-2'
+            });
         });
     });
 }
@@ -1384,23 +1415,6 @@ if (deleteUserBtn) {
         }
     }
 
-    // *** Tailwind Toast Functionality (Replacement for M.toast) ***
-    // NOTE: This assumes a container element exists in your HTML with a class like 'toast-container'
-    // or that you append it directly to the body.
-    function showToast(message, bgColor) {
-        const toast = document.createElement('div');
-        toast.textContent = message;
-        toast.className = `fixed bottom-5 right-5 p-4 rounded-lg shadow-xl text-white ${bgColor} transition-opacity duration-300 z-50`;
-        document.body.appendChild(toast);
-
-        // Auto-hide the toast after 4 seconds
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 300); // Wait for transition before removing
-        }, 4000);
-    }
-    // *** END Tailwind Toast Functionality ***
-
 
     // Initial load: show dashboard and fetch all trackings to populate stats
     showSection('dashboard-section');
@@ -1419,6 +1433,6 @@ if (deleteUserBtn) {
         console.error("Sidebar or menu toggle button not found in the DOM.");
     }
 
-    // Cleanup: Removed all M.Modal.init() and M.FormSelect.init() calls as they are Materialize-specific.
-    // Tailwind modals and selects rely on simple JavaScript and CSS class manipulation (e.g., adding/removing 'hidden').
-}); // Closing brace for the DOMContentLoaded listener
+    // Initialize Modals
+    M.Modal.init(document.querySelectorAll('.modal'));
+});
