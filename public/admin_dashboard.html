@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Admin Dashboard </title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <link rel="stylesheet" href="/css/admin_dashboard.css">
     <style>
         :root {
@@ -15,18 +17,39 @@
             --in-transit-yellow: #FFC107;
             --pending-orange: #FF9800;
             --exception-red: #F44336;
-            --info-blue: #2196F3;
-            --danger-red: #F44336;
-            --warning-orange: #FF9800;
-            --sidebar-bg: #ffffff;
-            --sidebar-text: #333333;
+            /* Tailwind equivalents will be used for colors, but keeping vars for clarity if needed in JS/custom CSS */
         }
-        .form-group { margin-bottom: 20px; }
-        .form-row { display: flex; gap: 20px; }
-        .form-row .form-group { flex: 1; }
-        .btn, .btn-primary, .btn-secondary, .btn-danger { margin-right: 10px; margin-top: 10px; }
-        .select-wrapper input.select-dropdown { width: 100%; }
-        .status-indicator { display: flex; align-items: center; margin-top: 10px; margin-bottom: 10px; }
+        
+        /* Custom Styles that need to override or define specific behaviors */
+        .sidebar {
+            width: 280px;
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(-100%); /* Hidden by default on mobile/small screens */
+        }
+        .sidebar.active {
+            transform: translateX(0);
+        }
+        .main-content {
+            transition: margin-left 0.3s ease-in-out;
+            margin-left: 0;
+            padding-top: 5rem; /* Space for the fixed header */
+        }
+        @media (min-width: 1024px) { /* Tailwind's lg breakpoint */
+            .sidebar {
+                transform: translateX(0); /* Always visible on large screens */
+                position: fixed;
+                height: 100vh;
+            }
+            .main-content {
+                margin-left: 280px;
+                padding-top: 2rem; /* Less space needed when sidebar is fixed */
+            }
+        }
+        .menu-toggle {
+            z-index: 1000;
+        }
+
+        /* Status Indicators (keeping for JS integration with color variables) */
         .status-circle { display: inline-block; width: 20px; height: 20px; border-radius: 50%; vertical-align: middle; margin-right: 10px; border: 1px solid #ccc; }
         .status-circle.delivered { background-color: var(--success-green); }
         .status-circle.in-transit { background-color: var(--in-transit-yellow); }
@@ -35,548 +58,489 @@
         .status-circle.unknown { background-color: #9e9e9e; }
         .status-circle.blinking { animation: blink-animation 1s infinite alternate; }
         @keyframes blink-animation { from { opacity: 1; } to { opacity: 0.5; } }
+
+        /* Custom History List Styling */
         #trackingHistoryList ul { list-style: none; padding: 0; }
-        #trackingHistoryList li { background-color: #f8f8f8; border: 1px solid #eee; padding: 10px 15px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        #trackingHistoryList .history-content { flex: 1; padding-right: 10px; }
-        #trackingHistoryList .history-actions { display: flex; gap: 5px; margin-top: 5px; }
-        #trackingHistoryList .btn-small { padding: 5px 10px; font-size: 0.8em; }
-        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-        .data-table th { background-color: #f2f2f2; font-weight: bold; }
-        .data-table tbody tr:nth-child(even) { background-color: #f9f9f9; }
-        .data-table tbody tr:hover { background-color: #e9e9e9; }
-        .table-responsive { overflow-x: auto; }
-        .menu-toggle { position: fixed; top: 20px; left: 20px; font-size: 24px; cursor: pointer; z-index: 1000; background-color: var(--sidebar-bg); color: var(--sidebar-text); padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
+        #trackingHistoryList li { padding: 10px 15px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
     </style>
 </head>
-<body>
-    <i id="menu-toggle" class="fas fa-bars menu-toggle" aria-label="Toggle Navigation Menu"></i>
+<body class="bg-gray-100 min-h-screen">
+    
+    <i id="menu-toggle" class="fas fa-bars fixed top-4 left-4 text-xl cursor-pointer p-3 bg-white text-gray-800 rounded shadow-md lg:hidden z-[1000]" aria-label="Toggle Navigation Menu"></i>
 
-    <aside id="sidebar" class="sidebar">
+    <aside id="sidebar" class="sidebar bg-white shadow-xl fixed inset-y-0 left-0 z-50 p-6 flex flex-col justify-between">
         <div>
-            <h2>FedEx Admin</h2>
+            <h2 class="text-2xl font-bold text-indigo-700 mb-6 border-b pb-4">Admin</h2>
             <nav>
-                <ul>
-                    <li class="active"><a href="#" data-section="dashboard-section"><i class="fas fa-tachometer-alt"></i> Dashboard Overview</a></li>
-                    <li><a href="#" data-section="add-tracking-section"><i class="fas fa-plus-circle"></i> Add New Tracking</a></li>
-                    <li><a href="#" data-section="manage-tracking-section"><i class="fas fa-edit"></i> Manage Single Tracking</a></li>
-                    <li><a href="#" data-section="all-trackings-section"><i class="fas fa-list"></i> Manage All Trackings</a></li>
-                    <li><a href="#" data-section="communication-center-section"><i class="fas fa-paper-plane"></i> Communication Center</a></li>
-                    <li><a href="#" data-section="user-management-section"><i class="fas fa-users-cog"></i> User Management</a></li>
-                    <li><a href="#" data-section="settings-section"><i class="fas fa-cogs"></i> Settings</a></li>
+                <ul class="space-y-2">
+                    <li class="rounded-lg bg-indigo-100"><a href="#" data-section="dashboard-section" class="flex items-center p-3 text-indigo-700 font-semibold hover:bg-indigo-50 rounded-lg transition duration-150"><i class="fas fa-tachometer-alt mr-3"></i> Dashboard Overview</a></li>
+                    <li><a href="#" data-section="add-tracking-section" class="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-150"><i class="fas fa-plus-circle mr-3"></i> Add New Tracking</a></li>
+                    <li><a href="#" data-section="manage-tracking-section" class="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-150"><i class="fas fa-edit mr-3"></i> Manage Single Tracking</a></li>
+                    <li><a href="#" data-section="all-trackings-section" class="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-150"><i class="fas fa-list mr-3"></i> Manage All Trackings</a></li>
+                    <li><a href="#" data-section="communication-center-section" class="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-150"><i class="fas fa-paper-plane mr-3"></i> Communication Center</a></li>
+                    <li><a href="#" data-section="user-management-section" class="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-150"><i class="fas fa-users-cog mr-3"></i> User Management</a></li>
+                    <li><a href="#" data-section="settings-section" class="flex items-center p-3 text-gray-700 hover:bg-gray-100 rounded-lg transition duration-150"><i class="fas fa-cogs mr-3"></i> Settings</a></li>
                 </ul>
             </nav>
         </div>
-        <div class="logout-section">
-            <p>Logged in as: <strong id="adminUsername">Admin</strong></p>
-            <button id="logout-btn" class="btn waves-effect waves-light red darken-2">Logout <i class="fas fa-sign-out-alt"></i></button>
+        <div class="logout-section pt-4 border-t border-gray-200">
+            <p class="text-sm text-gray-600 mb-2">Logged in as: <strong id="adminUsername" class="text-gray-800">Admin</strong></p>
+            <button id="logout-btn" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition duration-150 flex items-center justify-center">
+                Logout <i class="fas fa-sign-out-alt ml-2"></i>
+            </button>
         </div>
     </aside>
 
-    <main class="main-content">
-        <header>
-            <h1>Admin Dashboard</h1>
-            <div class="user-info">Welcome, <strong id="headerUsername">Admin</strong>!</div>
+    <main class="main-content p-4 sm:p-6 md:p-8">
+        <header class="bg-white shadow p-4 rounded-lg flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-semibold text-gray-800">Admin Dashboard</h1>
+            <div class="user-info text-gray-600 hidden sm:block">Welcome, <strong id="headerUsername" class="text-gray-800">Admin</strong>!</div>
         </header>
 
-        <section id="dashboard-section" class="dashboard-section active-section">
-            <h3><i class="fas fa-chart-line"></i> Dashboard Overview</h3>
-            <div class="quick-stats">
-                <div class="stat-card">
-                    <div class="icon"><i class="fas fa-box"></i></div>
-                    <div class="value" id="totalPackages">0</div>
-                    <div class="label">Total Packages</div>
+        <section id="dashboard-section" class="dashboard-section active-section p-6 bg-white rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-chart-line mr-2"></i> Dashboard Overview</h3>
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 quick-stats">
+                <div class="stat-card bg-indigo-100 p-4 rounded-lg shadow flex flex-col items-center text-center">
+                    <div class="icon text-3xl text-indigo-700 mb-2"><i class="fas fa-box"></i></div>
+                    <div class="text-3xl font-bold" id="totalPackages">0</div>
+                    <div class="text-sm text-indigo-600">Total Packages</div>
                 </div>
-                <div class="stat-card">
-                    <div class="icon"><i class="fas fa-check-circle" style="color: var(--success-green);"></i></div>
-                    <div class="value" id="deliveredPackages">0</div>
-                    <div class="label">Delivered</div>
+                <div class="stat-card bg-green-100 p-4 rounded-lg shadow flex flex-col items-center text-center">
+                    <div class="icon text-3xl text-green-700 mb-2"><i class="fas fa-check-circle"></i></div>
+                    <div class="text-3xl font-bold" id="deliveredPackages">0</div>
+                    <div class="text-sm text-green-600">Delivered</div>
                 </div>
-                <div class="stat-card">
-                    <div class="icon"><i class="fas fa-truck" style="color: #007bff;"></i></div>
-                    <div class="value" id="inTransitPackages">0</div>
-                    <div class="label">In Transit</div>
+                <div class="stat-card bg-yellow-100 p-4 rounded-lg shadow flex flex-col items-center text-center">
+                    <div class="icon text-3xl text-yellow-700 mb-2"><i class="fas fa-truck"></i></div>
+                    <div class="text-3xl font-bold" id="inTransitPackages">0</div>
+                    <div class="text-sm text-yellow-600">In Transit</div>
                 </div>
-                <div class="stat-card">
-                    <div class="icon"><i class="fas fa-hourglass-half" style="color: var(--warning-orange);"></i></div>
-                    <div class="value" id="pendingPackages">0</div>
-                    <div class="label">Pending</div>
+                <div class="stat-card bg-orange-100 p-4 rounded-lg shadow flex flex-col items-center text-center">
+                    <div class="icon text-3xl text-orange-700 mb-2"><i class="fas fa-hourglass-half"></i></div>
+                    <div class="text-3xl font-bold" id="pendingPackages">0</div>
+                    <div class="text-sm text-orange-600">Pending</div>
                 </div>
-                <div class="stat-card">
-                    <div class="icon"><i class="fas fa-exclamation-triangle" style="color: var(--danger-red);"></i></div>
-                    <div class="value" id="exceptionsPackages">0</div>
-                    <div class="label">Exceptions</div>
+                <div class="stat-card bg-red-100 p-4 rounded-lg shadow flex flex-col items-center text-center">
+                    <div class="icon text-3xl text-red-700 mb-2"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="text-3xl font-bold" id="exceptionsPackages">0</div>
+                    <div class="text-sm text-red-600">Exceptions</div>
                 </div>
             </div>
-            <p class="note">
-                <small style="color: #666; display: block;">
-                    This overview provides a quick glance at key tracking metrics.
-                    Detailed management is available in specific sections.
-                </small>
+            <p class="note mt-4 text-sm text-gray-500">
+                <small>This overview provides a quick glance at key tracking metrics. Detailed management is available in specific sections.</small>
             </p>
         </section>
 
-        <section id="add-tracking-section" class="dashboard-section">
-            <h3><i class="fas fa-plus-circle"></i> Add New Tracking</h3>
-            <form id="addTrackingForm">
-                <div class="input-field">
-                    <input type="text" id="addTrackingId" name="trackingId" required>
-                    <label for="addTrackingId">Tracking ID:</label>
-                    <small class="form-text text-muted">A unique identifier for the shipment.</small>
+        <section id="add-tracking-section" class="dashboard-section p-6 bg-white rounded-lg shadow-md mt-6 hidden">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-plus-circle mr-2"></i> Add New Tracking</h3>
+            <form id="addTrackingForm" class="space-y-4">
+                <div class="form-group">
+                    <label for="addTrackingId" class="block text-sm font-medium text-gray-700">Tracking ID:</label>
+                    <input type="text" id="addTrackingId" name="trackingId" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <small class="form-text text-xs text-gray-500">A unique identifier for the shipment.</small>
                 </div>
 
-                <div class="input-field">
-                    <input type="text" id="addStatus" name="status" required>
-                    <label for="addStatus">Status:</label>
-                    <div class="status-indicator">
+                <div class="form-group">
+                    <label for="addStatus" class="block text-sm font-medium text-gray-700">Status:</label>
+                    <input type="text" id="addStatus" name="status" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <div class="status-indicator flex items-center mt-2">
                         <div id="addStatusCircle" class="status-circle"></div>
-                        <span>Visual Status Indicator (based on `addStatus` field)</span>
+                        <span class="text-sm text-gray-600">Visual Status Indicator (based on status field)</span>
                     </div>
-                    <small class="form-text text-muted">Current status of the package (e.g., In Transit, Delivered, Pending).</small>
+                    <small class="form-text text-xs text-gray-500">Current status of the package (e.g., In Transit, Delivered, Pending).</small>
                 </div>
 
-                <div class="form-group mb-3">
-                    <label for="addIsBlinking"> <input type="checkbox" id="addIsBlinking" name="isBlinking" />
-                        <span>Tracking is Blinking (for visual emphasis)</span>
-                    </label>
-                </div>
-                <div class="input-field">
-                    <label for="addStatusLineColor">Status Line Color:</label>
-                    <input type="color" id="addStatusLineColor" name="statusLineColor" value="#2196F3">
-                    <small class="form-text text-muted">Default: Blue</small>
-                </div>
-
-                <div class="input-field">
-                    <label for="addBlinkingDotColor">Blinking Dot Color:</label>
-                    <input type="color" id="addBlinkingDotColor" name="blinkingDotColor" value="#FFFFFF">
-                    <small class="form-text text-muted">Default: White</small>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="addSenderName" name="senderName" required>
-                    <label for="addSenderName">Sender Name:</label>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="addRecipientName" name="recipientName" required>
-                    <label for="addRecipientName">Recipient Name:</label>
-                </div>
-
-                <div class="input-field">
-                    <input type="email" id="addRecipientEmail" name="recipientEmail" required>
-                    <label for="addRecipientEmail">Recipient Email:</label>
-                    <small class="form-text text-muted">Email address for notifications.</small>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="addPackageContents" name="packageContents" required>
-                    <label for="addPackageContents">Package Contents:</label>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="addServiceType" name="serviceType" required>
-                    <label for="addServiceType">Service Type:</label>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="addRecipientAddress" name="recipientAddress" required>
-                    <label for="addRecipientAddress">Recipient Address:</label>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="addSpecialHandling" name="specialHandling">
-                    <label for="addSpecialHandling">Special Handling/Notes:</label>
-                </div>
-
-                <div class="row">
-                    <div class="input-field col s6">
-                        <input type="text" id="addExpectedDeliveryDate" name="expectedDeliveryDate" class="datepicker">
-                        <label for="addExpectedDeliveryDate">Expected Delivery Date:</label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="form-group md:col-span-1">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="addIsBlinking" name="isBlinking" class="form-checkbox h-5 w-5 text-indigo-600">
+                            <span class="ml-2 text-gray-700 text-sm">Tracking is Blinking</span>
+                        </label>
                     </div>
-                    <div class="input-field col s6">
-                        <input type="text" id="addExpectedDeliveryTime" name="expectedDeliveryTime" class="timepicker">
-                        <label for="addExpectedDeliveryTime">Expected Delivery Time:</label>
+                    <div class="form-group">
+                        <label for="addStatusLineColor" class="block text-sm font-medium text-gray-700">Status Line Color:</label>
+                        <input type="color" id="addStatusLineColor" name="statusLineColor" value="#2196F3" class="mt-1 block w-full h-10 border border-gray-300 rounded-md shadow-sm">
+                        <small class="form-text text-xs text-gray-500">Default: Blue</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="addBlinkingDotColor" class="block text-sm font-medium text-gray-700">Blinking Dot Color:</label>
+                        <input type="color" id="addBlinkingDotColor" name="blinkingDotColor" value="#FFFFFF" class="mt-1 block w-full h-10 border border-gray-300 rounded-md shadow-sm">
+                        <small class="form-text text-xs text-gray-500">Default: White</small>
                     </div>
                 </div>
 
-                <div class="input-field">
-                    <input type="text" id="addOrigin" name="origin">
-                    <label for="addOrigin">Origin:</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="addSenderName" class="block text-sm font-medium text-gray-700">Sender Name:</label>
+                        <input type="text" id="addSenderName" name="senderName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group">
+                        <label for="addRecipientName" class="block text-sm font-medium text-gray-700">Recipient Name:</label>
+                        <input type="text" id="addRecipientName" name="recipientName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group md:col-span-2">
+                        <label for="addRecipientEmail" class="block text-sm font-medium text-gray-700">Recipient Email:</label>
+                        <input type="email" id="addRecipientEmail" name="recipientEmail" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <small class="form-text text-xs text-gray-500">Email address for notifications.</small>
+                    </div>
                 </div>
 
-                <div class="input-field">
-                    <input type="text" id="addDestination" name="destination">
-                    <label for="addDestination">Destination:</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="addPackageContents" class="block text-sm font-medium text-gray-700">Package Contents:</label>
+                        <input type="text" id="addPackageContents" name="packageContents" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group">
+                        <label for="addServiceType" class="block text-sm font-medium text-gray-700">Service Type:</label>
+                        <input type="text" id="addServiceType" name="serviceType" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group md:col-span-2">
+                        <label for="addRecipientAddress" class="block text-sm font-medium text-gray-700">Recipient Address:</label>
+                        <input type="text" id="addRecipientAddress" name="recipientAddress" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group md:col-span-2">
+                        <label for="addSpecialHandling" class="block text-sm font-medium text-gray-700">Special Handling/Notes:</label>
+                        <input type="text" id="addSpecialHandling" name="specialHandling" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
                 </div>
 
-                <div class="input-field">
-                    <input type="number" step="0.1" id="addWeight" name="weight">
-                    <label for="addWeight">Weight (kg):</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="form-group">
+                        <label for="addExpectedDeliveryDate" class="block text-sm font-medium text-gray-700">Expected Delivery Date:</label>
+                        <input type="text" id="addExpectedDeliveryDate" name="expectedDeliveryDate" class="datepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group">
+                        <label for="addExpectedDeliveryTime" class="block text-sm font-medium text-gray-700">Expected Delivery Time:</label>
+                        <input type="text" id="addExpectedDeliveryTime" name="expectedDeliveryTime" class="timepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group">
+                        <label for="addOrigin" class="block text-sm font-medium text-gray-700">Origin:</label>
+                        <input type="text" id="addOrigin" name="origin" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="form-group">
+                        <label for="addDestination" class="block text-sm font-medium text-gray-700">Destination:</label>
+                        <input type="text" id="addDestination" name="destination" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
                 </div>
 
-                <button type="submit" class="btn waves-effect waves-light green darken-2"><i class="fas fa-plus-circle"></i> Add New Tracking</button>
+                <div class="form-group w-full md:w-1/4">
+                    <label for="addWeight" class="block text-sm font-medium text-gray-700">Weight (kg):</label>
+                    <input type="number" step="0.1" id="addWeight" name="weight" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                
+                <button type="submit" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150 flex items-center">
+                    <i class="fas fa-plus-circle mr-2"></i> Add New Tracking
+                </button>
             </form>
         </section>
 
-        <section id="manage-tracking-section" class="dashboard-section">
-            <h3><i class="fas fa-edit"></i> Manage Single Tracking</h3>
-            <p>Select a tracking ID to view and update its details.</p>
+      
+        <section id="manage-tracking-section" class="dashboard-section p-6 bg-white rounded-lg shadow-md mt-6 hidden">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-edit mr-2"></i> Manage Single Tracking</h3>
+            <p class="mb-4 text-gray-600">Select a tracking ID to view and update its details.</p>
 
-            <div class="input-field">
-                <select id="singleTrackingIdSelect" name="selectedTrackingId">
+            <div class="form-group mb-6">
+                <label for="singleTrackingIdSelect" class="block text-sm font-medium text-gray-700">Select Tracking to Edit</label>
+                <select id="singleTrackingIdSelect" name="selectedTrackingId" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="" disabled selected>Select Tracking ID</option>
-                </select>
-                <label for="singleTrackingIdSelect">Select Tracking to Edit</label>
+                    </select>
             </div>
 
-            <form id="updateTrackingForm" style="display: none;">
-                <h4>Update Tracking Details</h4>
+            <form id="updateTrackingForm" class="space-y-4" style="display: none;">
+                <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-4">Update Tracking Details</h4>
                 <input type="hidden" id="updateTrackingMongoId" name="mongoId">
-
-                <div class="input-field">
-                    <input type="text" id="updateTrackingId" name="trackingId" required readonly>
-                    <label for="updateTrackingId">Tracking ID:</label>
+                
+                <div class="form-group">
+                    <label for="updateTrackingId" class="block text-sm font-medium text-gray-700">Tracking ID:</label>
+                    <input type="text" id="updateTrackingId" name="trackingId" required readonly class="mt-1 block w-full border border-gray-300 bg-gray-50 rounded-md shadow-sm p-2">
                 </div>
 
-                <div class="input-field">
-                    <input type="text" id="updateStatus" name="status" required>
-                    <label for="updateStatus">Status:</label>
-                    <div class="status-indicator">
+                <div class="form-group">
+                    <label for="updateStatus" class="block text-sm font-medium text-gray-700">Status:</label>
+                    <input type="text" id="updateStatus" name="status" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <div class="status-indicator flex items-center mt-2">
                         <div id="updateStatusCircle" class="status-circle"></div>
-                        <span>Visual Status Indicator (based on `updateStatus` field)</span>
+                        <span class="text-sm text-gray-600">Visual Status Indicator (based on status field)</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="form-group md:col-span-1">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="updateIsBlinkingOriginal" name="isBlinking" class="form-checkbox h-5 w-5 text-indigo-600">
+                            <span class="ml-2 text-gray-700 text-sm">Tracking is Blinking</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="updateStatusLineColor" class="block text-sm font-medium text-gray-700">Status Line Color:</label>
+                        <input type="color" id="updateStatusLineColor" name="statusLineColor" class="mt-1 block w-full h-10 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="form-group">
+                        <label for="updateBlinkingDotColor" class="block text-sm font-medium text-gray-700">Blinking Dot Color:</label>
+                        <input type="color" id="updateBlinkingDotColor" name="blinkingDotColor" class="mt-1 block w-full h-10 border border-gray-300 rounded-md shadow-sm">
                     </div>
                 </div>
 
-                <div class="form-group mb-3">
-                    <label for="updateIsBlinkingOriginal"> <input type="checkbox" id="updateIsBlinkingOriginal" name="isBlinking" />
-                        <span>Tracking is Blinking (for visual emphasis)</span>
-                    </label>
-                </div>
-                <div class="input-field">
-                    <label for="updateStatusLineColor">Status Line Color:</label>
-                    <input type="color" id="updateStatusLineColor" name="statusLineColor">
-                </div>
-                <div class="input-field">
-                    <label for="updateBlinkingDotColor">Blinking Dot Color:</label>
-                    <input type="color" id="updateBlinkingDotColor" name="blinkingDotColor">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group"><label for="updateSenderName" class="block text-sm font-medium text-gray-700">Sender Name:</label><input type="text" id="updateSenderName" name="senderName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group"><label for="updateRecipientName" class="block text-sm font-medium text-gray-700">Recipient Name:</label><input type="text" id="updateRecipientName" name="recipientName" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group md:col-span-2"><label for="updateRecipientEmail" class="block text-sm font-medium text-gray-700">Recipient Email:</label><input type="email" id="updateRecipientEmail" name="recipientEmail" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
                 </div>
 
-                <div class="input-field">
-                    <input type="text" id="updateSenderName" name="senderName" required>
-                    <label for="updateSenderName">Sender Name:</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group"><label for="updatePackageContents" class="block text-sm font-medium text-gray-700">Package Contents:</label><input type="text" id="updatePackageContents" name="packageContents" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group"><label for="updateServiceType" class="block text-sm font-medium text-gray-700">Service Type:</label><input type="text" id="updateServiceType" name="serviceType" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group md:col-span-2"><label for="updateRecipientAddress" class="block text-sm font-medium text-gray-700">Recipient Address:</label><input type="text" id="updateRecipientAddress" name="recipientAddress" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group md:col-span-2"><label for="updateSpecialHandling" class="block text-sm font-medium text-gray-700">Special Handling/Notes:</label><input type="text" id="updateSpecialHandling" name="specialHandling" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
                 </div>
 
-                <div class="input-field">
-                    <input type="text" id="updateRecipientName" name="recipientName" required>
-                    <label for="updateRecipientName">Recipient Name:</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="form-group"><label for="updateExpectedDeliveryDate" class="block text-sm font-medium text-gray-700">Expected Delivery Date:</label><input type="text" id="updateExpectedDeliveryDate" name="expectedDeliveryDate" class="datepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group"><label for="updateExpectedDeliveryTime" class="block text-sm font-medium text-gray-700">Expected Delivery Time:</label><input type="text" id="updateExpectedDeliveryTime" name="expectedDeliveryTime" class="timepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group"><label for="updateOrigin" class="block text-sm font-medium text-gray-700">Origin:</label><input type="text" id="updateOrigin" name="origin" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                    <div class="form-group"><label for="updateDestination" class="block text-sm font-medium text-gray-700">Destination:</label><input type="text" id="updateDestination" name="destination" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
                 </div>
 
-                <div class="input-field">
-                    <input type="email" id="updateRecipientEmail" name="recipientEmail" required>
-                    <label for="updateRecipientEmail">Recipient Email:</label>
+                <div class="form-group w-full md:w-1/4">
+                    <label for="updateWeight" class="block text-sm font-medium text-gray-700">Weight (kg):</label>
+                    <input type="number" step="0.1" id="updateWeight" name="weight" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                 </div>
 
-                <div class="input-field">
-                    <input type="text" id="updatePackageContents" name="packageContents">
-                    <label for="updatePackageContents">Package Contents:</label>
-                </div>
-                <div class="input-field">
-                    <input type="text" id="updateServiceType" name="serviceType" required>
-                    <label for="updateServiceType">Service Type:</label>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="updateRecipientAddress" name="recipientAddress" required>
-                    <label for="updateRecipientAddress">Recipient Address:</label>
-                </div>
-
-                <div class="input-field">
-                    <input type="text" id="updateSpecialHandling" name="specialHandling">
-                    <label for="updateSpecialHandling">Special Handling/Notes:</label>
-                </div>
-
-                <div class="row">
-                    <div class="input-field col s6">
-                        <input type="text" id="updateExpectedDeliveryDate" name="expectedDeliveryDate" class="datepicker">
-                        <label for="updateExpectedDeliveryDate">Expected Delivery Date:</label>
-                    </div>
-                    <div class="input-field col s6">
-                        <input type="text" id="updateExpectedDeliveryTime" name="expectedDeliveryTime" class="timepicker">
-                        <label for="updateExpectedDeliveryTime">Expected Delivery Time:</label>
-                    </div>
-                </div>
-                <div class="input-field">
-                    <input type="text" id="updateOrigin" name="origin">
-                    <label for="updateOrigin">Origin:</label>
-                </div>
-                <div class="input-field">
-                    <input type="text" id="updateDestination" name="destination">
-                    <label for="updateDestination">Destination:</label>
-                </div>
-                <div class="input-field">
-                    <input type="number" step="0.1" id="updateWeight" name="weight">
-                    <label for="updateWeight">Weight (kg):</label>
-                </div>
-                <button type="submit" class="btn waves-effect waves-light blue darken-2"><i class="fas fa-save"></i> Update Tracking</button>
+                <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-150 flex items-center">
+                    <i class="fas fa-save mr-2"></i> Update Tracking
+                </button>
             </form>
-            <h4 class="mt-4">Tracking History</h4>
+
+            <h4 class="text-lg font-semibold text-gray-700 mt-8 mb-4 border-t pt-4">Tracking History</h4>
             <div id="trackingHistoryList" class="history-list">
-                <ul id="historyEvents" class="collection">
-                </ul>
+                <ul id="historyEvents" class="divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                    </ul>
             </div>
-            <form id="addHistoryForm">
-                <h4>Add New History Event</h4>
+
+            <form id="addHistoryForm" class="mt-8 space-y-4 p-4 bg-gray-50 rounded-lg border">
+                <h4 class="text-lg font-semibold text-gray-700">Add New History Event</h4>
                 <input type="hidden" id="historyTrackingIdInput" name="trackingId">
                 
-                <div class="input-field">
-                    <input type="text" id="newHistoryDate" name="newHistoryDate" class="datepicker" required> <label for="newHistoryDate">Date:</label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-group"><label for="newHistoryDate" class="block text-sm font-medium text-gray-700">Date:</label><input type="text" id="newHistoryDate" name="newHistoryDate" class="datepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div>
+                    <div class="form-group"><label for="newHistoryTime" class="block text-sm font-medium text-gray-700">Time:</label><input type="text" id="newHistoryTime" name="newHistoryTime" class="timepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></div>
                 </div>
-                <div class="input-field">
-                    <input type="text" id="newHistoryTime" name="newHistoryTime" class="timepicker" required> <label for="newHistoryTime">Time:</label>
+                <div class="form-group"><label for="newHistoryLocation" class="block text-sm font-medium text-gray-700">Location:</label><input type="text" id="newHistoryLocation" name="newHistoryLocation" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group">
+                    <label for="newHistoryDescription" class="block text-sm font-medium text-gray-700">Description:</label>
+                    <textarea id="newHistoryDescription" name="newHistoryDescription" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500" required></textarea>
                 </div>
-                <div class="input-field">
-                    <input type="text" id="newHistoryLocation" name="newHistoryLocation"> <label for="newHistoryLocation">Location:</label>
-                </div>
-                <div class="input-field">
-                    <textarea id="newHistoryDescription" name="newHistoryDescription" class="materialize-textarea" required></textarea> <label for="newHistoryDescription">Description:</label>
-                </div>
-                <button type="submit" class="btn waves-effect waves-light teal lighten-1"><i class="fas fa-calendar-plus"></i> Add Event</button>
+                
+                <button type="submit" class="bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition duration-150 flex items-center">
+                    <i class="fas fa-calendar-plus mr-2"></i> Add Event
+                </button>
             </form>
         </section>
 
-        <section id="all-trackings-section" class="dashboard-section">
-            <h3><i class="fas fa-list"></i> Manage All Trackings</h3>
-            <div class="table-responsive">
-                <table id="trackingTable" class="data-table striped responsive-table">
-                    <thead>
+        ---
+
+        <section id="all-trackings-section" class="dashboard-section p-6 bg-white rounded-lg shadow-md mt-6 hidden">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-list mr-2"></i> Manage All Trackings</h3>
+            <div class="overflow-x-auto table-responsive">
+                <table id="trackingTable" class="min-w-full divide-y divide-gray-200 data-table">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th>Tracking ID</th>
-                            <th>Status</th>
-                            <th>Status Color</th>
-                            <th>Blinking</th>
-                            <th>Sender Name</th>
-                            <th>Recipient Name</th>
-                            <th>Recipient Email</th>
-                            <th>Package Contents</th>
-                            <th>Service Type</th>
-                            <th>Recipient Address</th>
-                            <th>Special Handling</th>
-                            <th>Expected Delivery</th>
-                            <th>Last Updated</th>
-                            <th>Actions</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Color</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blinking</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sender Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recipient Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recipient Email</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Package Contents</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recipient Address</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Handling</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expected Delivery</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="all-trackings-table-body">
-                        <tr><td colspan="14" style="text-align: center; padding: 20px;">Loading tracking data...</td></tr>
+                    <tbody id="all-trackings-table-body" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="14" class="px-4 py-4 text-sm text-gray-500 text-center">Loading tracking data...</td></tr>
                     </tbody>
                 </table>
             </div>
-            <p class="note" style="margin-top: 20px;">
-                <small style="color: #666; display: block;">
-                    Click 'View/Edit' to manage full details and history for a specific tracking.
-                </small>
+            <p class="note mt-4 text-sm text-gray-500">
+                <small>Click 'View/Edit' to manage full details and history for a specific tracking.</small>
             </p>
         </section>
 
-        <section id="communication-center-section" class="dashboard-section">
-            <h3><i class="fas fa-paper-plane"></i> FedEx Communication Center</h3>
-            <p>Send email notifications to recipients and attach optional files.</p>
+        ---
 
-            <div class="communication-content">
-                <div class="card full-width">
-                    <h3><i class="fas fa-envelope"></i> Send Email Notification with Optional Attachment</h3>
-                    <form id="sendEmailForm">
-                        <div class="input-field">
-                            <select id="emailTrackingIdSelect" name="emailTrackingId">
+        <section id="communication-center-section" class="dashboard-section p-6 bg-white rounded-lg shadow-md mt-6 hidden">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-paper-plane mr-2"></i> FedEx Communication Center</h3>
+            <p class="mb-6 text-gray-600">Send email notifications to recipients and attach optional files.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 communication-content">
+                <div class="card p-4 bg-white rounded-lg shadow border border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-envelope mr-2"></i> Send Email Notification</h3>
+                    <form id="sendEmailForm" class="space-y-4">
+                        <div class="form-group">
+                            <label for="emailTrackingIdSelect" class="block text-sm font-medium text-gray-700">Link to Tracking (Optional)</label>
+                            <select id="emailTrackingIdSelect" name="emailTrackingId" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                                 <option value="" disabled selected>Select Tracking ID (Optional, for pre-filling email)</option>
-                                </select>
-                            <label for="emailTrackingIdSelect">Link to Tracking (Optional)</label>
+                            </select>
                         </div>
-                        <div class="input-field">
-                            <input type="email" id="notificationEmail" name="notificationEmail" required> <label for="notificationEmail">Recipient Email:</label>
+                        <div class="form-group"><label for="notificationEmail" class="block text-sm font-medium text-gray-700">Recipient Email:</label><input type="email" id="notificationEmail" name="notificationEmail" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                        <div class="form-group"><label for="emailSubject" class="block text-sm font-medium text-gray-700">Subject:</label><input type="text" id="emailSubject" name="emailSubject" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                        <div class="form-group">
+                            <label for="notificationMessage" class="block text-sm font-medium text-gray-700">Message Body:</label>
+                            <textarea id="notificationMessage" name="notificationMessage" rows="5" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
                         </div>
-                        <div class="input-field">
-                            <input type="text" id="emailSubject" name="emailSubject" required> <label for="emailSubject">Subject:</label>
+                        <div class="form-group">
+                            <label for="emailAttachmentFileUpload" class="block text-sm font-medium text-gray-700 mb-1">Attach File (Optional):</label>
+                            <input type="file" id="emailAttachmentFileUpload" name="emailAttachmentFile" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                         </div>
-                        <div class="input-field">
-                            <textarea id="notificationMessage" name="notificationMessage" class="materialize-textarea" rows="8" required></textarea> <label for="notificationMessage">Message Body:</label>
-                        </div>
-                        <div class="file-field input-field">
-                            <div class="btn">
-                                <span>Attach File</span>
-                                <input type="file" id="emailAttachmentFileUpload" name="emailAttachmentFile">
-                            </div>
-                            <div class="file-path-wrapper">
-                                <input class="file-path validate" type="text" name="emailAttachmentFileName" placeholder="Upload optional attachment">
-                            </div>
-                        </div>
-                        <button type="submit" id="sendEmailButton" class="btn waves-effect waves-light light-blue darken-1"><i class="fas fa-paper-plane"></i> Send Email</button>
+                        <button type="submit" id="sendEmailButton" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-150 flex items-center">
+                            <i class="fas fa-paper-plane mr-2"></i> Send Email
+                        </button>
                     </form>
                 </div>
 
-                <div class="card full-width">
-                    <h3><i class="fas fa-file-upload"></i> Upload Package File</h3>
-                    <form id="uploadPackageFileForm">
-                        <div class="input-field">
-                            <select id="attachFileTrackingIdSelect" name="attachFileTrackingId">
+                <div class="card p-4 bg-white rounded-lg shadow border border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-file-upload mr-2"></i> Upload Package File</h3>
+                    <form id="uploadPackageFileForm" class="space-y-4">
+                        <div class="form-group">
+                            <label for="attachFileTrackingIdSelect" class="block text-sm font-medium text-gray-700">Tracking ID to link file to:</label>
+                            <select id="attachFileTrackingIdSelect" name="attachFileTrackingId" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                                 <option value="" disabled selected>Select Tracking ID</option>
-                                </select>
-                            <label for="attachFileTrackingIdSelect">Tracking ID to link file to:</label>
+                            </select>
                         </div>
-                        <div class="file-field input-field">
-                            <div class="btn">
-                                <span>Choose File</span>
-                                <input type="file" id="packageFileInput" name="packageFile" required>
-                            </div>
-                            <div class="file-path-wrapper">
-                                <input class="file-path validate" type="text" name="packageFileName" placeholder="Upload package document">
-                            </div>
+                        <div class="form-group">
+                            <label for="packageFileInput" class="block text-sm font-medium text-gray-700 mb-1">Choose File:</label>
+                            <input type="file" id="packageFileInput" name="packageFile" required class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100">
                         </div>
-                        <button class="btn waves-effect waves-light green"><i class="material-icons left">cloud_upload</i> Upload & Link File</button>
+                        <button class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150 flex items-center">
+                            <i class="fas fa-cloud-upload-alt mr-2"></i> Upload & Link File
+                        </button>
                     </form>
                 </div>
             </div>
-            <p class="note" style="margin-top: 20px;">
-                <small style="color: #666; display: block;">
-                    Note: Email sending and file uploads require server-side integration.
-                    This interface provides the client-side functionality.
-                </small>
+            <p class="note mt-6 text-sm text-gray-500">
+                <small>Note: Email sending and file uploads require server-side integration. This interface provides the client-side functionality.</small>
             </p>
         </section>
 
-        <section id="user-management-section" class="dashboard-section">
-            <h3><i class="fas fa-users-cog"></i> User Management</h3>
-            <p>Manage user accounts (add, edit, delete users and roles).</p>
+        ---
 
-            <a class="waves-effect waves-light btn modal-trigger blue darken-2" href="#createUserModal"><i class="material-icons left">person_add</i>Add New User</a>
+        <section id="user-management-section" class="dashboard-section p-6 bg-white rounded-lg shadow-md mt-6 hidden">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-users-cog mr-2"></i> User Management</h3>
+            <p class="mb-4 text-gray-600">Manage user accounts (add, edit, delete users and roles).</p>
 
-            <div class="table-responsive" style="margin-top: 20px;">
-                <table class="striped responsive-table">
-                    <thead>
+            <a class="inline-flex items-center bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-150 modal-trigger" href="#createUserModal">
+                <i class="fas fa-user-plus mr-2"></i> Add New User
+            </a>
+
+            <div class="overflow-x-auto mt-6">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Actions</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="users-table-body">
-                        <tr><td colspan="4" style="text-align: center; padding: 20px;">Loading users...</td></tr>
+                    <tbody id="users-table-body" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="4" class="px-4 py-4 text-sm text-gray-500 text-center">Loading users...</td></tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <section id="settings-section" class="dashboard-section">
-            <h3><i class="fas fa-cogs"></i> Settings</h3>
-            <p>Coming Soon: Configure dashboard settings and preferences.</p>
+        ---
+
+        <section id="settings-section" class="dashboard-section p-6 bg-white rounded-lg shadow-md mt-6 hidden">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 border-b pb-2"><i class="fas fa-cogs mr-2"></i> Settings</h3>
+            <p class="text-gray-600">Coming Soon: Configure dashboard settings and preferences.</p>
         </section>
     </main>
 
-    <div id="editHistoryModal" class="modal">
-        <div class="modal-content">
-            <h4>Edit History Event</h4>
+    <div id="editHistoryModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-[1001]">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 p-6">
+            <h4 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Edit History Event</h4>
             <input type="hidden" id="editHistoryModalTrackingMongoId" name="editHistoryModalTrackingMongoId">
             <input type="hidden" id="editHistoryModalHistoryId" name="editHistoryModalHistoryId">
-            <div class="input-field">
-                <input type="text" id="editHistoryDate" name="editHistoryDate" class="datepicker">
-                <label for="editHistoryDate">Date:</label>
+            <form id="editHistoryForm" class="space-y-4">
+                <div class="form-group"><label for="editHistoryDate" class="block text-sm font-medium text-gray-700">Date:</label><input type="text" id="editHistoryDate" name="editHistoryDate" class="datepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group"><label for="editHistoryTime" class="block text-sm font-medium text-gray-700">Time:</label><input type="text" id="editHistoryTime" name="editHistoryTime" class="timepicker mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group"><label for="editHistoryLocation" class="block text-sm font-medium text-gray-700">Location:</label><input type="text" id="editHistoryLocation" name="editHistoryLocation" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group">
+                    <label for="editHistoryDescription" class="block text-sm font-medium text-gray-700">Description:</label>
+                    <textarea id="editHistoryDescription" name="editHistoryDescription" rows="3" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+                </div>
+            </form>
+            <div class="modal-footer flex justify-end space-x-3 pt-4 border-t mt-4">
+                <button type="button" id="saveHistoryEditBtn" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150">Save Changes</button>
+                <button type="button" class="modal-close bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-150">Cancel</button>
             </div>
-            <div class="input-field">
-                <input type="text" id="editHistoryTime" name="editHistoryTime" class="timepicker">
-                <label for="editHistoryTime">Time:</label>
-            </div>
-            <div class="input-field">
-                <input type="text" id="editHistoryLocation" name="editHistoryLocation">
-                <label for="editHistoryLocation">Location:</label>
-            </div>
-            <div class="input-field">
-                <textarea id="editHistoryDescription" name="editHistoryDescription" class="materialize-textarea"></textarea>
-                <label for="editHistoryDescription">Description:</label>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" id="saveHistoryEditBtn" class="modal-close waves-effect waves-green btn-flat">Save Changes</button>
-            <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
         </div>
     </div>
 
-    <div id="createUserModal" class="modal">
-        <div class="modal-content">
-            <h4>Create New User</h4>
-            <form id="createUserForm">
-                <div class="input-field">
-                    <input type="text" id="newUsername" required>
-                    <label for="newUsername">Username</label>
-                </div>
-                <div class="input-field">
-                    <input type="email" id="newEmail" required>
-                    <label for="newEmail">Email</label>
-                </div>
-                <div class="input-field">
-                    <input type="password" id="newPassword" required>
-                    <label for="newPassword">Password</label>
-                </div>
-                <div class="input-field">
-                    <select id="newUserRole" required>
+    <div id="createUserModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-[1001]">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-11/12 md:w-1/3 p-6">
+            <h4 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Create New User</h4>
+            <form id="createUserForm" class="space-y-4">
+                <div class="form-group"><label for="newUsername" class="block text-sm font-medium text-gray-700">Username</label><input type="text" id="newUsername" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group"><label for="newEmail" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="newEmail" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group"><label for="newPassword" class="block text-sm font-medium text-gray-700">Password</label><input type="password" id="newPassword" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group">
+                    <label for="newUserRole" class="block text-sm font-medium text-gray-700">User Role</label>
+                    <select id="newUserRole" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                         <option value="" disabled selected>Choose user role</option>
                         <option value="admin">Admin</option>
                         <option value="editor">Editor</option>
                         <option value="viewer">Viewer</option>
                     </select>
-                    <label for="newUserRole">User Role</label>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn waves-effect waves-light green darken-2">Create User</button>
-                    <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+                <div class="modal-footer flex justify-end space-x-3 pt-4 border-t mt-4">
+                    <button type="submit" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150">Create User</button>
+                    <button type="button" class="modal-close bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-150">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="editUserModal" class="modal">
-        <div class="modal-content">
-            <h4>Edit User</h4>
-            <form id="editUserForm">
+    <div id="editUserModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-[1001]">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-11/12 md:w-1/3 p-6">
+            <h4 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Edit User</h4>
+            <form id="editUserForm" class="space-y-4">
                 <input type="hidden" id="editUserId">
-                <div class="input-field">
-                    <input type="text" id="editUsername" required>
-                    <label for="editUsername">Username</label>
-                </div>
-                <div class="input-field">
-                    <input type="email" id="editEmail" required>
-                    <label for="editEmail">Email</label>
-                </div>
-                <div class="input-field">
-                    <input type="password" id="editPassword">
-                    <label for="editPassword">New Password (leave blank to keep current)</label>
-                </div>
-                <div class="input-field">
-                    <select id="editUserRole" required>
+                <div class="form-group"><label for="editUsername" class="block text-sm font-medium text-gray-700">Username</label><input type="text" id="editUsername" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group"><label for="editEmail" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="editEmail" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group"><label for="editPassword" class="block text-sm font-medium text-gray-700">New Password (leave blank to keep current)</label><input type="password" id="editPassword" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></div>
+                <div class="form-group">
+                    <label for="editUserRole" class="block text-sm font-medium text-gray-700">User Role</label>
+                    <select id="editUserRole" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
                         <option value="" disabled selected>Choose user role</option>
                         <option value="admin">Admin</option>
                         <option value="editor">Editor</option>
                         <option value="viewer">Viewer</option>
                     </select>
-                    <label for="editUserRole">User Role</label>
                 </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn waves-effect waves-light blue darken-2">Update User</button>
-                    <button type="button" class="modal-close waves-effect waves-red btn-flat">Cancel</button>
+                <div class="modal-footer flex justify-end space-x-3 pt-4 border-t mt-4">
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-150">Update User</button>
+                    <button type="button" class="modal-close bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-150">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="deleteUserModal" class="modal">
-        <div class="modal-content">
-            <h4>Confirm Delete User</h4>
-            <p>Are you sure you want to delete user <strong id="usernameToDelete"></strong>? This action cannot be undone.</p>
+    <div id="deleteUserModal" class="modal fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-[1001]">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-11/12 md:w-1/3 p-6">
+            <h4 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Confirm Delete User</h4>
+            <p class="text-gray-600 mb-4">Are you sure you want to delete user <strong id="usernameToDelete"></strong>? This action cannot be undone.</p>
             <input type="hidden" id="userIdToDeleteInput">
-        </div>
-        <div class="modal-footer">
-            <button type="button" id="deleteUserBtn" class="waves-effect waves-light btn red darken-2">Delete</button>
-            <button type="button" class="modal-close waves-effect waves-green btn-flat">Cancel</button>
+            <div class="modal-footer flex justify-end space-x-3 pt-4 border-t mt-4">
+                <button type="button" id="deleteUserBtn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition duration-150">Delete</button>
+                <button type="button" class="modal-close bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-150">Cancel</button>
+            </div>
         </div>
     </div>
 
